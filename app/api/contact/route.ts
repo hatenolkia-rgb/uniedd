@@ -4,9 +4,9 @@ import nodemailer from "nodemailer";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { firstName, lastName, email, instrument } = body;
+    const { firstName, lastName, email, phone, instrument } = body;
 
-    if (!firstName || !email || !instrument) {
+    if (!firstName || !email || !phone || !instrument) {
       return NextResponse.json(
         { error: "Please fill all required fields." },
         { status: 400 }
@@ -30,6 +30,7 @@ export async function POST(request: Request) {
         <h2>New Student Registration</h2>
         <p><strong>Name:</strong> ${firstName} ${lastName}</p>
         <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
         <p><strong>Instrument:</strong> ${instrument}</p>
         <br/>
         <p>This inquiry was submitted from the Uniedd website.</p>

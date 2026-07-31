@@ -25,6 +25,7 @@ export default function CTA() {
       firstName: formData.get("firstName") as string,
       lastName: formData.get("lastName") as string,
       email: formData.get("email") as string,
+      phone: formData.get("phone") as string,
       instrument: formData.get("instrument") as string,
     };
 
@@ -131,7 +132,7 @@ export default function CTA() {
             </p>
 
             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <input
                   type="text"
                   name="firstName"
@@ -143,6 +144,13 @@ export default function CTA() {
                   type="text"
                   name="lastName"
                   placeholder="Last name"
+                  className="w-full px-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
+                />
+                <input
+                  type="tel"
+                  name="phone"
+                  placeholder="Mobile number"
+                  required
                   className="w-full px-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
                 />
               </div>
