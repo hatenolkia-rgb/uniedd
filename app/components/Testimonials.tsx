@@ -8,25 +8,25 @@ gsap.registerPlugin(ScrollTrigger);
 
 const testimonials = [
   {
-    name: "Sarah M.",
-    role: "Beginner Student",
+    name: "Parent, Rohini",
+    role: "Guitar learner",
     quote:
-      "I never thought I could play guitar. After 3 months with Uniedd, I'm playing full songs. The structured approach makes all the difference.",
-    initials: "SM",
+      "Our daughter started with guitar and now she waits for every class. The trainers are patient, encouraging, and genuinely focused on progress.",
+    initials: "R",
   },
   {
-    name: "Alex K.",
-    role: "Intermediate Player",
+    name: "Working Professional, Noida",
+    role: "Vocal student",
     quote:
-      "The music theory integration is brilliant. I finally understand why certain chord progressions feel the way they do.",
-    initials: "AK",
+      "I was looking for a beginner-friendly way to learn singing without pressure. The 1:1 format made all the difference and kept me consistent.",
+    initials: "N",
   },
   {
-    name: "Jordan P.",
-    role: "Returning Musician",
+    name: "Student, Gurugram",
+    role: "Public speaking learner",
     quote:
-      "I picked up the guitar years ago and gave up. Uniedd's approach kept me motivated and I'm now better than I ever was.",
-    initials: "JP",
+      "The public speaking classes helped me become calmer, clearer, and much more confident in school presentations and conversations.",
+    initials: "G",
   },
 ];
 

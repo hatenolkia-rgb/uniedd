@@ -7,25 +7,25 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 gsap.registerPlugin(ScrollTrigger);
 
 const stats = [
-  { value: "95%", label: "Completion rate", icon: "📊" },
-  { value: "4.2x", label: "Faster progress", icon: "⚡" },
-  { value: "30min", label: "Average session", icon: "⏱️" },
+  { value: "1:1", label: "Live coaching", icon: "🎯" },
+  { value: "15+", label: "Years of teaching", icon: "🎶" },
+  { value: "Weekly", label: "Progress reviews", icon: "📈" },
 ];
 
 const methods = [
   {
-    title: "Watch & Learn",
-    description: "HD video lessons from professional musicians explaining every concept clearly.",
+    title: "Start with a free assessment",
+    description: "We understand your level, goals, and learning style before creating your personal roadmap.",
     visual: "video",
   },
   {
-    title: "Read & Understand",
-    description: "Sheet music, chord diagrams, and theory notes integrated right into your lessons.",
+    title: "Learn in structured live sessions",
+    description: "Each lesson is guided by expert faculty, with correction, clarity, and confidence-building built in.",
     visual: "theory",
   },
   {
-    title: "Practice & Play",
-    description: "Interactive exercises with real-time feedback that adapts to your pace.",
+    title: "Practice with accountability",
+    description: "We help students stay consistent, improve performance, and build skills that translate into real confidence.",
     visual: "practice",
   },
 ];
@@ -136,20 +136,17 @@ export default function LearnPlay() {
         {/* Heading */}
         <div ref={headingRef} className="text-center mb-16">
           <p className="text-sm tracking-widest uppercase text-[var(--muted)] mb-4">
-            Education Meets Music
+            How We Teach
           </p>
           <h2
             className="text-4xl sm:text-5xl font-bold tracking-tight"
             style={{ fontFamily: "var(--font-playfair), serif" }}
           >
-            Learn the{" "}
-            <span className="text-[var(--brand-blue)]">science</span>,{" "}
-            feel the{" "}
-            <span className="text-[var(--brand-orange)]">art</span>
+            Real coaching.
+            <span className="text-[var(--brand-blue)]"> Real progress.</span>
           </h2>
           <p className="mt-4 text-[var(--muted)] max-w-lg mx-auto">
-            Our method combines academic music education with hands-on playing, so you
-            understand <em>why</em> it works — not just <em>how</em>.
+            UniEDD blends live mentoring, detailed correction, and performance-focused guidance so students learn with clarity and confidence.
           </p>
         </div>
 

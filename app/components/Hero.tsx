@@ -63,7 +63,7 @@ export default function Hero() {
         <div className="flex flex-col gap-6 max-w-xl">
           <div className="inline-flex items-center gap-2 border border-[var(--border)] rounded-full px-4 py-1.5 w-fit bg-white shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            <span className="text-xs text-[var(--muted)]">Trusted by 10,000+ students worldwide</span>
+            <span className="text-xs text-[var(--muted)]">Live 1:1 online classes • New Delhi • 15+ years experience</span>
           </div>
 
           <h1
@@ -71,25 +71,23 @@ export default function Hero() {
             className="text-[2.75rem] sm:text-6xl lg:text-[4.2rem] font-bold leading-[1.1] tracking-tight"
             style={{ fontFamily: "var(--font-playfair), serif" }}
           >
-            Your musical journey
+            Music, dance &
             <br />
-            
             <span className="bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] bg-clip-text text-transparent">
-              starts here
+              confidence for every age
             </span>
           </h1>
 
           <p ref={subtitleRef} className="text-base sm:text-lg text-[var(--muted)] leading-relaxed">
-            Learn guitar and piano from world-class instructors with step-by-step courses,
-            real-time feedback, and a supportive community behind you.
+            UniEDD helps kids and adults learn Guitar, Keyboard, Vocals, Tabla, Dance, and Public Speaking through live online coaching, expert mentors, and personalised practice plans.
           </p>
 
           <div ref={ctaRef} className="flex flex-wrap items-center gap-4 pt-2">
             <a
-              href="#cta"
+              href="#contact"
               className="px-7 py-3.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full text-sm font-semibold shadow-lg shadow-[var(--brand-blue)]/10 hover:shadow-xl hover:-translate-y-px transition-all duration-300"
             >
-              Start Free Trial
+              Book a Free Demo
             </a>
             <a href="#courses" className="flex items-center gap-2 text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               <span className="w-9 h-9 rounded-full border border-[var(--border)] flex items-center justify-center bg-white shadow-sm">
@@ -97,30 +95,23 @@ export default function Hero() {
                   <path d="M3 1.5L10 6L3 10.5V1.5Z" fill="var(--brand-blue)" />
                 </svg>
               </span>
-              Watch how it works
+              Explore programs
             </a>
           </div>
 
-          {/* Ratings */}
-          <div className="flex items-center gap-5 pt-5 mt-2 border-t border-[var(--border)]">
-            <div className="flex -space-x-2.5">
-              {["#e8962e", "#1a9fd4", "#333", "#e8962e"].map((c, i) => (
-                <div key={i} className="w-8 h-8 rounded-full border-2 border-white shadow-sm" style={{ background: c, opacity: 0.9 - i * 0.1 }} />
-              ))}
-              <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center shadow-sm">
-                <span className="text-[9px] font-bold text-[var(--muted)]">+9k</span>
-              </div>
+          {/* Metrics */}
+          <div className="grid grid-cols-3 gap-4 pt-5 mt-2 border-t border-[var(--border)]">
+            <div>
+              <p className="text-2xl font-bold text-[var(--foreground)]">1,000+</p>
+              <p className="text-[11px] text-[var(--muted)]">Students trained</p>
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-0.5">
-                {[...Array(5)].map((_, i) => (
-                  <svg key={i} width="13" height="13" viewBox="0 0 24 24" fill="var(--brand-orange)">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                ))}
-                <span className="text-xs font-semibold ml-1.5">4.9</span>
-              </div>
-              <span className="text-[11px] text-[var(--muted)]">from 2,400+ reviews</span>
+            <div>
+              <p className="text-2xl font-bold text-[var(--foreground)]">120+</p>
+              <p className="text-[11px] text-[var(--muted)]">Educators</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[var(--foreground)]">15+</p>
+              <p className="text-[11px] text-[var(--muted)]">Years of experience</p>
             </div>
           </div>
         </div>

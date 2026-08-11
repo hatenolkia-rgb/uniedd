@@ -9,39 +9,39 @@ gsap.registerPlugin(ScrollTrigger);
 const features = [
   {
     icon: "🎸",
-    title: "Structured Lessons",
+    title: "Guitar & Keyboard",
     description:
-      "Progress through carefully designed modules from beginner chords to advanced techniques.",
+      "Structured one-to-one coaching for beginners to advanced learners who want strong technique and confidence.",
   },
   {
-    icon: "🎵",
-    title: "Interactive Practice",
+    icon: "🎤",
+    title: "Vocals & Expression",
     description:
-      "Real-time feedback on your playing with built-in tools to track tempo and accuracy.",
+      "Build breath control, pitch, diction, and stage presence with guided vocal coaching.",
   },
   {
-    icon: "🎧",
-    title: "Expert Instructors",
+    icon: "🥁",
+    title: "Tabla & Rhythm",
     description:
-      "Learn from professional musicians who break down complex concepts into simple steps.",
+      "Develop timing, taal, and rhythmic accuracy with patient instruction tailored to your pace.",
   },
   {
-    icon: "📖",
-    title: "Music Theory",
+    icon: "💃",
+    title: "Dance & Performance",
     description:
-      "Understand the 'why' behind the music with integrated theory lessons alongside practice.",
+      "Learn expression, movement, coordination, and stage confidence in a supportive online environment.",
   },
   {
-    icon: "🤝",
-    title: "Community",
+    icon: "🗣️",
+    title: "Public Speaking",
     description:
-      "Connect with fellow learners, share progress, and get inspired by others on the same path.",
+      "Improve clarity, confidence, and communication skills for school, work, and personal growth.",
   },
   {
-    icon: "📱",
-    title: "Learn Anywhere",
+    icon: "👨‍👩‍👧‍👦",
+    title: "Kids & Adults",
     description:
-      "Access your lessons on any device. Practice at home, on the go, or wherever inspiration strikes.",
+      "Programs designed for all ages, with flexible online learning that fits real family and work schedules.",
   },
 ];
 
@@ -95,21 +95,21 @@ export default function Features() {
   return (
     <section
       ref={sectionRef}
-      id="features"
+      id="about"
       className="py-32 px-6 bg-white"
     >
       <div className="max-w-7xl mx-auto">
         <div ref={headingRef} className="text-center mb-20">
           <p className="text-sm tracking-widest uppercase text-[var(--muted)] mb-4">
-            Why Choose Us
+            Why UniEDD
           </p>
           <h2
             className="text-4xl sm:text-5xl font-bold tracking-tight"
             style={{ fontFamily: "var(--font-playfair), serif" }}
           >
-            Everything you need to
+            Personal mentorship for
             <br />
-            <span className="bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] bg-clip-text text-transparent">master guitar</span>
+            <span className="bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] bg-clip-text text-transparent">creative growth</span>
           </h2>
         </div>
 

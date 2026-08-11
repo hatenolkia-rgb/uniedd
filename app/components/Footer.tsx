@@ -7,36 +7,35 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-                    <Image src="/logo.png" className="w-32 h-12" alt="logo" width={1000} height={1000} />
-            
+            <Image src="/logo.png" className="w-32 h-12" alt="logo" width={1000} height={1000} />
+
             <p className="mt-4 text-sm text-[var(--muted)] leading-relaxed">
-              Where music education meets passion. Learn guitar, understand
-              theory, and join a community of musicians.
+              UniEDD is a New Delhi-based academy offering personalised music, dance, and public speaking coaching to kids and adults.
             </p>
           </div>
 
           {/* Links */}
           <div>
-            <p className="text-sm font-medium mb-4">Learn</p>
+            <p className="text-sm font-medium mb-4">Programs</p>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Guitar Basics
+                <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Guitar
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Music Theory
+                <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Keyboard
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Advanced Techniques
+                <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Vocals
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Songwriting
+                <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Tabla
                 </a>
               </li>
             </ul>
@@ -46,23 +45,23 @@ export default function Footer() {
             <p className="text-sm font-medium mb-4">Company</p>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                <a href="#about" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
                   About
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Instructors
+                <a href="#pricing" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Pricing
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Blog
+                <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Programs
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Careers
+                <a href="#contact" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Contact
                 </a>
               </li>
             </ul>
@@ -72,23 +71,23 @@ export default function Footer() {
             <p className="text-sm font-medium mb-4">Connect</p>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Community
+                <a href="https://wa.me/918383857710" target="_blank" rel="noreferrer" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  WhatsApp
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Discord
+                <a href="tel:+918383857710" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Call us
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Instagram
+                <a href="#contact" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Enquire now
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  YouTube
+                <a href="https://wa.me/918383857710" target="_blank" rel="noreferrer" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Book a demo
                 </a>
               </li>
             </ul>
@@ -97,14 +96,14 @@ export default function Footer() {
 
         <div className="mt-16 pt-8 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-[var(--muted)]">
-            © 2026 Uniedd. All rights reserved.
+            © 2026 UniEDD. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <a href="#" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-              Privacy
+            <a href="#about" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+              About
             </a>
-            <a href="#" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-              Terms
+            <a href="#contact" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+              Contact
             </a>
           </div>
         </div>

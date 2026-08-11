@@ -37,20 +37,23 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-8">
-          <a href="#features" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-            Features
+          <a href="#about" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+            About
           </a>
           <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-            Courses
+            Programs
+          </a>
+          <a href="#pricing" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+            Pricing
           </a>
           <a href="#testimonials" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-            Community
+            Reviews
           </a>
           <a
-            href="#cta"
+            href="#contact"
             className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full hover:opacity-90 transition-opacity"
           >
-            Start Learning
+            Book a Demo
           </a>
         </div>
 
@@ -69,21 +72,24 @@ export default function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-[var(--border)] px-6 py-6 flex flex-col gap-4">
-          <a href="#features" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
-            Features
+          <a href="#about" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+            About
           </a>
           <a href="#courses" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
-            Courses
+            Programs
+          </a>
+          <a href="#pricing" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+            Pricing
           </a>
           <a href="#testimonials" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
-            Community
+            Reviews
           </a>
           <a
-            href="#cta"
+            href="#contact"
             className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full text-center"
             onClick={() => setMenuOpen(false)}
           >
-            Start Learning
+            Book a Demo
           </a>
         </div>
       )}

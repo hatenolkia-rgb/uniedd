@@ -8,36 +8,52 @@ gsap.registerPlugin(ScrollTrigger);
 
 const courses = [
   {
-    level: "Beginner",
-    title: "Guitar Foundations",
-    description: "From holding your first pick to playing your first song. Build a solid foundation.",
-    lessons: 24,
-    duration: "6 weeks",
+    level: "Beginner to Advanced",
+    title: "Guitar Class",
+    description: "Learn chords, rhythm, melody, fingerstyle, and confidence-building practice in structured weekly sessions.",
+    lessons: 1,
+    duration: "Live 1:1",
     tag: "Popular",
   },
   {
-    level: "Intermediate",
-    title: "Rhythm & Strumming",
-    description: "Master strumming patterns, barre chords, and develop your sense of rhythm.",
-    lessons: 32,
-    duration: "8 weeks",
+    level: "All Levels",
+    title: "Keyboard / Piano",
+    description: "Develop timing, hand coordination, and musical expression with personalised keyboard coaching.",
+    lessons: 1,
+    duration: "Live 1:1",
     tag: "New",
   },
   {
-    level: "Advanced",
-    title: "Lead Guitar & Soloing",
-    description: "Scales, improvisation, and techniques that make your playing sing.",
-    lessons: 28,
-    duration: "10 weeks",
+    level: "Kids & Adults",
+    title: "Vocals & Singing",
+    description: "Improve pitch, voice control, breathing, and performance confidence through guided vocal practice.",
+    lessons: 1,
+    duration: "Live 1:1",
     tag: null,
   },
   {
-    level: "All Levels",
-    title: "Music Theory Essentials",
-    description: "Understand harmony, melody, and composition to unlock creative freedom.",
-    lessons: 20,
-    duration: "5 weeks",
-    tag: "Essential",
+    level: "Traditional Rhythm",
+    title: "Tabla",
+    description: "Build taal, rhythm patterns, and deep musical sensitivity through traditional learning methods.",
+    lessons: 1,
+    duration: "Live 1:1",
+    tag: "Classic",
+  },
+  {
+    level: "Performance",
+    title: "Dance",
+    description: "Learn movement, rhythm, posture, and performance quality in a fun and encouraging format.",
+    lessons: 1,
+    duration: "Live 1:1",
+    tag: null,
+  },
+  {
+    level: "Confidence",
+    title: "Public Speaking",
+    description: "Strengthen voice, storytelling, presence, and speaking confidence for school, work, and leadership.",
+    lessons: 1,
+    duration: "Live 1:1",
+    tag: "In demand",
   },
 ];
 
@@ -94,16 +110,17 @@ export default function Courses() {
       <div className="max-w-7xl mx-auto">
         <div ref={headingRef} className="text-center mb-20">
           <p className="text-sm tracking-widest uppercase text-[var(--muted)] mb-4">
-            Courses
+            Programs
           </p>
           <h2
             className="text-4xl sm:text-5xl font-bold tracking-tight"
             style={{ fontFamily: "var(--font-playfair), serif" }}
           >
-            Find your <span className="italic text-[var(--brand-orange)]">path</span>
+            Learn what you love,
+            <span className="italic text-[var(--brand-orange)]"> one-to-one</span>
           </h2>
-          <p className="mt-4 text-[var(--muted)] max-w-md mx-auto">
-            Structured programs designed by professionals, built for real progress.
+          <p className="mt-4 text-[var(--muted)] max-w-lg mx-auto">
+            UniEDD offers live online coaching in the creative disciplines that shape confidence, performance, and expression.
           </p>
         </div>
 
@@ -148,7 +165,7 @@ export default function Courses() {
                       <path d="M4 19.5v-15A2.5 2.5 0 016.5 2H20v20H6.5a2.5 2.5 0 01-2.5-2.5z" />
                       <path d="M8 7h8M8 11h6" strokeLinecap="round" />
                     </svg>
-                    {course.lessons} lessons
+                    Personalised coaching
                   </span>
                 </div>
               </div>

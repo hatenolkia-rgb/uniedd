@@ -15,9 +15,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Uniedd — Learn Guitar & Music",
+  title: "UniEDD | Live 1:1 Music, Dance & Public Speaking Classes",
   description:
-    "Master the art of guitar and music with interactive lessons, expert instructors, and a community of passionate musicians.",
+    "UniEDD is a New Delhi-based academy offering live 1-on-1 online classes in Guitar, Keyboard, Vocals, Tabla, Dance, and Public Speaking for kids and adults.",
 };
 
 export default function RootLayout({
@@ -38,7 +38,7 @@ export default function RootLayout({
 
             {/* WhatsApp Button */}
             <span className="absolute inset-0 flex items-center justify-center rounded-full bg-[#25D366] hover:scale-110 duration-300">
-              <Link href="https://wa.me/917042209741">
+              <Link href="https://wa.me/918383857710" target="_blank" rel="noreferrer">
                 <FaWhatsapp className="text-2xl text-white" />
               </Link>
             </span>

@@ -93,7 +93,7 @@ export default function CTA() {
   }, []);
 
   return (
-    <section ref={sectionRef} id="cta" className="py-24 px-6 bg-white">
+    <section ref={sectionRef} id="contact" className="py-24 px-6 bg-white">
       <div className="max-w-7xl mx-auto">
         <div ref={contentRef} className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center border border-[var(--border)] rounded-3xl p-10 sm:p-14 overflow-hidden relative">
           {/* Animated background elements */}
@@ -123,12 +123,12 @@ export default function CTA() {
               className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] tracking-tight mb-3"
               style={{ fontFamily: "var(--font-playfair), serif" }}
             >
-              Ready to start your
+              Book a free demo and
               <br />
-              musical journey?
+              start your next chapter.
             </h2>
             <p className="text-[var(--muted)] mb-8 text-sm leading-relaxed">
-              Join thousands of students who discovered their passion. Sign up and get your first lesson free.
+              Tell us your age, interest, and goals. We’ll match you with the right mentor and help you begin the right program for your growth.
             </p>
 
             <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
@@ -169,16 +169,18 @@ export default function CTA() {
               >
                 <option value="" disabled>What do you want to learn?</option>
                 <option value="Guitar">Guitar</option>
-                <option value="Piano">Piano</option>
-                <option value="Both">Both</option>
-                <option value="Music Theory">Music Theory</option>
+                <option value="Keyboard">Keyboard</option>
+                <option value="Vocals">Vocals</option>
+                <option value="Tabla">Tabla</option>
+                <option value="Dance">Dance</option>
+                <option value="Public Speaking">Public Speaking</option>
               </select>
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-xl text-sm font-semibold hover:opacity-90 hover:-translate-y-px transition-all duration-300 shadow-lg shadow-[var(--brand-blue)]/20 mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? "Sending..." : "Start Free Trial"}
+                {loading ? "Sending..." : "Book My Free Demo"}
               </button>
               {status && (
                 <p className={`text-sm mt-1 ${status.type === "success" ? "text-green-600" : "text-red-500"}`}>
