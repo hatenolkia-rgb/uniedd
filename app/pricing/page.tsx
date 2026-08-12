@@ -58,9 +58,8 @@ export default function PricingPage() {
           ].map((plan) => (
             <div key={plan.name} className="rounded-3xl border border-[var(--border)] bg-white p-8 shadow-sm">
               <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">{plan.name}</p>
-              <div className="mt-5 flex items-end gap-2">
-                <span className="text-4xl font-bold">{plan.price}</span>
-                <span className="pb-1 text-[var(--muted)]">{plan.note}</span>
+              <div className="mt-5">
+                <span className="text-2xl font-bold">Contact us for pricing</span>
               </div>
 
               <ul className="mt-7 space-y-3 text-sm text-[var(--foreground)]">
@@ -80,7 +79,7 @@ export default function PricingPage() {
                 rel="noreferrer"
                 className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] px-5 py-3 text-sm font-semibold text-white"
               >
-                Book a Demo
+                Get Pricing on WhatsApp
               </a>
             </div>
           ))}

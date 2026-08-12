@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { FaGuitar, FaMicrophoneAlt, FaBullhorn, FaChild } from "react-icons/fa";
-import { GiGrandPiano, GiDrum } from "react-icons/gi";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -13,7 +12,7 @@ type Category = (typeof categories)[number];
 
 const courses: {
   category: Category;
-  icon: React.ElementType;
+  image: string;
   title: string;
   tagline: string;
   ageGroup: string;
@@ -21,11 +20,10 @@ const courses: {
   format: string;
   description: string;
   tag: string | null;
-  gradient: string;
 }[] = [
   {
     category: "Music",
-    icon: FaGuitar,
+    image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=800&q=70&auto=format&fit=crop",
     title: "Online Guitar Classes for Kids",
     tagline: "Strum, create & shine — on stage & in life",
     ageGroup: "5-14 Years",
@@ -34,11 +32,10 @@ const courses: {
     description:
       "Learn chords, rhythm, melody, fingerstyle, and confidence-building practice in structured weekly sessions with a dedicated coach.",
     tag: "Popular",
-    gradient: "from-[var(--brand-blue)] to-[var(--brand-orange)]",
   },
   {
     category: "Music",
-    icon: GiGrandPiano,
+    image: "/piano-hero.jpg",
     title: "Online Keyboard & Piano Classes for Kids",
     tagline: "Every key unlocks a little more confidence",
     ageGroup: "5-14 Years",
@@ -47,11 +44,10 @@ const courses: {
     description:
       "Develop timing, hand coordination, and musical expression with personalised keyboard coaching designed around your child's pace.",
     tag: "New",
-    gradient: "from-[var(--brand-orange)] to-[var(--brand-blue)]",
   },
   {
     category: "Music",
-    icon: FaMicrophoneAlt,
+    image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=800&q=70&auto=format&fit=crop",
     title: "Online Vocals & Singing Classes for Kids",
     tagline: "Find your voice, then find your stage",
     ageGroup: "5-16 Years",
@@ -60,11 +56,10 @@ const courses: {
     description:
       "Improve pitch, voice control, breathing, and performance confidence through guided vocal practice with regular performance opportunities.",
     tag: null,
-    gradient: "from-[var(--brand-blue)] to-[var(--brand-orange)]",
   },
   {
     category: "Music",
-    icon: GiDrum,
+    image: "https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=800&q=70&auto=format&fit=crop",
     title: "Online Tabla Classes for Kids",
     tagline: "Build rhythm, build discipline",
     ageGroup: "6-16 Years",
@@ -73,11 +68,10 @@ const courses: {
     description:
       "Build taal, rhythm patterns, and deep musical sensitivity through traditional learning methods passed down through generations.",
     tag: "Classic",
-    gradient: "from-[var(--brand-orange)] to-[var(--brand-blue)]",
   },
   {
     category: "Dance",
-    icon: FaChild,
+    image: "https://images.unsplash.com/photo-1547153760-18fc86324498?w=800&q=70&auto=format&fit=crop",
     title: "Online Dance Classes for Kids",
     tagline: "Move, express & perform with joy",
     ageGroup: "4-14 Years",
@@ -86,11 +80,10 @@ const courses: {
     description:
       "Learn movement, rhythm, posture, and performance quality in a fun and encouraging format that builds discipline and self-expression.",
     tag: null,
-    gradient: "from-[var(--brand-blue)] to-[var(--brand-orange)]",
   },
   {
     category: "Public Speaking",
-    icon: FaBullhorn,
+    image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&q=70&auto=format&fit=crop",
     title: "Online Public Speaking Classes for Kids",
     tagline: "Build sharper communication for school and life",
     ageGroup: "7-17 Years",
@@ -99,7 +92,6 @@ const courses: {
     description:
       "Strengthen voice, storytelling, presence, and speaking confidence for school, work, and leadership through live guided practice.",
     tag: "In demand",
-    gradient: "from-[var(--brand-orange)] to-[var(--brand-blue)]",
   },
 ];
 
@@ -200,7 +192,6 @@ export default function Courses() {
 
         <div ref={cardsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((course, index) => {
-            const Icon = course.icon;
             const isOpen = expanded === index;
             return (
               <div
@@ -208,8 +199,15 @@ export default function Courses() {
                 className="group relative rounded-3xl border border-[var(--border)] hover:border-[var(--brand-blue)]/30 hover:shadow-xl transition-all duration-500 overflow-hidden bg-white flex flex-col"
               >
                 {/* Visual header */}
-                <div className={`relative h-40 bg-gradient-to-br ${course.gradient} flex items-center justify-center`}>
-                  <Icon className="text-white/90" size={52} />
+                <div className="relative h-44 overflow-hidden">
+                  <Image
+                    src={course.image}
+                    alt={course.title}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
                   {course.tag && (
                     <span className="absolute top-4 right-4 text-xs font-medium text-[var(--foreground)] bg-white px-3 py-1 rounded-full shadow-sm">
                       {course.tag}

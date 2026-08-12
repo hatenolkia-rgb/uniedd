@@ -15,7 +15,7 @@ export default function Footer() {
             <Image src="/logo.png" className="w-32 h-12 object-contain" alt="UniEDD logo" width={2332} height={908} />
 
             <p className="mt-4 text-sm text-[var(--muted)] leading-relaxed">
-              UniEDD is a New Delhi-based academy offering personalised music, dance, and public speaking coaching to kids and adults.
+              UniEDD is a New Delhi-based academy offering personalised online music, dance, and public speaking coaching to kids and adults.
             </p>
           </div>
 
