@@ -24,7 +24,7 @@ const courses: {
   {
     category: "Music",
     image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=800&q=70&auto=format&fit=crop",
-    title: "Online Guitar Classes for Kids",
+    title: "Online Guitar Classes for Kids & Adults",
     tagline: "Strum, create & shine — on stage & in life",
     ageGroup: "5-45 Years",
     duration: "48 sessions in 6 months for beginner level",
@@ -36,19 +36,19 @@ const courses: {
   {
     category: "Music",
     image: "/piano-hero.jpg",
-    title: "Online Keyboard & Piano Classes for Kids",
+    title: "Online Keyboard & Piano Classes for Kids & Adults",
     tagline: "Every key unlocks a little more confidence",
     ageGroup: "5-45 Years",
     duration: "48 sessions in 6 months for beginner level",
     format: "Group or Individual Classes",
     description:
-      "Develop timing, hand coordination, and musical expression with personalised keyboard coaching designed around your child's pace.",
+      "Develop timing, hand coordination, and musical expression with personalised keyboard coaching designed around your pace.",
     tag: "New",
   },
   {
     category: "Music",
     image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=800&q=70&auto=format&fit=crop",
-    title: "Online Vocals & Singing Classes for Kids",
+    title: "Online Vocals & Singing Classes for Kids & Adults",
     tagline: "Find your voice, then find your stage",
     ageGroup: "5-45 Years",
     duration: "48 sessions in 6 months for beginner level",
@@ -60,7 +60,7 @@ const courses: {
   {
     category: "Music",
     image: "https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=800&q=70&auto=format&fit=crop",
-    title: "Online Tabla Classes for Kids",
+    title: "Online Tabla Classes for Kids & Adults",
     tagline: "Build rhythm, build discipline",
     ageGroup: "5-45 Years",
     duration: "48 sessions in 6 months for beginner level",
@@ -72,7 +72,7 @@ const courses: {
   {
     category: "Dance",
     image: "https://images.unsplash.com/photo-1547153760-18fc86324498?w=800&q=70&auto=format&fit=crop",
-    title: "Online Dance Classes for Kids",
+    title: "Online Dance Classes for Kids & Adults",
     tagline: "Move, express & perform with joy",
     ageGroup: "5-45 Years",
     duration: "48 sessions in 6 months for beginner level",
@@ -84,8 +84,8 @@ const courses: {
   {
     category: "Public Speaking",
     image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&q=70&auto=format&fit=crop",
-    title: "Online Public Speaking Classes for Kids",
-    tagline: "Build sharper communication for school and life",
+    title: "Online Public Speaking Classes for Kids & Adults",
+    tagline: "Build sharper communication for school, work & life",
     ageGroup: "5-45 Years",
     duration: "48 sessions in 6 months for beginner level",
     format: "Group or Individual Classes",
