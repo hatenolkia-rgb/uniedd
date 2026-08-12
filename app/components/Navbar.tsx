@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
-import Image from "next/image";
 
 export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
@@ -33,7 +32,8 @@ export default function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <Image src="/logo.png" className="w-32 h-12" alt="logo" width={1000} height={1000} />
+        {/* eslint-disable-next-line @next/next/no-img-element -- vector logo, no benefit from next/image optimization */}
+        <img src="/logo.svg" className="w-32 h-12" alt="UniEDD logo" />
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-7">

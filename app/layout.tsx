@@ -14,10 +14,33 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
 });
 
+const siteTitle = "UniEDD | Live 1:1 Music, Dance & Public Speaking Classes";
+const siteDescription =
+  "UniEDD is a New Delhi-based academy offering live 1-on-1 online classes in Guitar, Keyboard, Vocals, Tabla, Dance, and Public Speaking for kids and adults.";
+
 export const metadata: Metadata = {
-  title: "UniEDD | Live 1:1 Music, Dance & Public Speaking Classes",
-  description:
-    "UniEDD is a New Delhi-based academy offering live 1-on-1 online classes in Guitar, Keyboard, Vocals, Tabla, Dance, and Public Speaking for kids and adults.",
+  metadataBase: new URL("https://uniedd.com"),
+  title: siteTitle,
+  description: siteDescription,
+  openGraph: {
+    title: siteTitle,
+    description: siteDescription,
+    url: "https://uniedd.com",
+    siteName: "UniEDD",
+    images: [{ url: "/logo.png", width: 2332, height: 908, alt: "UniEDD" }],
+    locale: "en_IN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: ["/logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
