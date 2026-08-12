@@ -1,8 +1,31 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Image from "next/image";
+
+const HERO_SLIDES = [
+  {
+    src: "/piano-hero.jpg",
+    alt: "Close-up of piano keys, representing UniEDD's live piano coaching",
+    label: "Piano",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=800&q=70&auto=format&fit=crop",
+    alt: "Close-up of hands playing an acoustic guitar, representing UniEDD's live guitar coaching",
+    label: "Guitar",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=800&q=70&auto=format&fit=crop",
+    alt: "Stage microphone, representing UniEDD's live vocals coaching",
+    label: "Vocals",
+  },
+  {
+    src: "https://images.unsplash.com/photo-1547153760-18fc86324498?w=800&q=70&auto=format&fit=crop",
+    alt: "Dancer mid-performance, representing UniEDD's live dance coaching",
+    label: "Dance",
+  },
+];
 
 export default function Hero() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -10,6 +33,15 @@ export default function Hero() {
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
   const lottieWrapRef = useRef<HTMLDivElement>(null);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  // Auto-rotate the hero photo through each program
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveSlide((i) => (i + 1) % HERO_SLIDES.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -86,7 +118,7 @@ export default function Hero() {
               href="#contact"
               className="px-7 py-3.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full text-sm font-semibold shadow-lg shadow-[var(--brand-blue)]/10 hover:shadow-xl hover:-translate-y-px transition-all duration-300"
             >
-              Book a Free Demo
+              Book a Demo
             </a>
             <a href="#courses" className="flex items-center gap-2 text-sm font-medium text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               <span className="w-9 h-9 rounded-full border border-[var(--border)] flex items-center justify-center bg-white shadow-sm">
@@ -122,19 +154,38 @@ export default function Hero() {
 
           <div
             ref={lottieWrapRef}
-            className="relative w-full max-w-md lg:max-w-lg rounded-3xl overflow-hidden border border-[var(--border)] shadow-2xl shadow-black/10"
+            className="relative w-full max-w-md lg:max-w-lg aspect-[800/533] rounded-3xl overflow-hidden border border-[var(--border)] shadow-2xl shadow-black/10"
             style={{ transformStyle: "preserve-3d" }}
           >
-            <Image
-              src="/piano-hero.jpg"
-              alt="Close-up of piano keys, representing UniEDD's live music coaching"
-              width={800}
-              height={533}
-              priority
-              className="w-full h-auto object-cover"
-            />
+            {HERO_SLIDES.map((slide, i) => (
+              <Image
+                key={slide.src}
+                src={slide.src}
+                alt={slide.alt}
+                fill
+                priority={i === 0}
+                sizes="(max-width: 1024px) 90vw, 40vw"
+                className={`object-cover transition-opacity duration-1000 ${
+                  i === activeSlide ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            ))}
             {/* Brand gradient wash to tie the photo into the palette */}
             <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-blue)]/15 via-transparent to-[var(--brand-orange)]/10 mix-blend-multiply pointer-events-none" />
+
+            {/* Slide indicators */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+              {HERO_SLIDES.map((slide, i) => (
+                <button
+                  key={slide.label}
+                  onClick={() => setActiveSlide(i)}
+                  aria-label={`Show ${slide.label} photo`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    i === activeSlide ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/70"
+                  }`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>

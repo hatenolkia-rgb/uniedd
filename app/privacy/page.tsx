@@ -44,6 +44,13 @@ export default function PrivacyPage() {
                 <li>
                   <span className="font-medium">Technical data</span> such as browser type, device information, and
                   general usage of our website, collected automatically to keep the site secure and working correctly.
+                  This includes an approximate location (derived from IP address) used only to determine whether a
+                  demo booking fee applies.
+                </li>
+                <li>
+                  <span className="font-medium">Payment data</span>, for bookings made from India where a demo fee
+                  applies. Payments are processed by Razorpay; we do not receive or store your card, UPI, or bank
+                  details — only confirmation that a payment was completed.
                 </li>
               </ul>
             </div>
@@ -63,7 +70,7 @@ export default function PrivacyPage() {
             <div>
               <h2 className="text-lg font-semibold mb-2">3. How we use your information</h2>
               <ul className="list-disc pl-5 space-y-1.5">
-                <li>To respond to enquiries and follow up on free demo requests.</li>
+                <li>To respond to enquiries and follow up on demo bookings.</li>
                 <li>To schedule and deliver classes, and to communicate about your (or your child&rsquo;s) learning.</li>
                 <li>To send confirmation emails and, where relevant, service updates.</li>
                 <li>To improve our website, programs, and customer support.</li>

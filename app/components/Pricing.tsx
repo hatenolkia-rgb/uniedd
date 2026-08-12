@@ -156,7 +156,7 @@ export default function Pricing() {
                     : "bg-[var(--foreground)] text-white hover:opacity-90"
                 }`}
               >
-                Book a Free Demo
+                Book a Demo
               </a>
             </div>
           ))}

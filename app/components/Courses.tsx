@@ -247,7 +247,7 @@ export default function Courses() {
                       href="#contact"
                       className="w-full text-center px-6 py-3 bg-[var(--brand-blue)]/80 text-white rounded-full text-sm font-semibold hover:opacity-90 hover:-translate-y-px transition-all duration-300"
                     >
-                      Book A Free Demo
+                      Book a Demo
                     </a>
                     <button
                       onClick={() => setExpanded(isOpen ? null : index)}

@@ -36,7 +36,7 @@ export default function Navbar() {
         <Image src="/logo.png" className="w-32 h-12 object-contain" alt="UniEDD logo" width={2332} height={908} priority />
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-7">
+        <div className="hidden xl:flex items-center gap-5">
           <a href="#about" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             About
           </a>
@@ -56,7 +56,7 @@ export default function Navbar() {
             href="https://lms.uniedd.com"
             target="_blank"
             rel="noreferrer"
-            className="text-sm px-4 py-2 rounded-full border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--brand-blue)]/50 hover:text-[var(--brand-blue)] transition-colors"
+            className="text-sm px-3.5 py-2 rounded-full border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--brand-blue)]/50 hover:text-[var(--brand-blue)] transition-colors whitespace-nowrap"
           >
             Teacher Login
           </a>
@@ -64,14 +64,14 @@ export default function Navbar() {
             href="https://lms.uniedd.com"
             target="_blank"
             rel="noreferrer"
-            className="text-sm px-4 py-2 rounded-full border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--brand-blue)]/50 hover:text-[var(--brand-blue)] transition-colors"
+            className="text-sm px-3.5 py-2 rounded-full border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--brand-blue)]/50 hover:text-[var(--brand-blue)] transition-colors whitespace-nowrap"
           >
             Student Login
           </a>
 
           <a
             href="#contact"
-            className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full hover:opacity-90 hover:-translate-y-px transition-all duration-300 shadow-md shadow-[var(--brand-blue)]/20"
+            className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full hover:opacity-90 hover:-translate-y-px transition-all duration-300 shadow-md shadow-[var(--brand-blue)]/20 whitespace-nowrap"
           >
             Book a Demo
           </a>
@@ -79,7 +79,7 @@ export default function Navbar() {
 
         {/* Mobile menu button */}
         <button
-          className="md:hidden flex flex-col gap-1.5"
+          className="xl:hidden flex flex-col gap-1.5"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
         >
@@ -91,7 +91,7 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-[var(--border)] px-6 py-6 flex flex-col gap-4">
+        <div className="xl:hidden bg-white/95 backdrop-blur-md border-t border-[var(--border)] px-6 py-6 flex flex-col gap-4">
           <a href="#about" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
             About
           </a>

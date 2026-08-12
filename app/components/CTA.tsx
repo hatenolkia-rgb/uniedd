@@ -7,30 +7,56 @@ import { FaUser, FaPhoneAlt, FaRegEnvelope, FaRegCalendarAlt, FaRegClock, FaChec
 
 gsap.registerPlugin(ScrollTrigger);
 
-const TIME_SLOTS = [
-  "10:00 AM",
-  "11:00 AM",
-  "12:00 PM",
-  "1:00 PM",
-  "2:00 PM",
-  "3:00 PM",
-  "4:00 PM",
-  "5:00 PM",
-  "6:00 PM",
-];
+const DEMO_FEE_INR = 199;
 
 // Decorative preview grid — Mon-start, 4 weeks. "today" and "selected" are just illustrative.
 const CALENDAR_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
 const TODAY_INDEX = 13;
 const SELECTED_INDEX = 17;
-const PREVIEW_CHIPS = ["10 AM", "11 AM", "2 PM", "4 PM"];
+const PREVIEW_CHIPS = ["6:30 AM", "1:00 PM", "7:45 PM", "11:00 PM"];
 const SELECTED_CHIP_INDEX = 2;
 
 const INCLUDED = [
   "30-minute live 1:1 session",
   "Meet your mentor before you commit",
-  "No cost, no card required",
+  "Available 24/7, any time zone",
 ];
+
+interface RazorpayResponse {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
+
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  prefill: { name: string; email: string; contact: string };
+  theme: { color: string };
+  handler: (response: RazorpayResponse) => void;
+  modal: { ondismiss: () => void };
+}
+
+declare global {
+  interface Window {
+    Razorpay: new (options: RazorpayOptions) => { open: () => void };
+  }
+}
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 export default function CTA() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -39,25 +65,23 @@ export default function CTA() {
   const previewRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  // null = still checking; true = India (paid); false = elsewhere (free)
+  const [requiresPayment, setRequiresPayment] = useState<boolean | null>(null);
 
-  // Earliest bookable date is today, in the visitor's local time
-  const minDate = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
+  useEffect(() => {
+    fetch("/api/geo")
+      .then((r) => r.json())
+      .then((d) => setRequiresPayment(d.country === "IN"))
+      .catch(() => setRequiresPayment(false)); // fail open to "free" rather than blocking bookings
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setStatus(null);
+    setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const demoDate = formData.get("demoDate") as string;
-
-    // Skip Sundays — we're closed
-    const [year, month, day] = demoDate.split("-").map(Number);
-    if (new Date(year, month - 1, day).getDay() === 0) {
-      setStatus({ type: "error", message: "We're closed on Sundays — please pick another date." });
-      return;
-    }
-
-    setLoading(true);
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const data = {
       firstName: formData.get("firstName") as string,
@@ -65,31 +89,102 @@ export default function CTA() {
       email: formData.get("email") as string,
       phone: formData.get("phone") as string,
       instrument: formData.get("instrument") as string,
-      demoDate,
+      demoDate: formData.get("demoDate") as string,
       demoTime: formData.get("demoTime") as string,
+      timezone,
     };
 
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        setStatus({
-          type: "success",
-          message: `Demo booked for ${demoDate} at ${data.demoTime}! A confirmation has been sent to your email.`,
+    const finishBooking = async (paymentFields?: {
+      razorpayOrderId: string;
+      razorpayPaymentId: string;
+      razorpaySignature: string;
+    }) => {
+      try {
+        const res = await fetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...data, ...paymentFields }),
         });
-        (e.target as HTMLFormElement).reset();
-      } else {
-        setStatus({ type: "error", message: result.error || "Something went wrong." });
+        const result = await res.json();
+        if (res.ok) {
+          setStatus({
+            type: "success",
+            message: `Demo booked for ${data.demoDate} at ${data.demoTime}! A confirmation has been sent to your email.`,
+          });
+          (e.target as HTMLFormElement).reset();
+        } else {
+          setStatus({ type: "error", message: result.error || "Something went wrong." });
+        }
+      } catch {
+        setStatus({ type: "error", message: "Network error. Please try again." });
+      } finally {
+        setLoading(false);
       }
+    };
+
+    if (!requiresPayment) {
+      await finishBooking();
+      return;
+    }
+
+    // India flow: pay ₹199 via Razorpay before the booking is created
+    try {
+      const orderRes = await fetch("/api/create-order", { method: "POST" });
+      const order = await orderRes.json();
+      if (!orderRes.ok) {
+        setStatus({ type: "error", message: order.error || "Could not start payment." });
+        setLoading(false);
+        return;
+      }
+
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setStatus({ type: "error", message: "Could not load payment gateway. Please try again." });
+        setLoading(false);
+        return;
+      }
+
+      const razorpay = new window.Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency,
+        name: "UniEDD",
+        description: `Demo booking — ${data.instrument}`,
+        order_id: order.orderId,
+        prefill: { name: `${data.firstName} ${data.lastName}`.trim(), email: data.email, contact: data.phone },
+        theme: { color: "#3B82C4" },
+        handler: async (response: RazorpayResponse) => {
+          const verifyRes = await fetch("/api/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+            }),
+          });
+          const verifyResult = await verifyRes.json();
+          if (!verifyRes.ok || !verifyResult.verified) {
+            setStatus({ type: "error", message: "Payment could not be verified. Please contact us." });
+            setLoading(false);
+            return;
+          }
+          await finishBooking({
+            razorpayOrderId: response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature,
+          });
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            setStatus({ type: "error", message: "Payment cancelled — your demo wasn't booked." });
+          },
+        },
+      });
+      razorpay.open();
     } catch {
-      setStatus({ type: "error", message: "Network error. Please try again." });
-    } finally {
+      setStatus({ type: "error", message: "Could not start payment. Please try again." });
       setLoading(false);
     }
   };
@@ -222,7 +317,7 @@ export default function CTA() {
               className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] tracking-tight mb-3"
               style={{ fontFamily: "var(--font-playfair), serif" }}
             >
-              Book a free demo and
+              Book a demo and
               <br />
               start your next chapter.
             </h2>
@@ -309,38 +404,35 @@ export default function CTA() {
                       type="date"
                       name="demoDate"
                       required
-                      min={minDate}
                       className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
                     />
                   </div>
                   <div className="relative">
                     <FaRegClock className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)] z-10" size={13} />
-                    <select
+                    <input
+                      type="time"
                       name="demoTime"
                       required
-                      className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--muted)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors appearance-none"
-                      defaultValue=""
-                    >
-                      <option value="" disabled>Preferred time</option>
-                      {TIME_SLOTS.map((slot) => (
-                        <option key={slot} value={slot}>{slot}</option>
-                      ))}
-                    </select>
+                      className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
+                    />
                   </div>
                 </div>
-                <p className="text-xs text-[var(--muted)] mt-2">Mon–Sat, 10 AM–7 PM IST. We&rsquo;ll confirm your slot by email.</p>
+                <p className="text-xs text-[var(--muted)] mt-2">
+                  Open 24/7 — pick any date and time in your own time zone. We&rsquo;ll confirm your slot by email.
+                </p>
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || requiresPayment === null}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-xl text-sm font-semibold hover:opacity-90 hover:-translate-y-px transition-all duration-300 shadow-lg shadow-[var(--brand-blue)]/20 mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   "Booking..."
                 ) : (
                   <>
-                    <FaPaperPlane size={12} /> Book My Free Demo
+                    <FaPaperPlane size={12} />
+                    {requiresPayment ? `Book a Demo — ₹${DEMO_FEE_INR}` : "Book a Demo"}
                   </>
                 )}
               </button>
@@ -357,9 +449,22 @@ export default function CTA() {
             ref={previewRef}
             className="relative bg-[#fafafa] rounded-3xl border border-[var(--border)] p-8 overflow-hidden"
           >
-            <p className="text-[10px] tracking-widest uppercase text-[var(--muted)] mb-4 font-medium">
-              Your Free Demo, At a Glance
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[10px] tracking-widest uppercase text-[var(--muted)] font-medium">
+                Your Demo, At a Glance
+              </p>
+              {requiresPayment !== null && (
+                <span
+                  className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
+                    requiresPayment
+                      ? "bg-[var(--brand-orange)]/10 text-[var(--brand-orange)]"
+                      : "bg-green-500/10 text-green-600"
+                  }`}
+                >
+                  {requiresPayment ? `₹${DEMO_FEE_INR}` : "FREE"}
+                </span>
+              )}
+            </div>
 
             {/* Mini calendar */}
             <div className="mb-6">
@@ -388,7 +493,7 @@ export default function CTA() {
 
             {/* Time chips */}
             <div className="mb-6">
-              <p className="text-[10px] tracking-widest uppercase text-[var(--muted)] mb-2 font-medium">Available Times</p>
+              <p className="text-[10px] tracking-widest uppercase text-[var(--muted)] mb-2 font-medium">Book Any Time, Day or Night</p>
               <div className="flex flex-wrap gap-2">
                 {PREVIEW_CHIPS.map((chip, i) => (
                   <span

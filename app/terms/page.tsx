@@ -34,8 +34,8 @@ export default function TermsPage() {
               <h2 className="text-lg font-semibold mb-2">1. Our services</h2>
               <p>
                 UniEDD provides live, online, one-to-one and group coaching in Guitar, Keyboard/Piano, Vocals,
-                Tabla, Dance, and Public Speaking, for kids and adults. Free demo sessions are offered subject to
-                availability of trainers and time slots.
+                Tabla, Dance, and Public Speaking, for kids and adults. Demo sessions can be booked online 24/7,
+                subject to availability of trainers.
               </p>
             </div>
 
@@ -67,6 +67,11 @@ export default function TermsPage() {
                 and is subject to change without prior notice; changes will not affect an already-confirmed billing
                 cycle. Payment terms, refund eligibility, and cancellation windows are confirmed at the time of
                 enrolment.
+              </p>
+              <p className="mt-3">
+                A one-time demo booking fee of ₹199 applies to visitors booking from India, determined by your
+                location at the time of booking; this fee is processed securely via Razorpay. Visitors booking from
+                outside India are not charged for the demo session.
               </p>
             </div>
 
