@@ -2,8 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
-import Lottie from "lottie-react";
-import singingAnimation from "@/public/Singing and playing Music with Guitar.json";
+import Image from "next/image";
 
 export default function Hero() {
   const heroRef = useRef<HTMLDivElement>(null);
@@ -116,22 +115,26 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Right — Lottie Animation */}
+        {/* Right — Hero photo */}
         <div className="relative flex items-center justify-center min-h-[400px] lg:min-h-[550px]">
           {/* Soft glow behind */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full opacity-20 blur-[80px]" style={{ background: "radial-gradient(circle, var(--brand-blue), var(--brand-orange), transparent)" }} />
 
           <div
             ref={lottieWrapRef}
-            className="relative w-full max-w-md lg:max-w-lg"
+            className="relative w-full max-w-md lg:max-w-lg rounded-3xl overflow-hidden border border-[var(--border)] shadow-2xl shadow-black/10"
             style={{ transformStyle: "preserve-3d" }}
           >
-            <Lottie
-              animationData={singingAnimation}
-              loop
-              autoplay
-              className="w-full h-auto"
+            <Image
+              src="/piano-hero.jpg"
+              alt="Close-up of piano keys, representing UniEDD's live music coaching"
+              width={800}
+              height={533}
+              priority
+              className="w-full h-auto object-cover"
             />
+            {/* Brand gradient wash to tie the photo into the palette */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--brand-blue)]/15 via-transparent to-[var(--brand-orange)]/10 mix-blend-multiply pointer-events-none" />
           </div>
         </div>
       </div>
