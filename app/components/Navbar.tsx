@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import Image from "next/image";
 
 export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
@@ -32,8 +33,7 @@ export default function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        {/* eslint-disable-next-line @next/next/no-img-element -- vector logo, no benefit from next/image optimization */}
-        <img src="/logo.svg" className="w-32 h-12" alt="UniEDD logo" />
+        <Image src="/logo.png" className="w-32 h-12 object-contain" alt="UniEDD logo" width={2332} height={908} priority />
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-7">
@@ -43,7 +43,7 @@ export default function Navbar() {
           <a href="#courses" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             Programs
           </a>
-          <a href="#pricing" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
+          <a href="/pricing" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             Pricing
           </a>
           <a href="#testimonials" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
@@ -98,7 +98,7 @@ export default function Navbar() {
           <a href="#courses" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
             Programs
           </a>
-          <a href="#pricing" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+          <a href="/pricing" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
             Pricing
           </a>
           <a href="#testimonials" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { FaWhatsapp, FaPhoneAlt } from "react-icons/fa";
 
 export default function Footer() {
@@ -11,8 +12,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            {/* eslint-disable-next-line @next/next/no-img-element -- vector logo, no benefit from next/image optimization */}
-            <img src="/logo.svg" className="w-32 h-12" alt="UniEDD logo" />
+            <Image src="/logo.png" className="w-32 h-12 object-contain" alt="UniEDD logo" width={2332} height={908} />
 
             <p className="mt-4 text-sm text-[var(--muted)] leading-relaxed">
               UniEDD is a New Delhi-based academy offering personalised music, dance, and public speaking coaching to kids and adults.
@@ -55,7 +55,7 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#pricing" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                <a href="/pricing" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
                   Pricing
                 </a>
               </li>
