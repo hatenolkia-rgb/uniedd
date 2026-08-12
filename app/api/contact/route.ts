@@ -4,14 +4,40 @@ import nodemailer from "nodemailer";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { firstName, lastName, email, phone, instrument } = body;
+    const { firstName, lastName, email, phone, instrument, demoDate, demoTime } = body;
 
-    if (!firstName || !email || !phone || !instrument) {
+    if (!firstName || !email || !phone || !instrument || !demoDate || !demoTime) {
       return NextResponse.json(
         { error: "Please fill all required fields." },
         { status: 400 }
       );
     }
+
+    // Reject Sundays and past dates server-side too (client validation can be bypassed)
+    const [year, month, day] = demoDate.split("-").map(Number);
+    const chosenDate = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (Number.isNaN(chosenDate.getTime()) || chosenDate < today) {
+      return NextResponse.json(
+        { error: "Please choose a valid, upcoming date." },
+        { status: 400 }
+      );
+    }
+    if (chosenDate.getDay() === 0) {
+      return NextResponse.json(
+        { error: "We're closed on Sundays. Please choose another date." },
+        { status: 400 }
+      );
+    }
+
+    const formattedDate = chosenDate.toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -25,15 +51,16 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: process.env.MAIL_ID,
       to: process.env.MAIL_ID,
-      subject: `New Student Inquiry - ${firstName} ${lastName}`,
+      subject: `New Demo Booking - ${firstName} ${lastName} - ${formattedDate}`,
       html: `
-        <h2>New Student Registration</h2>
+        <h2>New Demo Booking</h2>
         <p><strong>Name:</strong> ${firstName} ${lastName}</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Phone:</strong> ${phone}</p>
         <p><strong>Instrument:</strong> ${instrument}</p>
+        <p><strong>Requested slot:</strong> ${formattedDate} at ${demoTime}</p>
         <br/>
-        <p>This inquiry was submitted from the Uniedd website.</p>
+        <p>This booking was submitted from the Uniedd website. Confirm the slot with the student, or follow up on WhatsApp if it needs to be rescheduled.</p>
       `,
     });
 
@@ -41,15 +68,18 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: process.env.MAIL_ID,
       to: email,
-      subject: "Welcome to Uniedd — Your Musical Journey Starts Here!",
+      subject: `Your UniEDD Demo is Booked — ${formattedDate}`,
       html: `
         <h2>Hi ${firstName},</h2>
-        <p>Thank you for signing up for Uniedd! We're excited to have you on board.</p>
-        <p>You've expressed interest in learning <strong>${instrument}</strong>. Our team will be in touch shortly with next steps to get you started.</p>
+        <p>Thanks for booking a free demo with UniEDD! Here are your details:</p>
+        <p>
+          <strong>Program:</strong> ${instrument}<br/>
+          <strong>Date:</strong> ${formattedDate}<br/>
+          <strong>Time:</strong> ${demoTime} IST
+        </p>
+        <p>Our team will reach out on ${phone} to confirm this slot shortly. If you need to reschedule, just reply to this email or message us on WhatsApp.</p>
         <br/>
-        <p>In the meantime, feel free to explore our courses.</p>
-        <br/>
-        <p>— The Uniedd Team</p>
+        <p>— The UniEDD Team</p>
       `,
     });
 

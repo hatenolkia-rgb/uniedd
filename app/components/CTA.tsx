@@ -8,6 +8,18 @@ import guitaristAnimation from "@/public/Guitarist.json";
 
 gsap.registerPlugin(ScrollTrigger);
 
+const TIME_SLOTS = [
+  "10:00 AM",
+  "11:00 AM",
+  "12:00 PM",
+  "1:00 PM",
+  "2:00 PM",
+  "3:00 PM",
+  "4:00 PM",
+  "5:00 PM",
+  "6:00 PM",
+];
+
 export default function CTA() {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -15,18 +27,33 @@ export default function CTA() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // Earliest bookable date is today, in the visitor's local time
+  const minDate = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true);
     setStatus(null);
 
     const formData = new FormData(e.currentTarget);
+    const demoDate = formData.get("demoDate") as string;
+
+    // Skip Sundays — we're closed
+    const [year, month, day] = demoDate.split("-").map(Number);
+    if (new Date(year, month - 1, day).getDay() === 0) {
+      setStatus({ type: "error", message: "We're closed on Sundays — please pick another date." });
+      return;
+    }
+
+    setLoading(true);
+
     const data = {
       firstName: formData.get("firstName") as string,
       lastName: formData.get("lastName") as string,
       email: formData.get("email") as string,
       phone: formData.get("phone") as string,
       instrument: formData.get("instrument") as string,
+      demoDate,
+      demoTime: formData.get("demoTime") as string,
     };
 
     try {
@@ -39,7 +66,10 @@ export default function CTA() {
       const result = await res.json();
 
       if (res.ok) {
-        setStatus({ type: "success", message: "Message Sent Successfully! Our team will connect within 24 hours." });
+        setStatus({
+          type: "success",
+          message: `Demo booked for ${demoDate} at ${data.demoTime}! A confirmation has been sent to your email.`,
+        });
         (e.target as HTMLFormElement).reset();
       } else {
         setStatus({ type: "error", message: result.error || "Something went wrong." });
@@ -175,6 +205,29 @@ export default function CTA() {
                 <option value="Dance">Dance</option>
                 <option value="Public Speaking">Public Speaking</option>
               </select>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input
+                  type="date"
+                  name="demoDate"
+                  required
+                  min={minDate}
+                  className="w-full px-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
+                />
+                <select
+                  name="demoTime"
+                  required
+                  className="w-full px-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--muted)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors appearance-none"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Preferred time</option>
+                  {TIME_SLOTS.map((slot) => (
+                    <option key={slot} value={slot}>{slot}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-[var(--muted)] -mt-2">Mon–Sat, 10 AM–7 PM IST. We&rsquo;ll confirm your slot by email.</p>
+
               <button
                 type="submit"
                 disabled={loading}
