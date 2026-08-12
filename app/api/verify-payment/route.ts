@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { isRateLimited, clientKey } from "../rate-limit";
 
 export async function POST(request: Request) {
+  if (isRateLimited(`verify-payment:${clientKey(request)}`, 20, 10 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many requests. Please try again shortly." }, { status: 429 });
+  }
+
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   if (!keySecret) {
     return NextResponse.json({ error: "Payments are not configured yet." }, { status: 503 });
