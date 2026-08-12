@@ -26,32 +26,52 @@ export default function Navbar() {
   return (
     <nav
       ref={navRef}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b ${
         scrolled
-          ? "bg-white/90 backdrop-blur-md shadow-sm"
-          : "bg-transparent"
+          ? "bg-white/90 backdrop-blur-md shadow-sm border-[var(--border)]"
+          : "bg-white/60 backdrop-blur-sm border-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <Image src="/logo.png" className="w-32 h-12" alt="logo" width={1000} height={1000} />
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-8">
-          <a href="#about" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+        <div className="hidden md:flex items-center gap-7">
+          <a href="#about" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             About
           </a>
-          <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+          <a href="#courses" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             Programs
           </a>
-          <a href="#pricing" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+          <a href="#pricing" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             Pricing
           </a>
-          <a href="#testimonials" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+          <a href="#testimonials" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             Reviews
           </a>
+
+          <div className="w-px h-5 bg-[var(--border)]" />
+
+          <a
+            href="https://lms.uniedd.com"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm px-4 py-2 rounded-full border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--brand-blue)]/50 hover:text-[var(--brand-blue)] transition-colors"
+          >
+            Teacher Login
+          </a>
+          <a
+            href="https://lms.uniedd.com"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm px-4 py-2 rounded-full border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--brand-blue)]/50 hover:text-[var(--brand-blue)] transition-colors"
+          >
+            Student Login
+          </a>
+
           <a
             href="#contact"
-            className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full hover:opacity-90 transition-opacity"
+            className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full hover:opacity-90 hover:-translate-y-px transition-all duration-300 shadow-md shadow-[var(--brand-blue)]/20"
           >
             Book a Demo
           </a>
@@ -84,6 +104,28 @@ export default function Navbar() {
           <a href="#testimonials" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
             Reviews
           </a>
+
+          <div className="h-px bg-[var(--border)] my-1" />
+
+          <a
+            href="https://lms.uniedd.com"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm px-5 py-2.5 rounded-full border border-[var(--border)] text-[var(--foreground)] text-center"
+            onClick={() => setMenuOpen(false)}
+          >
+            Teacher Login
+          </a>
+          <a
+            href="https://lms.uniedd.com"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm px-5 py-2.5 rounded-full border border-[var(--border)] text-[var(--foreground)] text-center"
+            onClick={() => setMenuOpen(false)}
+          >
+            Student Login
+          </a>
+
           <a
             href="#contact"
             className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full text-center"

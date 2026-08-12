@@ -1,59 +1,105 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { FaGuitar, FaMicrophoneAlt, FaBullhorn, FaChild } from "react-icons/fa";
+import { GiGrandPiano, GiDrum } from "react-icons/gi";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const courses = [
+const categories = ["All", "Music", "Dance", "Public Speaking"] as const;
+type Category = (typeof categories)[number];
+
+const courses: {
+  category: Category;
+  icon: React.ElementType;
+  title: string;
+  tagline: string;
+  ageGroup: string;
+  duration: string;
+  format: string;
+  description: string;
+  tag: string | null;
+  gradient: string;
+}[] = [
   {
-    level: "Beginner to Advanced",
-    title: "Guitar Class",
-    description: "Learn chords, rhythm, melody, fingerstyle, and confidence-building practice in structured weekly sessions.",
-    lessons: 1,
-    duration: "Live 1:1",
+    category: "Music",
+    icon: FaGuitar,
+    title: "Online Guitar Classes for Kids",
+    tagline: "Strum, create & shine — on stage & in life",
+    ageGroup: "5-14 Years",
+    duration: "48 sessions in 6 months for beginner level",
+    format: "Group or Individual Classes",
+    description:
+      "Learn chords, rhythm, melody, fingerstyle, and confidence-building practice in structured weekly sessions with a dedicated coach.",
     tag: "Popular",
+    gradient: "from-[var(--brand-blue)] to-[var(--brand-orange)]",
   },
   {
-    level: "All Levels",
-    title: "Keyboard / Piano",
-    description: "Develop timing, hand coordination, and musical expression with personalised keyboard coaching.",
-    lessons: 1,
-    duration: "Live 1:1",
+    category: "Music",
+    icon: GiGrandPiano,
+    title: "Online Keyboard & Piano Classes for Kids",
+    tagline: "Every key unlocks a little more confidence",
+    ageGroup: "5-14 Years",
+    duration: "48 sessions in 6 months for beginner level",
+    format: "Group or Individual Classes",
+    description:
+      "Develop timing, hand coordination, and musical expression with personalised keyboard coaching designed around your child's pace.",
     tag: "New",
+    gradient: "from-[var(--brand-orange)] to-[var(--brand-blue)]",
   },
   {
-    level: "Kids & Adults",
-    title: "Vocals & Singing",
-    description: "Improve pitch, voice control, breathing, and performance confidence through guided vocal practice.",
-    lessons: 1,
-    duration: "Live 1:1",
+    category: "Music",
+    icon: FaMicrophoneAlt,
+    title: "Online Vocals & Singing Classes for Kids",
+    tagline: "Find your voice, then find your stage",
+    ageGroup: "5-16 Years",
+    duration: "48 sessions in 6 months for beginner level",
+    format: "Group or Individual Classes",
+    description:
+      "Improve pitch, voice control, breathing, and performance confidence through guided vocal practice with regular performance opportunities.",
     tag: null,
+    gradient: "from-[var(--brand-blue)] to-[var(--brand-orange)]",
   },
   {
-    level: "Traditional Rhythm",
-    title: "Tabla",
-    description: "Build taal, rhythm patterns, and deep musical sensitivity through traditional learning methods.",
-    lessons: 1,
-    duration: "Live 1:1",
+    category: "Music",
+    icon: GiDrum,
+    title: "Online Tabla Classes for Kids",
+    tagline: "Build rhythm, build discipline",
+    ageGroup: "6-16 Years",
+    duration: "48 sessions in 6 months for beginner level",
+    format: "Group or Individual Classes",
+    description:
+      "Build taal, rhythm patterns, and deep musical sensitivity through traditional learning methods passed down through generations.",
     tag: "Classic",
+    gradient: "from-[var(--brand-orange)] to-[var(--brand-blue)]",
   },
   {
-    level: "Performance",
-    title: "Dance",
-    description: "Learn movement, rhythm, posture, and performance quality in a fun and encouraging format.",
-    lessons: 1,
-    duration: "Live 1:1",
+    category: "Dance",
+    icon: FaChild,
+    title: "Online Dance Classes for Kids",
+    tagline: "Move, express & perform with joy",
+    ageGroup: "4-14 Years",
+    duration: "48 sessions in 6 months for beginner level",
+    format: "Group or Individual Classes",
+    description:
+      "Learn movement, rhythm, posture, and performance quality in a fun and encouraging format that builds discipline and self-expression.",
     tag: null,
+    gradient: "from-[var(--brand-blue)] to-[var(--brand-orange)]",
   },
   {
-    level: "Confidence",
-    title: "Public Speaking",
-    description: "Strengthen voice, storytelling, presence, and speaking confidence for school, work, and leadership.",
-    lessons: 1,
-    duration: "Live 1:1",
+    category: "Public Speaking",
+    icon: FaBullhorn,
+    title: "Online Public Speaking Classes for Kids",
+    tagline: "Build sharper communication for school and life",
+    ageGroup: "7-17 Years",
+    duration: "48 sessions in 6 months for beginner level",
+    format: "Group or Individual Classes",
+    description:
+      "Strengthen voice, storytelling, presence, and speaking confidence for school, work, and leadership through live guided practice.",
     tag: "In demand",
+    gradient: "from-[var(--brand-orange)] to-[var(--brand-blue)]",
   },
 ];
 
@@ -61,6 +107,13 @@ export default function Courses() {
   const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
+  const [activeCategory, setActiveCategory] = useState<Category>("All");
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  const filtered =
+    activeCategory === "All"
+      ? courses
+      : courses.filter((c) => c.category === activeCategory);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -79,36 +132,37 @@ export default function Courses() {
           },
         }
       );
-
-      const cards = cardsRef.current?.children;
-      if (cards) {
-        gsap.fromTo(
-          cards,
-          { y: 80, opacity: 0, scale: 0.95 },
-          {
-            y: 0,
-            opacity: 1,
-            scale: 1,
-            duration: 0.7,
-            stagger: 0.15,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: cardsRef.current,
-              start: "top 80%",
-              toggleActions: "play none none none",
-            },
-          }
-        );
-      }
     }, sectionRef);
 
     return () => ctx.revert();
   }, []);
 
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const cards = cardsRef.current?.children;
+      if (cards) {
+        gsap.fromTo(
+          cards,
+          { y: 40, opacity: 0, scale: 0.97 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 0.5,
+            stagger: 0.08,
+            ease: "power3.out",
+          }
+        );
+      }
+    }, cardsRef);
+
+    return () => ctx.revert();
+  }, [activeCategory]);
+
   return (
     <section ref={sectionRef} id="courses" className="py-32 px-6 bg-white">
       <div className="max-w-7xl mx-auto">
-        <div ref={headingRef} className="text-center mb-20">
+        <div ref={headingRef} className="text-center mb-12">
           <p className="text-sm tracking-widest uppercase text-[var(--muted)] mb-4">
             Programs
           </p>
@@ -124,53 +178,90 @@ export default function Courses() {
           </p>
         </div>
 
-        <div ref={cardsRef} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {courses.map((course, index) => (
-            <div
-              key={index}
-              className="group relative p-8 rounded-2xl border border-[var(--border)] hover:border-[var(--brand-blue)]/30 hover:shadow-xl transition-all duration-500 cursor-pointer overflow-hidden"
+        {/* Category filters */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-14">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => {
+                setActiveCategory(cat);
+                setExpanded(null);
+              }}
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 border ${
+                activeCategory === cat
+                  ? "bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white border-transparent shadow-md"
+                  : "text-[var(--muted)] border-[var(--border)] hover:border-[var(--brand-blue)]/40 hover:text-[var(--foreground)]"
+              }`}
             >
-              {/* Hover gradient */}
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              {cat}
+            </button>
+          ))}
+        </div>
 
-              <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-medium tracking-wider uppercase text-[var(--brand-blue)] bg-[var(--brand-blue)]/10 px-3 py-1 rounded-full">
-                    {course.level}
-                  </span>
+        <div ref={cardsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((course, index) => {
+            const Icon = course.icon;
+            const isOpen = expanded === index;
+            return (
+              <div
+                key={course.title}
+                className="group relative rounded-3xl border border-[var(--border)] hover:border-[var(--brand-blue)]/30 hover:shadow-xl transition-all duration-500 overflow-hidden bg-white flex flex-col"
+              >
+                {/* Visual header */}
+                <div className={`relative h-40 bg-gradient-to-br ${course.gradient} flex items-center justify-center`}>
+                  <Icon className="text-white/90" size={52} />
                   {course.tag && (
-                    <span className="text-xs font-medium text-[var(--brand-orange)] bg-[var(--brand-orange)]/10 px-3 py-1 rounded-full">
+                    <span className="absolute top-4 right-4 text-xs font-medium text-[var(--foreground)] bg-white px-3 py-1 rounded-full shadow-sm">
                       {course.tag}
                     </span>
                   )}
                 </div>
 
-                <h3 className="text-xl font-semibold mb-2 group-hover:translate-x-1 transition-transform">
-                  {course.title}
-                </h3>
-                <p className="text-[var(--muted)] text-sm leading-relaxed mb-6">
-                  {course.description}
-                </p>
+                <div className="p-6 flex flex-col flex-1">
+                  <h3 className="text-lg font-semibold text-[var(--brand-blue)] mb-1.5 leading-snug">
+                    {course.title}
+                  </h3>
+                  <p className="text-sm text-[var(--muted)] mb-4">{course.tagline}</p>
 
-                <div className="flex items-center gap-6 text-sm text-[var(--muted)]">
-                  <span className="flex items-center gap-1.5">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 6v6l4 2" strokeLinecap="round" />
-                      <circle cx="12" cy="12" r="10" />
-                    </svg>
-                    {course.duration}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M4 19.5v-15A2.5 2.5 0 016.5 2H20v20H6.5a2.5 2.5 0 01-2.5-2.5z" />
-                      <path d="M8 7h8M8 11h6" strokeLinecap="round" />
-                    </svg>
-                    Personalised coaching
-                  </span>
+                  <div className="space-y-2 text-sm mb-6">
+                    <div className="flex gap-2">
+                      <span className="text-[var(--muted)] shrink-0">Age group:</span>
+                      <span className="font-medium">{course.ageGroup}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[var(--muted)] shrink-0">Course duration:</span>
+                      <span className="font-medium">{course.duration}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[var(--muted)] shrink-0">Format:</span>
+                      <span className="font-medium">{course.format}</span>
+                    </div>
+                  </div>
+
+                  {isOpen && (
+                    <p className="text-sm text-[var(--muted)] leading-relaxed mb-6 border-t border-[var(--border)] pt-4">
+                      {course.description}
+                    </p>
+                  )}
+
+                  <div className="mt-auto flex flex-col items-center gap-3">
+                    <a
+                      href="#contact"
+                      className="w-full text-center px-6 py-3 bg-[var(--brand-blue)]/80 text-white rounded-full text-sm font-semibold hover:opacity-90 hover:-translate-y-px transition-all duration-300"
+                    >
+                      Book A Free Demo
+                    </a>
+                    <button
+                      onClick={() => setExpanded(isOpen ? null : index)}
+                      className="text-sm text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--brand-blue)] transition-colors"
+                    >
+                      {isOpen ? "Hide details" : "View details"}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

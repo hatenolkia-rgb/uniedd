@@ -1,8 +1,13 @@
 import Image from "next/image";
+import { FaWhatsapp, FaPhoneAlt } from "react-icons/fa";
 
 export default function Footer() {
   return (
-    <footer className="py-16 px-6 border-t border-[var(--border)] bg-white">
+    <footer className="relative pt-16 pb-10 px-6 bg-white overflow-hidden">
+      {/* Top accent bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)]" />
+      <div className="absolute top-0 left-0 right-0 border-t border-[var(--border)]" />
+
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
@@ -71,22 +76,22 @@ export default function Footer() {
             <p className="text-sm font-medium mb-4">Connect</p>
             <ul className="space-y-3">
               <li>
-                <a href="https://wa.me/918383857710" target="_blank" rel="noreferrer" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  WhatsApp
+                <a href="https://wa.me/918383857710" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">
+                  <FaWhatsapp size={14} /> WhatsApp
                 </a>
               </li>
               <li>
-                <a href="tel:+918383857710" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Call us
+                <a href="tel:+918383857710" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">
+                  <FaPhoneAlt size={12} /> Call us
                 </a>
               </li>
               <li>
-                <a href="#contact" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                <a href="#contact" className="text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">
                   Enquire now
                 </a>
               </li>
               <li>
-                <a href="https://wa.me/918383857710" target="_blank" rel="noreferrer" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                <a href="https://wa.me/918383857710" target="_blank" rel="noreferrer" className="text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">
                   Book a demo
                 </a>
               </li>
@@ -104,6 +109,9 @@ export default function Footer() {
             </a>
             <a href="#contact" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               Contact
+            </a>
+            <a href="https://lms.uniedd.com" target="_blank" rel="noreferrer" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+              LMS Login
             </a>
           </div>
         </div>
