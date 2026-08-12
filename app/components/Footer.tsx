@@ -113,6 +113,12 @@ export default function Footer() {
             <a href="https://lms.uniedd.com" target="_blank" rel="noreferrer" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               LMS Login
             </a>
+            <a href="/privacy" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+              Privacy Policy
+            </a>
+            <a href="/terms" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+              Terms &amp; Conditions
+            </a>
           </div>
         </div>
       </div>
