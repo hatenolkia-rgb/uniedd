@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { isRateLimited, clientKey } from "../rate-limit";
+import { getSupabase } from "../../lib/supabase";
 
 const DEMO_FEE_INR = 199;
 const VALID_INSTRUMENTS = ["Guitar", "Keyboard", "Vocals", "Tabla", "Dance", "Public Speaking"];
@@ -105,6 +106,39 @@ export async function POST(request: NextRequest) {
       }
 
       usedPaymentIds.add(razorpayPaymentId);
+    }
+
+    // Persist the booking. When Supabase is configured, its `unique`
+    // constraint on razorpay_payment_id is the authoritative replay guard
+    // (works across cold starts/instances, unlike the in-memory Set above).
+    const supabase = getSupabase();
+    if (supabase) {
+      const { error: dbError } = await supabase.from("bookings").insert({
+        first_name: firstName,
+        last_name: lastName || null,
+        email,
+        phone,
+        instrument,
+        demo_date: demoDate,
+        demo_time: demoTime,
+        timezone: timezone || null,
+        requires_payment: requiresPayment,
+        razorpay_order_id: requiresPayment ? razorpayOrderId : null,
+        razorpay_payment_id: requiresPayment ? razorpayPaymentId : null,
+      });
+
+      if (dbError) {
+        if (dbError.code === "23505") {
+          // Unique violation on razorpay_payment_id -- this payment was already used.
+          return NextResponse.json(
+            { error: "This payment has already been used for a booking." },
+            { status: 409 }
+          );
+        }
+        // Don't block the booking on a DB hiccup -- email is still the fallback
+        // record. Log it so it's visible in Vercel's function logs.
+        console.error("Supabase insert error:", dbError);
+      }
     }
 
     const transporter = nodemailer.createTransport({
