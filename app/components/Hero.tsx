@@ -83,13 +83,13 @@ export default function Hero() {
   }, []);
 
   return (
-    <section ref={heroRef} className="relative min-h-screen flex items-center overflow-hidden px-6" style={{ perspective: "1000px" }}>
+    <section ref={heroRef} className="relative overflow-hidden px-6 lg:min-h-screen lg:flex lg:items-center" style={{ perspective: "1000px" }}>
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#fdfcfb] via-white to-[#f7f4ef]" />
       <div className="absolute top-0 right-0 w-[60%] h-full bg-gradient-to-l from-[var(--brand-orange)]/[0.03] to-transparent" />
       <div className="absolute bottom-0 left-0 w-[40%] h-[60%] bg-gradient-to-tr from-[var(--brand-blue)]/[0.03] to-transparent" />
 
-      <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-10 items-center pt-28 pb-20">
+      <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-10 items-center pt-24 pb-12 lg:pt-28 lg:pb-20">
         {/* Left — Text */}
         <div className="flex flex-col gap-6 max-w-xl">
           <div className="inline-flex items-center gap-2 border border-[var(--border)] rounded-full px-4 py-1.5 w-fit bg-white shadow-sm">
@@ -191,7 +191,7 @@ export default function Hero() {
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60">
+      <div className="hidden lg:flex absolute bottom-8 left-1/2 -translate-x-1/2 flex-col items-center gap-2 opacity-60">
         <div className="w-5 h-8 rounded-full border-[1.5px] border-[var(--muted)]/30 flex justify-center pt-2">
           <div className="w-1 h-2 rounded-full bg-[var(--brand-blue)] animate-bounce" />
         </div>
