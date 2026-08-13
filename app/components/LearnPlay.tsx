@@ -151,7 +151,7 @@ export default function LearnPlay() {
         </div>
 
         {/* Main content grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
           {/* Left — Method cards */}
           <div ref={cardsRef} className="flex flex-col gap-5">
             {methods.map((method, i) => (

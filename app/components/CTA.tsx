@@ -289,7 +289,7 @@ export default function CTA() {
   return (
     <section ref={sectionRef} id="contact" className="py-24 px-6 bg-white">
       <div className="max-w-7xl mx-auto">
-        <div ref={contentRef} className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start border border-[var(--border)] rounded-3xl p-10 sm:p-14 overflow-hidden relative">
+        <div ref={contentRef} className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-start border border-[var(--border)] rounded-3xl p-6 sm:p-10 lg:p-14 overflow-hidden relative">
           {/* Animated background elements */}
           <div ref={bgElementsRef} className="absolute inset-0 pointer-events-none select-none overflow-hidden">
             <span className="absolute top-[8%] right-[10%] text-5xl text-[var(--brand-blue)] opacity-[0.06]">♪</span>

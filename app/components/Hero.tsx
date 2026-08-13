@@ -83,15 +83,15 @@ export default function Hero() {
   }, []);
 
   return (
-    <section ref={heroRef} className="relative overflow-hidden px-6 lg:min-h-screen lg:flex lg:items-center" style={{ perspective: "1000px" }}>
+    <section ref={heroRef} className="relative overflow-hidden px-6 md:min-h-screen md:flex md:items-center" style={{ perspective: "1000px" }}>
       {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#fdfcfb] via-white to-[#f7f4ef]" />
       <div className="absolute top-0 right-0 w-[60%] h-full bg-gradient-to-l from-[var(--brand-orange)]/[0.03] to-transparent" />
       <div className="absolute bottom-0 left-0 w-[40%] h-[60%] bg-gradient-to-tr from-[var(--brand-blue)]/[0.03] to-transparent" />
 
-      <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-10 items-center pt-24 pb-12 lg:pt-28 lg:pb-20">
+      <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 items-center pt-24 pb-12 md:pt-28 md:pb-20">
         {/* Left — Text */}
-        <div className="flex flex-col gap-6 max-w-xl">
+        <div className="flex flex-col gap-6 max-w-xl min-w-0">
           <div className="inline-flex items-center gap-2 border border-[var(--border)] rounded-full px-4 py-1.5 w-fit bg-white shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             <span className="text-xs text-[var(--muted)]">Live 1:1 online classes • New Delhi • 15+ years experience</span>
@@ -99,7 +99,7 @@ export default function Hero() {
 
           <h1
             ref={titleRef}
-            className="text-[2.75rem] sm:text-6xl lg:text-[4.2rem] font-bold leading-[1.1] tracking-tight"
+            className="text-4xl sm:text-5xl md:text-4xl lg:text-6xl xl:text-[4.2rem] font-bold leading-[1.1] tracking-tight break-words"
             style={{ fontFamily: "var(--font-playfair), serif" }}
           >
             Music, dance &
@@ -164,7 +164,7 @@ export default function Hero() {
                 alt={slide.alt}
                 fill
                 priority={i === 0}
-                sizes="(max-width: 1024px) 90vw, 40vw"
+                sizes="(max-width: 767px) 90vw, 40vw"
                 className={`object-cover transition-opacity duration-1000 ${
                   i === activeSlide ? "opacity-100" : "opacity-0"
                 }`}
@@ -191,7 +191,7 @@ export default function Hero() {
       </div>
 
       {/* Scroll indicator */}
-      <div className="hidden lg:flex absolute bottom-8 left-1/2 -translate-x-1/2 flex-col items-center gap-2 opacity-60">
+      <div className="hidden md:flex absolute bottom-8 left-1/2 -translate-x-1/2 flex-col items-center gap-2 opacity-60">
         <div className="w-5 h-8 rounded-full border-[1.5px] border-[var(--muted)]/30 flex justify-center pt-2">
           <div className="w-1 h-2 rounded-full bg-[var(--brand-blue)] animate-bounce" />
         </div>
