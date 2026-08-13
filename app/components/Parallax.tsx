@@ -73,7 +73,7 @@ export default function Parallax() {
   return (
     <section
       ref={sectionRef}
-      className="relative h-[80vh] overflow-hidden flex items-center justify-center bg-[#f5f5f5]"
+      className="relative overflow-hidden flex items-center justify-center bg-[#f5f5f5] py-24 sm:py-0 sm:h-[60vh] lg:h-[80vh]"
     >
       {/* Parallax layers */}
       <div

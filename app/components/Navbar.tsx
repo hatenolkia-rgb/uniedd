@@ -12,8 +12,8 @@ export default function Navbar() {
   useEffect(() => {
     gsap.fromTo(
       navRef.current,
-      { y: -100, opacity: 0 },
-      { y: 0, opacity: 1, duration: 1, ease: "power3.out", delay: 0.5 }
+      { y: -20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }
     );
 
     const handleScroll = () => {
