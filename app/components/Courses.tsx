@@ -7,7 +7,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const categories = ["All", "Music", "Dance", "Public Speaking"] as const;
+const categories = ["All", "Music", "Dance", "Public Speaking", "Chess"] as const;
 type Category = (typeof categories)[number];
 
 const courses: {
@@ -92,6 +92,18 @@ const courses: {
     description:
       "Strengthen voice, storytelling, presence, and speaking confidence for school, work, and leadership through live guided practice.",
     tag: "In demand",
+  },
+  {
+    category: "Chess",
+    image: "https://images.unsplash.com/photo-1528819622765-d6bcf132f793?w=800&q=70&auto=format&fit=crop",
+    title: "Online Chess Classes for Kids & Adults",
+    tagline: "Build sharper thinking for school & life",
+    ageGroup: "5-14 Years",
+    duration: "24 to 96 sessions across 3 to 12 months",
+    format: "1:1, Group Buddy (1:2) or Group (1:5) Classes",
+    description:
+      "A Grandmaster-curated curriculum that takes learners from fundamentals to strategic thinkers — piece moves, tactics, openings, middlegame strategy, and endgames — with puzzle practice, game analysis, and a pathway to FIDE Online Arena tournaments and certification.",
+    tag: "New",
   },
 ];
 
