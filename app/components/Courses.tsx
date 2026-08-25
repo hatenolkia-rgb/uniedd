@@ -97,12 +97,12 @@ const courses: {
     category: "Chess",
     image: "https://images.unsplash.com/photo-1528819622765-d6bcf132f793?w=800&q=70&auto=format&fit=crop",
     title: "Online Chess Classes for Kids & Adults",
-    tagline: "Build sharper thinking for school & life",
-    ageGroup: "5-14 Years",
-    duration: "24 to 96 sessions across 3 to 12 months",
-    format: "1:1, Group Buddy (1:2) or Group (1:5) Classes",
+    tagline: "Master the board, sharpen the mind",
+    ageGroup: "5-45 Years",
+    duration: "48 sessions in 6 months for beginner level",
+    format: "Group or Individual Classes",
     description:
-      "A Grandmaster-curated curriculum that takes learners from fundamentals to strategic thinkers — piece moves, tactics, openings, middlegame strategy, and endgames — with puzzle practice, game analysis, and a pathway to FIDE Online Arena tournaments and certification.",
+      "Learn piece moves, tactics, openings, and strategy-building practice in structured weekly sessions with a dedicated coach.",
     tag: "New",
   },
 ];
