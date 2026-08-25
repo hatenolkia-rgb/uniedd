@@ -29,9 +29,11 @@ const HERO_SLIDES = [
 
 export default function Hero() {
   const heroRef = useRef<HTMLDivElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
   const lottieWrapRef = useRef<HTMLDivElement>(null);
   const [activeSlide, setActiveSlide] = useState(0);
 
@@ -47,10 +49,12 @@ export default function Hero() {
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ delay: 0.3 });
 
-      tl.fromTo(titleRef.current, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9, ease: "power4.out" })
-        .fromTo(subtitleRef.current, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, "-=0.4")
-        .fromTo(ctaRef.current, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, "-=0.3")
-        .fromTo(lottieWrapRef.current, { scale: 0.85, opacity: 0 }, { scale: 1, opacity: 1, duration: 1, ease: "back.out(1.2)" }, "-=0.6");
+      tl.fromTo(badgeRef.current, { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" })
+        .fromTo(titleRef.current, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power4.out" }, "-=0.15")
+        .fromTo(subtitleRef.current, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, "-=0.15")
+        .fromTo(ctaRef.current, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, "-=0.15")
+        .fromTo(statsRef.current, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, "-=0.15")
+        .fromTo(lottieWrapRef.current, { scale: 0.85, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "back.out(1.2)" }, "-=0.2");
 
       // Gentle floating on the lottie
       gsap.to(lottieWrapRef.current, {
@@ -92,7 +96,7 @@ export default function Hero() {
       <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 items-center pt-24 pb-12 md:pt-28 md:pb-20">
         {/* Left — Text */}
         <div className="flex flex-col gap-6 max-w-xl min-w-0">
-          <div className="inline-flex items-center gap-2 border border-[var(--border)] rounded-full px-4 py-1.5 w-fit bg-white shadow-sm">
+          <div ref={badgeRef} className="inline-flex items-center gap-2 border border-[var(--border)] rounded-full px-4 py-1.5 w-fit bg-white shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
             <span className="text-xs text-[var(--muted)]">Live 1:1 online classes • New Delhi • 15+ years experience</span>
           </div>
@@ -131,7 +135,7 @@ export default function Hero() {
           </div>
 
           {/* Metrics */}
-          <div className="grid grid-cols-3 gap-4 pt-5 mt-2 border-t border-[var(--border)]">
+          <div ref={statsRef} className="grid grid-cols-3 gap-4 pt-5 mt-2 border-t border-[var(--border)]">
             <div>
               <p className="text-2xl font-bold text-[var(--foreground)]">1,000+</p>
               <p className="text-[11px] text-[var(--muted)]">Students trained</p>
