@@ -5,6 +5,9 @@ import Footer from "../components/Footer";
 export const metadata = {
   title: "Terms & Conditions | UniEDD",
   description: "The terms that govern your use of UniEDD's website and classes.",
+  alternates: {
+    canonical: "/terms",
+  },
 };
 
 export default function TermsPage() {
@@ -34,7 +37,7 @@ export default function TermsPage() {
               <h2 className="text-lg font-semibold mb-2">1. Our services</h2>
               <p>
                 UniEDD provides live, online, one-to-one and group coaching in Guitar, Keyboard/Piano, Vocals,
-                Tabla, Dance, and Public Speaking, for kids and adults. Demo sessions can be booked online 24/7,
+                Tabla, Dance, Public Speaking, and Chess, for kids and adults. Demo sessions can be booked online 24/7,
                 subject to availability of trainers.
               </p>
             </div>

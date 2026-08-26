@@ -5,6 +5,9 @@ import Footer from "../components/Footer";
 export const metadata = {
   title: "Privacy Policy | UniEDD",
   description: "How UniEDD collects, uses, and protects your information.",
+  alternates: {
+    canonical: "/privacy",
+  },
 };
 
 export default function PrivacyPage() {
@@ -26,7 +29,7 @@ export default function PrivacyPage() {
           <div className="mt-10 space-y-8 text-sm leading-relaxed text-[var(--foreground)]">
             <p>
               UniEDD (&ldquo;UniEDD&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;) is a New Delhi-based
-              academy offering live online coaching in music, dance, and public speaking. This Privacy Policy explains
+              academy offering live online coaching in music, dance, public speaking, and chess. This Privacy Policy explains
               what information we collect through uniedd.com, how we use it, and the choices you have.
             </p>
 

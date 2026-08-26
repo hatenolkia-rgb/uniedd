@@ -1,5 +1,27 @@
+import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+
+const pricingTitle = "Pricing | UniEDD";
+const pricingDescription =
+  "Flexible monthly plans for UniEDD's live 1-on-1 online classes in Guitar, Keyboard, Vocals, Tabla, Dance, Public Speaking, and Chess.";
+
+export const metadata: Metadata = {
+  title: pricingTitle,
+  description: pricingDescription,
+  alternates: {
+    canonical: "/pricing",
+  },
+  openGraph: {
+    title: pricingTitle,
+    description: pricingDescription,
+    url: "https://uniedd.com/pricing",
+  },
+  twitter: {
+    title: pricingTitle,
+    description: pricingDescription,
+  },
+};
 
 export default function PricingPage() {
   return (

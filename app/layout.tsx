@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://uniedd.com"),
   title: siteTitle,
   description: siteDescription,
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: siteTitle,
     description: siteDescription,
