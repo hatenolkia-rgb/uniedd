@@ -14,9 +14,9 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
 });
 
-const siteTitle = "UniEDD | Live 1:1 Music, Dance & Public Speaking Classes";
+const siteTitle = "UniEDD | Live 1:1 Music, Dance, Chess & Public Speaking Classes";
 const siteDescription =
-  "UniEDD is a New Delhi-based academy offering live 1-on-1 online classes in Guitar, Keyboard, Vocals, Tabla, Dance, and Public Speaking for kids and adults.";
+  "UniEDD is a New Delhi-based academy offering live 1-on-1 online classes in Guitar, Keyboard, Vocals, Tabla, Dance, Public Speaking, and Chess for kids and adults.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://uniedd.com"),

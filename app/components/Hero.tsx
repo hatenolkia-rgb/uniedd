@@ -114,7 +114,7 @@ export default function Hero() {
           </h1>
 
           <p ref={subtitleRef} className="text-base sm:text-lg text-[var(--muted)] leading-relaxed">
-            UniEDD helps kids and adults learn Guitar, Keyboard, Vocals, Tabla, Dance, and Public Speaking through live online coaching, expert mentors, and personalised practice plans.
+            UniEDD helps kids and adults learn Guitar, Keyboard, Vocals, Tabla, Dance, Public Speaking, and Chess through live online coaching, expert mentors, and personalised practice plans.
           </p>
 
           <div ref={ctaRef} className="flex flex-wrap items-center gap-4 pt-2">

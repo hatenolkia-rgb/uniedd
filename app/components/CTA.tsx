@@ -387,6 +387,7 @@ export default function CTA() {
                       <option value="Tabla">Tabla</option>
                       <option value="Dance">Dance</option>
                       <option value="Public Speaking">Public Speaking</option>
+                      <option value="Chess">Chess</option>
                     </select>
                   </div>
                 </div>

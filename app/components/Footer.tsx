@@ -43,6 +43,21 @@ export default function Footer() {
                   Tabla
                 </a>
               </li>
+              <li>
+                <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Dance
+                </a>
+              </li>
+              <li>
+                <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Public Speaking
+                </a>
+              </li>
+              <li>
+                <a href="#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Chess
+                </a>
+              </li>
             </ul>
           </div>
 
