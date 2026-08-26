@@ -98,7 +98,7 @@ export default function Hero() {
         <div className="flex flex-col gap-6 max-w-xl min-w-0">
           <div ref={badgeRef} className="inline-flex items-center gap-2 border border-[var(--border)] rounded-full px-4 py-1.5 w-fit bg-white shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            <span className="text-xs text-[var(--muted)]">Live 1:1 online classes • New Delhi • 15+ years experience</span>
+            <span className="text-xs text-[var(--muted)]">Live 1:1 online classes • New Delhi • 8+ years experience</span>
           </div>
 
           <h1
@@ -137,15 +137,15 @@ export default function Hero() {
           {/* Metrics */}
           <div ref={statsRef} className="grid grid-cols-3 gap-4 pt-5 mt-2 border-t border-[var(--border)]">
             <div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">1,000+</p>
+              <p className="text-2xl font-bold text-[var(--foreground)]">785+</p>
               <p className="text-[11px] text-[var(--muted)]">Students trained</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">120+</p>
+              <p className="text-2xl font-bold text-[var(--foreground)]">64+</p>
               <p className="text-[11px] text-[var(--muted)]">Educators</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">15+</p>
+              <p className="text-2xl font-bold text-[var(--foreground)]">8+</p>
               <p className="text-[11px] text-[var(--muted)]">Years of experience</p>
             </div>
           </div>
