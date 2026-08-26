@@ -8,7 +8,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 const stats = [
   { value: "1:1", label: "Live coaching", icon: "🎯" },
-  { value: "15+", label: "Years of teaching", icon: "🎶" },
+  { value: "8+", label: "Years of teaching", icon: "🎶" },
   { value: "Weekly", label: "Progress reviews", icon: "📈" },
 ];
 
