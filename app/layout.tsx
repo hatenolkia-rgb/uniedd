@@ -43,6 +43,32 @@ export const metadata: Metadata = {
   },
 };
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "EducationalOrganization",
+  name: "UniEDD",
+  alternateName: "Universal Education",
+  url: "https://uniedd.com",
+  logo: "https://uniedd.com/logo.png",
+  description: siteDescription,
+  areaServed: "New Delhi, India",
+  telephone: "+91-8383857710",
+  sameAs: ["https://lms.uniedd.com"],
+  hasCourse: [
+    "Guitar",
+    "Keyboard & Piano",
+    "Vocals & Singing",
+    "Tabla",
+    "Dance",
+    "Public Speaking",
+    "Chess",
+  ].map((name) => ({
+    "@type": "Course",
+    name: `Online ${name} Classes for Kids & Adults`,
+    provider: { "@type": "EducationalOrganization", name: "UniEDD", sameAs: "https://uniedd.com" },
+  })),
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -53,7 +79,12 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${playfair.variable} antialiased`}
     >
-      <body className="min-h-screen">{children}
+      <body className="min-h-screen">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        {children}
          <div className="fixed z-40 bottom-4 right-2 md:right-6 flex flex-col gap-4">
           <div className="relative w-14 h-14">
             {/* Ripple Background */}

@@ -28,6 +28,13 @@ const testimonials = [
       "The public speaking classes helped me become calmer, clearer, and much more confident in school presentations and conversations.",
     initials: "G",
   },
+  {
+    name: "Parent, South Delhi",
+    role: "Chess learner",
+    quote:
+      "Our son picked up chess as a hobby and it's sharpened so much more than his game — his patience and focus at school have genuinely improved too.",
+    initials: "S",
+  },
 ];
 
 export default function Testimonials() {
