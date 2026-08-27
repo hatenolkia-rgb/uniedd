@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Image from "next/image";
+import { BOOK_DEMO_URL } from "../lib/links";
 
 const HERO_SLIDES = [
   {
@@ -119,7 +120,9 @@ export default function Hero() {
 
           <div ref={ctaRef} className="flex flex-wrap items-center gap-4 pt-2">
             <a
-              href="#contact"
+              href={BOOK_DEMO_URL}
+              target="_blank"
+              rel="noreferrer"
               className="px-7 py-3.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full text-sm font-semibold shadow-lg shadow-[var(--brand-blue)]/10 hover:shadow-xl hover:-translate-y-px transition-all duration-300"
             >
               Book a Demo

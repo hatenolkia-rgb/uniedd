@@ -6,7 +6,6 @@ import Courses from "./components/Courses";
 import Parallax from "./components/Parallax";
 import StatsBand from "./components/StatsBand";
 import Testimonials from "./components/Testimonials";
-import CTA from "./components/CTA";
 import Footer from "./components/Footer";
 
 export default function Home() {
@@ -20,7 +19,6 @@ export default function Home() {
       <Courses />
       <StatsBand />
       <Testimonials />
-      <CTA />
       <Footer />
     </main>
   );

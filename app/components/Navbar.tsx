@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Image from "next/image";
+import { BOOK_DEMO_URL } from "../lib/links";
 
 export default function Navbar() {
   const navRef = useRef<HTMLElement>(null);
@@ -70,7 +71,9 @@ export default function Navbar() {
           </a>
 
           <a
-            href="#contact"
+            href={BOOK_DEMO_URL}
+            target="_blank"
+            rel="noreferrer"
             className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full hover:opacity-90 hover:-translate-y-px transition-all duration-300 shadow-md shadow-[var(--brand-blue)]/20 whitespace-nowrap"
           >
             Book a Demo
@@ -127,7 +130,9 @@ export default function Navbar() {
           </a>
 
           <a
-            href="#contact"
+            href={BOOK_DEMO_URL}
+            target="_blank"
+            rel="noreferrer"
             className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full text-center"
             onClick={() => setMenuOpen(false)}
           >

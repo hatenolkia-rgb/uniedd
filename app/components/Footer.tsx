@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { FaWhatsapp, FaPhoneAlt } from "react-icons/fa";
+import { BOOK_DEMO_URL } from "../lib/links";
 
 export default function Footer() {
   return (
@@ -80,7 +81,7 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#contact" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                <a href={BOOK_DEMO_URL} target="_blank" rel="noreferrer" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
                   Contact
                 </a>
               </li>
@@ -101,12 +102,12 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="#contact" className="text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">
+                <a href={BOOK_DEMO_URL} target="_blank" rel="noreferrer" className="text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">
                   Enquire now
                 </a>
               </li>
               <li>
-                <a href="https://wa.me/918383857710" target="_blank" rel="noreferrer" className="text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">
+                <a href={BOOK_DEMO_URL} target="_blank" rel="noreferrer" className="text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">
                   Book a demo
                 </a>
               </li>
@@ -122,7 +123,7 @@ export default function Footer() {
             <a href="#about" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               About
             </a>
-            <a href="#contact" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+            <a href={BOOK_DEMO_URL} target="_blank" rel="noreferrer" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               Contact
             </a>
             <a href="https://lms.uniedd.com" target="_blank" rel="noreferrer" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">

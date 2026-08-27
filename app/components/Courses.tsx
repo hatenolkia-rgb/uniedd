@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { BOOK_DEMO_URL } from "../lib/links";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -256,7 +257,9 @@ export default function Courses() {
 
                   <div className="mt-auto flex flex-col items-center gap-3">
                     <a
-                      href="#contact"
+                      href={BOOK_DEMO_URL}
+                      target="_blank"
+                      rel="noreferrer"
                       className="w-full text-center px-6 py-3 bg-[var(--brand-blue)]/80 text-white rounded-full text-sm font-semibold hover:opacity-90 hover:-translate-y-px transition-all duration-300"
                     >
                       Book a Demo

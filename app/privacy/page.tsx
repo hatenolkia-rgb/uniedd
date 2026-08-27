@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -37,25 +36,22 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-semibold mb-2">1. Information we collect</h2>
               <ul className="list-disc pl-5 space-y-1.5">
                 <li>
-                  <span className="font-medium">Contact and enquiry details</span> you submit through our forms:
-                  first name, last name, email address, mobile number, and the program you&rsquo;re interested in.
-                </li>
-                <li>
                   <span className="font-medium">Communication data</span> when you reach us via WhatsApp, phone, or
                   email, including the content of those messages.
                 </li>
                 <li>
                   <span className="font-medium">Technical data</span> such as browser type, device information, and
                   general usage of our website, collected automatically to keep the site secure and working correctly.
-                  This includes an approximate location (derived from IP address) used only to determine whether a
-                  demo booking fee applies.
-                </li>
-                <li>
-                  <span className="font-medium">Payment data</span>, for bookings made from India where a demo fee
-                  applies. Payments are processed by Razorpay; we do not receive or store your card, UPI, or bank
-                  details — only confirmation that a payment was completed.
                 </li>
               </ul>
+              <p className="mt-3">
+                This website does not itself collect booking, enrolment, or payment details. Booking a demo takes
+                you to our learning platform at{" "}
+                <a href="https://lms.uniedd.com" target="_blank" rel="noreferrer" className="text-[var(--brand-blue)] hover:underline">
+                  lms.uniedd.com
+                </a>
+                , which has its own privacy policy covering that process.
+              </p>
             </div>
 
             <div>
@@ -130,11 +126,7 @@ export default function PrivacyPage() {
                 For any privacy-related questions or requests, contact us on WhatsApp/phone at{" "}
                 <a href="tel:+918383857710" className="text-[var(--brand-blue)] hover:underline">
                   +91 83838 57710
-                </a>{" "}
-                or through the enquiry form on our{" "}
-                <Link href="/#contact" className="text-[var(--brand-blue)] hover:underline">
-                  Contact section
-                </Link>
+                </a>
                 .
               </p>
             </div>

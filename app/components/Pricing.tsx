@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { BOOK_DEMO_URL } from "../lib/links";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -149,7 +150,9 @@ export default function Pricing() {
               </ul>
 
               <a
-                href="#contact"
+                href={BOOK_DEMO_URL}
+                target="_blank"
+                rel="noreferrer"
                 className={`inline-flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold transition-all ${
                   plan.popular
                     ? "bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white shadow-lg shadow-[var(--brand-blue)]/20"
