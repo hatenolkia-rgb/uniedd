@@ -198,10 +198,13 @@ export async function POST(request: NextRequest) {
     });
 
     // WhatsApp notification to the team — no-ops if not configured (see lib/whatsapp.ts)
-    await sendWhatsAppNotification(
-      `New ${safe.source} lead: ${firstName} ${lastName || ""} — ${instrument}${ageGroup ? ` (${ageGroup})` : ""}\n` +
-        `Phone: ${phone}\nRequested: ${formattedDate} at ${demoTime}${timezone ? ` (${timezone})` : ""}`
-    );
+    await sendWhatsAppNotification({
+      source: safe.source,
+      name: `${firstName} ${lastName || ""}`.trim(),
+      program: `${instrument}${ageGroup ? ` (${ageGroup})` : ""}`,
+      phone,
+      slot: `${formattedDate} at ${demoTime}${timezone ? ` (${timezone})` : ""}`,
+    });
 
     // Confirmation email to user
     await transporter.sendMail({
