@@ -30,15 +30,16 @@ export default function CTA() {
   const previewRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  // null = still checking; true = India (paid); false = elsewhere (free)
-  const [requiresPayment, setRequiresPayment] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    fetch("/api/geo")
-      .then((r) => r.json())
-      .then((d) => setRequiresPayment(d.country === "IN"))
-      .catch(() => setRequiresPayment(false)); // fail open to "free" rather than blocking bookings
-  }, []);
+  // TEMPORARILY DISABLED (2026-08-27): demo bookings are free for everyone
+  // right now, including India. To bring back the ₹199 India fee, restore
+  // the useState<boolean | null>(null) + this useEffect:
+  //   useEffect(() => {
+  //     fetch("/api/geo")
+  //       .then((r) => r.json())
+  //       .then((d) => setRequiresPayment(d.country === "IN"))
+  //       .catch(() => setRequiresPayment(false));
+  //   }, []);
+  const requiresPayment = false;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -390,7 +391,7 @@ export default function CTA() {
 
               <button
                 type="submit"
-                disabled={loading || requiresPayment === null}
+                disabled={loading}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-xl text-sm font-semibold hover:opacity-90 hover:-translate-y-px transition-all duration-300 shadow-lg shadow-[var(--brand-blue)]/20 mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? (
@@ -419,17 +420,15 @@ export default function CTA() {
               <p className="text-[10px] tracking-widest uppercase text-[var(--muted)] font-medium">
                 Your Demo, At a Glance
               </p>
-              {requiresPayment !== null && (
-                <span
-                  className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
-                    requiresPayment
-                      ? "bg-[var(--brand-orange)]/10 text-[var(--brand-orange)]"
-                      : "bg-green-500/10 text-green-600"
-                  }`}
-                >
-                  {requiresPayment ? `₹${DEMO_FEE_INR}` : "FREE"}
-                </span>
-              )}
+              <span
+                className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
+                  requiresPayment
+                    ? "bg-[var(--brand-orange)]/10 text-[var(--brand-orange)]"
+                    : "bg-green-500/10 text-green-600"
+                }`}
+              >
+                {requiresPayment ? `₹${DEMO_FEE_INR}` : "FREE"}
+              </span>
             </div>
 
             {/* Mini calendar */}

@@ -83,10 +83,13 @@ export async function POST(request: NextRequest) {
       year: "numeric",
     });
 
-    // Determine locale from the request itself — never trust a client-submitted
-    // "country" or "isPaid" flag, since that could be spoofed to skip payment.
-    const country = request.headers.get("x-vercel-ip-country");
-    const requiresPayment = country === "IN";
+    // TEMPORARILY DISABLED (2026-08-27): demo bookings are free for everyone
+    // right now, including India. To bring back the ₹199 India fee, restore:
+    //   const country = request.headers.get("x-vercel-ip-country");
+    //   const requiresPayment = country === "IN";
+    // (Determine locale from the request itself, not a client-submitted flag
+    // -- that could be spoofed to skip payment once this is re-enabled.)
+    const requiresPayment = false;
 
     if (requiresPayment) {
       const keySecret = process.env.RAZORPAY_KEY_SECRET;
