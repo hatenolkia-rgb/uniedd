@@ -3,9 +3,10 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { isRateLimited, clientKey } from "../rate-limit";
 import { getSupabase } from "../../lib/supabase";
+import { sendWhatsAppNotification } from "../../lib/whatsapp";
 
 const DEMO_FEE_INR = 199;
-const VALID_INSTRUMENTS = ["Guitar", "Keyboard", "Vocals", "Tabla", "Dance", "Public Speaking"];
+const VALID_INSTRUMENTS = ["Guitar", "Keyboard", "Vocals", "Tabla", "Dance", "Public Speaking", "Chess"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_LEN = 100;
 
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
       demoDate,
       demoTime,
       timezone,
+      ageGroup,
+      source,
       razorpayOrderId,
       razorpayPaymentId,
       razorpaySignature,
@@ -60,7 +63,9 @@ export async function POST(request: NextRequest) {
       typeof phone !== "string" || phone.length > 20 ||
       !VALID_INSTRUMENTS.includes(instrument) ||
       typeof demoTime !== "string" || demoTime.length > 20 ||
-      typeof timezone === "string" && timezone.length > 60
+      typeof timezone === "string" && timezone.length > 60 ||
+      typeof ageGroup === "string" && ageGroup.length > 40 ||
+      typeof source === "string" && source.length > 40
     ) {
       return NextResponse.json({ error: "Please check your details and try again." }, { status: 400 });
     }
@@ -122,6 +127,8 @@ export async function POST(request: NextRequest) {
         demo_date: demoDate,
         demo_time: demoTime,
         timezone: timezone || null,
+        age_group: ageGroup || null,
+        source: source || "website",
         requires_payment: requiresPayment,
         razorpay_order_id: requiresPayment ? razorpayOrderId : null,
         razorpay_payment_id: requiresPayment ? razorpayPaymentId : null,
@@ -136,7 +143,9 @@ export async function POST(request: NextRequest) {
           );
         }
         // Don't block the booking on a DB hiccup -- email is still the fallback
-        // record. Log it so it's visible in Vercel's function logs.
+        // record. Log it so it's visible in Vercel's function logs. Note: this
+        // also fires if the age_group/source columns haven't been added yet —
+        // see supabase/add_lead_fields.sql.
         console.error("Supabase insert error:", dbError);
       }
     }
@@ -160,6 +169,8 @@ export async function POST(request: NextRequest) {
       instrument: escapeHtml(instrument),
       demoTime: escapeHtml(demoTime),
       timezone: escapeHtml(String(timezone || "")),
+      ageGroup: escapeHtml(String(ageGroup || "")),
+      source: escapeHtml(String(source || "website")),
     };
 
     const paymentLine = requiresPayment
@@ -177,12 +188,20 @@ export async function POST(request: NextRequest) {
         <p><strong>Email:</strong> ${safe.email}</p>
         <p><strong>Phone:</strong> ${safe.phone}</p>
         <p><strong>Instrument:</strong> ${safe.instrument}</p>
+        ${safe.ageGroup ? `<p><strong>Age group:</strong> ${safe.ageGroup}</p>` : ""}
         <p><strong>Requested slot:</strong> ${formattedDate} at ${safe.demoTime}${safe.timezone ? ` (${safe.timezone})` : ""}</p>
         ${paymentLine}
+        <p><strong>Source:</strong> ${safe.source}</p>
         <br/>
         <p>This booking was submitted from the Uniedd website. Confirm the slot with the student, or follow up on WhatsApp if it needs to be rescheduled.</p>
       `,
     });
+
+    // WhatsApp notification to the team — no-ops if not configured (see lib/whatsapp.ts)
+    await sendWhatsAppNotification(
+      `New ${safe.source} lead: ${firstName} ${lastName || ""} — ${instrument}${ageGroup ? ` (${ageGroup})` : ""}\n` +
+        `Phone: ${phone}\nRequested: ${formattedDate} at ${demoTime}${timezone ? ` (${timezone})` : ""}`
+    );
 
     // Confirmation email to user
     await transporter.sendMail({

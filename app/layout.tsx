@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import { FaWhatsapp } from "react-icons/fa";
+import StickyBookBar from "./components/StickyBookBar";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -87,13 +88,13 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${playfair.variable} antialiased`}
     >
-      <body className="min-h-screen">
+      <body className="min-h-screen pb-20">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         {children}
-         <div className="fixed z-40 bottom-4 right-2 md:right-6 flex flex-col gap-4">
+         <div className="fixed z-40 bottom-20 right-2 md:right-6 flex flex-col gap-4">
           <div className="relative w-14 h-14">
             {/* Ripple Background */}
             <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ripple"></span>
@@ -106,6 +107,7 @@ export default function RootLayout({
             </span>
           </div>
         </div>
+        <StickyBookBar />
       </body>
     </html>
   );
