@@ -72,11 +72,9 @@ export default function TermsPage() {
                 enrolment.
               </p>
               <p className="mt-3">
-                Demo bookings and any associated one-time demo fee are handled on our learning platform at{" "}
-                <a href="https://lms.uniedd.com" target="_blank" rel="noreferrer" className="text-[var(--brand-blue)] hover:underline">
-                  lms.uniedd.com
-                </a>
-                , where current pricing and payment terms are shown at the time of booking.
+                A one-time demo booking fee of ₹199 applies to visitors booking from India, determined by your
+                location at the time of booking; this fee is processed securely via Razorpay. Visitors booking from
+                outside India are not charged for the demo session.
               </p>
             </div>
 
@@ -131,7 +129,11 @@ export default function TermsPage() {
                 Questions about these Terms can be sent to us on WhatsApp/phone at{" "}
                 <a href="tel:+918383857710" className="text-[var(--brand-blue)] hover:underline">
                   +91 83838 57710
-                </a>
+                </a>{" "}
+                or through the enquiry form on our{" "}
+                <Link href="/#contact" className="text-[var(--brand-blue)] hover:underline">
+                  Contact section
+                </Link>
                 .
               </p>
             </div>
