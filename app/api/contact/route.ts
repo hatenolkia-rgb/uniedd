@@ -182,25 +182,32 @@ export async function POST(request: NextRequest) {
       slot: `${formattedDate} at ${demoTime}${timezone ? ` (${timezone})` : ""}`,
     });
 
-    // Confirmation email to user
-    await transporter.sendMail({
-      from: process.env.MAIL_ID,
-      to: email,
-      subject: `Your UniEDD Demo is Booked — ${formattedDate}`,
-      html: `
-        <h2>Hi ${safe.firstName},</h2>
-        <p>Thanks for booking a demo with UniEDD! Here are your details:</p>
-        <p>
-          <strong>Program:</strong> ${safe.instrument}<br/>
-          <strong>Date:</strong> ${formattedDate}<br/>
-          <strong>Time:</strong> ${safe.demoTime}${safe.timezone ? ` (${safe.timezone})` : ""}
-          ${requiresPayment ? `<br/><strong>Amount paid:</strong> ₹${DEMO_FEE_INR}` : ""}
-        </p>
-        <p>Our team will reach out on ${safe.phone} to confirm this slot shortly. If you need to reschedule, just reply to this email or message us on WhatsApp.</p>
-        <br/>
-        <p>— The UniEDD Team</p>
-      `,
-    });
+    // Confirmation email to user -- best-effort, same as WhatsApp/Supabase
+    // above. A booking is already captured (WhatsApp + digest queue) by this
+    // point, so a Gmail auth/delivery failure shouldn't fail the whole
+    // request and show the visitor a false "booking failed" error.
+    try {
+      await transporter.sendMail({
+        from: process.env.MAIL_ID,
+        to: email,
+        subject: `Your UniEDD Demo is Booked — ${formattedDate}`,
+        html: `
+          <h2>Hi ${safe.firstName},</h2>
+          <p>Thanks for booking a demo with UniEDD! Here are your details:</p>
+          <p>
+            <strong>Program:</strong> ${safe.instrument}<br/>
+            <strong>Date:</strong> ${formattedDate}<br/>
+            <strong>Time:</strong> ${safe.demoTime}${safe.timezone ? ` (${safe.timezone})` : ""}
+            ${requiresPayment ? `<br/><strong>Amount paid:</strong> ₹${DEMO_FEE_INR}` : ""}
+          </p>
+          <p>Our team will reach out on ${safe.phone} to confirm this slot shortly. If you need to reschedule, just reply to this email or message us on WhatsApp.</p>
+          <br/>
+          <p>— The UniEDD Team</p>
+        `,
+      });
+    } catch (mailError) {
+      console.error("Confirmation email failed:", mailError);
+    }
 
     return NextResponse.json({ success: true, message: "Booking confirmed!" });
   } catch (error) {
