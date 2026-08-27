@@ -113,12 +113,18 @@ export async function POST(request: NextRequest) {
       usedPaymentIds.add(razorpayPaymentId);
     }
 
-    // Persist the booking. When Supabase is configured, its `unique`
-    // constraint on razorpay_payment_id is the authoritative replay guard
-    // (works across cold starts/instances, unlike the in-memory Set above).
+    // Note: payment-replay protection for the India flow now rests entirely
+    // on the in-memory `usedPaymentIds` Set above (best-effort within one
+    // warm serverless instance -- see its comment). There's no longer a
+    // permanent `bookings` table with a unique constraint on
+    // razorpay_payment_id backing this across cold starts/instances, since
+    // this route no longer persists bookings at all -- only a transient
+    // digest-queue row (see below), which isn't a reliable replay guard.
     const supabase = getSupabase();
     if (supabase) {
-      const { error: dbError } = await supabase.from("bookings").insert({
+      // Not a permanent record -- see supabase/lead_digest_queue.sql. This
+      // row gets emailed out and deleted by api/send-lead-digest within 24h.
+      const { error: dbError } = await supabase.from("lead_digest_queue").insert({
         first_name: firstName,
         last_name: lastName || null,
         email,
@@ -128,25 +134,15 @@ export async function POST(request: NextRequest) {
         demo_time: demoTime,
         timezone: timezone || null,
         age_group: ageGroup || null,
-        source: source || "website",
         requires_payment: requiresPayment,
-        razorpay_order_id: requiresPayment ? razorpayOrderId : null,
-        razorpay_payment_id: requiresPayment ? razorpayPaymentId : null,
       });
 
       if (dbError) {
-        if (dbError.code === "23505") {
-          // Unique violation on razorpay_payment_id -- this payment was already used.
-          return NextResponse.json(
-            { error: "This payment has already been used for a booking." },
-            { status: 409 }
-          );
-        }
-        // Don't block the booking on a DB hiccup -- email is still the fallback
-        // record. Log it so it's visible in Vercel's function logs. Note: this
-        // also fires if the age_group/source columns haven't been added yet —
-        // see supabase/add_lead_fields.sql.
-        console.error("Supabase insert error:", dbError);
+        // Don't block the booking on this -- WhatsApp + the customer's own
+        // confirmation email still go out. Log it so it's visible in
+        // Vercel's function logs. This fires if lead_digest_queue.sql
+        // hasn't been run yet.
+        console.error("lead_digest_queue insert error:", dbError);
       }
     }
 
@@ -163,39 +159,16 @@ export async function POST(request: NextRequest) {
     // into whatever inbox renders this.
     const safe = {
       firstName: escapeHtml(firstName),
-      lastName: escapeHtml(String(lastName || "")),
-      email: escapeHtml(email),
       phone: escapeHtml(phone),
       instrument: escapeHtml(instrument),
       demoTime: escapeHtml(demoTime),
       timezone: escapeHtml(String(timezone || "")),
-      ageGroup: escapeHtml(String(ageGroup || "")),
       source: escapeHtml(String(source || "website")),
     };
 
-    const paymentLine = requiresPayment
-      ? `<p><strong>Payment:</strong> ₹${DEMO_FEE_INR} paid (Razorpay payment ID: ${escapeHtml(razorpayPaymentId)})</p>`
-      : `<p><strong>Payment:</strong> Not required (visitor outside India)</p>`;
-
-    // Email to admin
-    await transporter.sendMail({
-      from: process.env.MAIL_ID,
-      to: process.env.MAIL_ID,
-      subject: `New Demo Booking - ${safe.firstName} ${safe.lastName} - ${formattedDate}`,
-      html: `
-        <h2>New Demo Booking</h2>
-        <p><strong>Name:</strong> ${safe.firstName} ${safe.lastName}</p>
-        <p><strong>Email:</strong> ${safe.email}</p>
-        <p><strong>Phone:</strong> ${safe.phone}</p>
-        <p><strong>Instrument:</strong> ${safe.instrument}</p>
-        ${safe.ageGroup ? `<p><strong>Age group:</strong> ${safe.ageGroup}</p>` : ""}
-        <p><strong>Requested slot:</strong> ${formattedDate} at ${safe.demoTime}${safe.timezone ? ` (${safe.timezone})` : ""}</p>
-        ${paymentLine}
-        <p><strong>Source:</strong> ${safe.source}</p>
-        <br/>
-        <p>This booking was submitted from the Uniedd website. Confirm the slot with the student, or follow up on WhatsApp if it needs to be rescheduled.</p>
-      `,
-    });
+    // No per-lead admin email anymore -- WhatsApp below is the immediate
+    // alert, and api/send-lead-digest emails a summary of everything queued
+    // in lead_digest_queue once every 24 hours instead.
 
     // WhatsApp notification to the team — no-ops if not configured (see lib/whatsapp.ts)
     await sendWhatsAppNotification({
