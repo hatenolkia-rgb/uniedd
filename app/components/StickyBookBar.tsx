@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { FaTimes, FaArrowRight } from "react-icons/fa";
 
 const DISMISS_KEY = "uniedd-sticky-bar-dismissed";
 
+// Links to the LMS's existing /demo booking flow (Razorpay + Sales CRM
+// already built there) rather than duplicating that funnel on this site.
+const BOOK_URL = "https://lms.uniedd.com/demo";
+
 export default function StickyBookBar() {
-  const pathname = usePathname();
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
@@ -19,8 +21,7 @@ export default function StickyBookBar() {
     }
   }, []);
 
-  // Don't show it on the booking page itself, or once dismissed for this session.
-  if (dismissed || pathname === "/book-trial") return null;
+  if (dismissed) return null;
 
   const handleDismiss = () => {
     setDismissed(true);
@@ -48,7 +49,9 @@ export default function StickyBookBar() {
         </div>
 
         <a
-          href="/book-trial"
+          href={BOOK_URL}
+          target="_blank"
+          rel="noreferrer"
           className="shrink-0 inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full text-xs sm:text-sm font-semibold shadow-md hover:opacity-90 hover:-translate-y-px transition-all duration-300 whitespace-nowrap"
         >
           Book Now <FaArrowRight size={11} />
