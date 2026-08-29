@@ -47,27 +47,40 @@ export async function sendWhatsAppNotification(lead: LeadNotification): Promise<
   }));
 
   await Promise.all(
-    recipients.map((to) =>
-      fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to,
-          type: "template",
-          template: {
-            name: templateName,
-            language: { code: templateLang },
-            components: [{ type: "body", parameters }],
+    recipients.map(async (to) => {
+      try {
+        const res = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
           },
-        }),
-      }).catch((err) => {
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to,
+            type: "template",
+            template: {
+              name: templateName,
+              language: { code: templateLang },
+              components: [{ type: "body", parameters }],
+            },
+          }),
+        });
+
+        // fetch() only rejects on network failures -- it does NOT reject on
+        // HTTP error responses like 400/401 from Meta. Without this check,
+        // an actual rejection from Meta (bad template name, recipient not
+        // on the test number's allow-list, expired token, etc.) would
+        // silently "succeed" from this function's perspective with no log
+        // at all, making it look like nothing was ever attempted.
+        if (!res.ok) {
+          const body = await res.text().catch(() => "");
+          console.error(`WhatsApp send to ${to} rejected (${res.status}):`, body);
+        }
+      } catch (err) {
         // Best-effort — never let a WhatsApp failure block a booking.
-        console.error("WhatsApp notification failed:", err);
-      })
-    )
+        console.error(`WhatsApp send to ${to} failed:`, err);
+      }
+    })
   );
 }
