@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { isRateLimited, clientKey } from "../rate-limit";
 import { getSupabase } from "../../lib/supabase";
-import { sendWhatsAppNotification } from "../../lib/whatsapp";
+import { sendWhatsAppNotification, sendCustomerWelcomeMessage } from "../../lib/whatsapp";
 
 const DEMO_FEE_INR = 199;
 const VALID_INSTRUMENTS = ["Guitar", "Keyboard", "Vocals", "Tabla", "Dance", "Public Speaking", "Chess"];
@@ -180,6 +180,14 @@ export async function POST(request: NextRequest) {
       program: `${instrument}${ageGroup ? ` (${ageGroup})` : ""}`,
       phone,
       slot: `${formattedDate} at ${demoTime}${timezone ? ` (${timezone})` : ""}`,
+    });
+
+    // WhatsApp welcome message back to the customer — separate template/
+    // number from the team alert above, no-ops if not configured.
+    await sendCustomerWelcomeMessage({
+      name: firstName,
+      program: instrument,
+      phone,
     });
 
     // Confirmation email to user -- best-effort, same as WhatsApp/Supabase
