@@ -5,6 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FaUser, FaPhoneAlt, FaRegEnvelope, FaRegCalendarAlt, FaRegClock, FaCheckCircle, FaPaperPlane, FaGraduationCap } from "react-icons/fa";
 import { loadRazorpayScript, type RazorpayResponse } from "../lib/razorpay";
+import { COUNTRY_CODES } from "../lib/countryCodes";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -21,17 +22,6 @@ const INCLUDED = [
   "30-minute live 1:1 session",
   "Meet your mentor before you commit",
   "Available 24/7, any time zone",
-];
-
-const COUNTRY_CODES = [
-  { code: "+91", label: "🇮🇳 +91" },
-  { code: "+971", label: "🇦🇪 +971" },
-  { code: "+1", label: "🇺🇸 +1" },
-  { code: "+44", label: "🇬🇧 +44" },
-  { code: "+61", label: "🇦🇺 +61" },
-  { code: "+65", label: "🇸🇬 +65" },
-  { code: "+974", label: "🇶🇦 +974" },
-  { code: "+966", label: "🇸🇦 +966" },
 ];
 
 export default function CTA() {
@@ -339,7 +329,7 @@ export default function CTA() {
                         className="px-2.5 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
                       >
                         {COUNTRY_CODES.map((c) => (
-                          <option key={c.code} value={c.code}>{c.label}</option>
+                          <option key={c.label} value={c.code}>{c.label}</option>
                         ))}
                       </select>
                       <div className="relative flex-1 min-w-0">
