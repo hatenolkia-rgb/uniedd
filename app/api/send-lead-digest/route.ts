@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import nodemailer from "nodemailer";
 import { getSupabase } from "../../lib/supabase";
+import { sendEmail } from "../../lib/resend";
 
 interface QueuedLead {
   id: string;
@@ -39,6 +39,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail) {
+    return NextResponse.json({ error: "ADMIN_EMAIL not configured" }, { status: 500 });
+  }
+
   const supabase = getSupabase();
   if (!supabase) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
@@ -74,17 +79,8 @@ export async function GET(request: NextRequest) {
     })
     .join("");
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.MAIL_ID,
-      pass: process.env.PASSWORD,
-    },
-  });
-
-  await transporter.sendMail({
-    from: process.env.MAIL_ID,
-    to: process.env.MAIL_ID,
+  await sendEmail({
+    to: adminEmail,
     subject: `UniEDD — ${leads.length} new lead${leads.length === 1 ? "" : "s"} (last 24h)`,
     html: `
       <h2>${leads.length} new demo booking${leads.length === 1 ? "" : "s"}</h2>

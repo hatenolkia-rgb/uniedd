@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import nodemailer from "nodemailer";
 import crypto from "crypto";
 import { isRateLimited, clientKey } from "../rate-limit";
 import { getSupabase } from "../../lib/supabase";
 import { sendWhatsAppNotification, sendCustomerWelcomeMessage } from "../../lib/whatsapp";
+import { sendEmail } from "../../lib/resend";
 
 const DEMO_FEE_INR = 199;
 const VALID_INSTRUMENTS = ["Guitar", "Keyboard", "Vocals", "Tabla", "Dance", "Public Speaking", "Chess"];
@@ -149,14 +149,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.MAIL_ID,
-        pass: process.env.PASSWORD,
-      },
-    });
-
     // Escape every user-supplied value before it goes into an HTML email —
     // otherwise the "name" field alone is an HTML/script injection vector
     // into whatever inbox renders this.
@@ -192,11 +184,10 @@ export async function POST(request: NextRequest) {
 
     // Confirmation email to user -- best-effort, same as WhatsApp/Supabase
     // above. A booking is already captured (WhatsApp + digest queue) by this
-    // point, so a Gmail auth/delivery failure shouldn't fail the whole
-    // request and show the visitor a false "booking failed" error.
+    // point, so a delivery failure shouldn't fail the whole request and show
+    // the visitor a false "booking failed" error.
     try {
-      await transporter.sendMail({
-        from: process.env.MAIL_ID,
+      await sendEmail({
         to: email,
         subject: `Your UniEDD Demo is Booked — ${formattedDate}`,
         html: `
