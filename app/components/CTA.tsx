@@ -23,6 +23,17 @@ const INCLUDED = [
   "Available 24/7, any time zone",
 ];
 
+const COUNTRY_CODES = [
+  { code: "+91", label: "🇮🇳 +91" },
+  { code: "+971", label: "🇦🇪 +971" },
+  { code: "+1", label: "🇺🇸 +1" },
+  { code: "+44", label: "🇬🇧 +44" },
+  { code: "+61", label: "🇦🇺 +61" },
+  { code: "+65", label: "🇸🇬 +65" },
+  { code: "+974", label: "🇶🇦 +974" },
+  { code: "+966", label: "🇸🇦 +966" },
+];
+
 export default function CTA() {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -49,11 +60,14 @@ export default function CTA() {
     const formData = new FormData(e.currentTarget);
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+    const countryCode = formData.get("countryCode") as string;
+    const phoneDigits = formData.get("phone") as string;
+
     const data = {
       firstName: formData.get("firstName") as string,
       lastName: formData.get("lastName") as string,
       email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
+      phone: `${countryCode} ${phoneDigits}`.trim(),
       instrument: formData.get("instrument") as string,
       demoDate: formData.get("demoDate") as string,
       demoTime: formData.get("demoTime") as string,
@@ -317,15 +331,27 @@ export default function CTA() {
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="relative">
-                      <FaPhoneAlt className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={13} />
-                      <input
-                        type="tel"
-                        name="phone"
-                        placeholder="Mobile number"
-                        required
-                        className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
-                      />
+                    <div className="flex gap-2">
+                      <select
+                        name="countryCode"
+                        defaultValue="+91"
+                        aria-label="Country code"
+                        className="px-2.5 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
+                      >
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={c.code} value={c.code}>{c.label}</option>
+                        ))}
+                      </select>
+                      <div className="relative flex-1 min-w-0">
+                        <FaPhoneAlt className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={13} />
+                        <input
+                          type="tel"
+                          name="phone"
+                          placeholder="Mobile number"
+                          required
+                          className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
+                        />
+                      </div>
                     </div>
                     <div className="relative">
                       <FaRegEnvelope className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={13} />
