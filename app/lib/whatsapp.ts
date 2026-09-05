@@ -75,10 +75,11 @@ async function sendTemplateMessage(to: string, templateName: string, templateLan
 }
 
 // Meta's Cloud API wants digits only, no "+", full country code included.
-// The site's booking forms don't have a country-code selector, so a bare
-// 10-digit entry is assumed to be a local Indian mobile number and gets
-// "91" prepended. Anything else is passed through as-is (already has a
-// country code, or is malformed and will just fail gracefully/get logged).
+// The booking form's country code selector (see CTA.tsx) means the phone
+// field normally already carries one, so this is mostly a defensive
+// fallback: a bare 10-digit entry (e.g. from a legacy/other caller) is
+// assumed to be a local Indian mobile number and gets "91" prepended.
+// Anything else is passed through as-is.
 function toWhatsAppNumber(rawPhone: string): string {
   const digits = rawPhone.replace(/\D/g, "");
   return digits.length === 10 ? `91${digits}` : digits;

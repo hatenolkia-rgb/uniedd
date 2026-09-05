@@ -79,28 +79,35 @@ export async function GET(request: NextRequest) {
     })
     .join("");
 
-  await sendEmail({
-    to: adminEmail,
-    subject: `UniEDD — ${leads.length} new lead${leads.length === 1 ? "" : "s"} (last 24h)`,
-    html: `
-      <h2>${leads.length} new demo booking${leads.length === 1 ? "" : "s"}</h2>
-      <table style="border-collapse:collapse;width:100%;font-size:14px;">
-        <thead>
-          <tr style="background:#f7f7f7;text-align:left;">
-            <th style="padding:8px;border:1px solid #e5e5e5;">Name</th>
-            <th style="padding:8px;border:1px solid #e5e5e5;">Phone</th>
-            <th style="padding:8px;border:1px solid #e5e5e5;">Email</th>
-            <th style="padding:8px;border:1px solid #e5e5e5;">Program</th>
-            <th style="padding:8px;border:1px solid #e5e5e5;">Requested slot</th>
-            <th style="padding:8px;border:1px solid #e5e5e5;">Fee</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <br/>
-      <p>Each lead was already sent to the team over WhatsApp when they booked — this is just the daily roll-up.</p>
-    `,
-  });
+  try {
+    await sendEmail({
+      to: adminEmail,
+      subject: `UniEDD — ${leads.length} new lead${leads.length === 1 ? "" : "s"} (last 24h)`,
+      html: `
+        <h2>${leads.length} new demo booking${leads.length === 1 ? "" : "s"}</h2>
+        <table style="border-collapse:collapse;width:100%;font-size:14px;">
+          <thead>
+            <tr style="background:#f7f7f7;text-align:left;">
+              <th style="padding:8px;border:1px solid #e5e5e5;">Name</th>
+              <th style="padding:8px;border:1px solid #e5e5e5;">Phone</th>
+              <th style="padding:8px;border:1px solid #e5e5e5;">Email</th>
+              <th style="padding:8px;border:1px solid #e5e5e5;">Program</th>
+              <th style="padding:8px;border:1px solid #e5e5e5;">Requested slot</th>
+              <th style="padding:8px;border:1px solid #e5e5e5;">Fee</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <br/>
+        <p>Each lead was already sent to the team over WhatsApp when they booked — this is just the daily roll-up.</p>
+      `,
+    });
+  } catch (mailError) {
+    // Don't delete the queue below if the email never actually went out --
+    // leave these rows for tomorrow's run to retry instead of losing them.
+    console.error("Digest email failed:", mailError);
+    return NextResponse.json({ error: "Digest email failed to send" }, { status: 502 });
+  }
 
   const ids = leads.map((lead) => lead.id);
   const { error: deleteError } = await supabase.from("lead_digest_queue").delete().in("id", ids);
