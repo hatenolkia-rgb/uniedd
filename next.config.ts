@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
-          // Clickjacking protection -- stops the site (incl. the payment
+          // Clickjacking protection -- stops the site (incl. the booking
           // form) from being embedded in a hidden iframe on another site.
           { key: "X-Frame-Options", value: "DENY" },
           // Stops browsers from guessing content-types away from what's declared.

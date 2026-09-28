@@ -13,7 +13,6 @@ interface QueuedLead {
   demo_date: string;
   demo_time: string;
   timezone: string | null;
-  requires_payment: boolean;
   created_at: string;
 }
 
@@ -74,7 +73,6 @@ export async function GET(request: NextRequest) {
           <td style="padding:8px;border:1px solid #e5e5e5;">${escapeHtml(lead.email)}</td>
           <td style="padding:8px;border:1px solid #e5e5e5;">${escapeHtml(lead.instrument)}${lead.age_group ? ` (${escapeHtml(lead.age_group)})` : ""}</td>
           <td style="padding:8px;border:1px solid #e5e5e5;">${escapeHtml(lead.demo_date)} ${escapeHtml(lead.demo_time)}${lead.timezone ? ` (${escapeHtml(lead.timezone)})` : ""}</td>
-          <td style="padding:8px;border:1px solid #e5e5e5;">${lead.requires_payment ? "₹199 (India)" : "Free"}</td>
         </tr>`;
     })
     .join("");
@@ -93,7 +91,6 @@ export async function GET(request: NextRequest) {
               <th style="padding:8px;border:1px solid #e5e5e5;">Email</th>
               <th style="padding:8px;border:1px solid #e5e5e5;">Program</th>
               <th style="padding:8px;border:1px solid #e5e5e5;">Requested slot</th>
-              <th style="padding:8px;border:1px solid #e5e5e5;">Fee</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>

@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import Link from "next/link";
 import { FaWhatsapp } from "react-icons/fa";
 import StickyBookBar from "./components/StickyBookBar";
+import MetaPixel from "./components/MetaPixel";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -94,42 +94,26 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
-        <Script id="meta-pixel" strategy="afterInteractive">
-          {`!function(f,b,e,v,n,t,s)
-          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-          n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s)}(window, document,'script',
-          'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init', '1411313724305376');
-          fbq('track', 'PageView');`}
-        </Script>
-        <noscript>
-          <img
-            height="1"
-            width="1"
-            style={{ display: "none" }}
-            src="https://www.facebook.com/tr?id=1411313724305376&ev=PageView&noscript=1"
-            alt=""
-          />
-        </noscript>
         {children}
-         <div className="fixed z-40 bottom-20 right-2 md:right-6 flex flex-col gap-4">
+        <div className="fixed z-40 bottom-20 right-2 md:right-6 flex flex-col gap-4">
           <div className="relative w-14 h-14">
             {/* Ripple Background */}
             <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ripple"></span>
 
             {/* WhatsApp Button */}
-            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-[#25D366] hover:scale-110 duration-300">
-              <Link href="https://wa.me/918383857710" target="_blank" rel="noreferrer">
-                <FaWhatsapp className="text-2xl text-white" />
-              </Link>
-            </span>
+            <Link
+              href="https://wa.me/918383857710"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Chat with us on WhatsApp"
+              className="absolute inset-0 flex items-center justify-center rounded-full bg-[#25D366] hover:scale-110 duration-300"
+            >
+              <FaWhatsapp className="text-2xl text-white" />
+            </Link>
           </div>
         </div>
         <StickyBookBar />
+        <MetaPixel />
       </body>
     </html>
   );

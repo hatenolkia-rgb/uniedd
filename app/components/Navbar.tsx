@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Image from "next/image";
@@ -37,18 +38,18 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <div className="hidden xl:flex items-center gap-5">
-          <a href="#about" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
+          <Link href="/#about" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             About
-          </a>
-          <a href="#courses" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
+          </Link>
+          <Link href="/#courses" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             Programs
-          </a>
-          <a href="/pricing" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
+          </Link>
+          <Link href="/pricing" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             Pricing
-          </a>
-          <a href="#testimonials" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
+          </Link>
+          <Link href="/#testimonials" className="relative text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors after:absolute after:left-0 after:-bottom-1 after:h-[1.5px] after:w-0 after:bg-gradient-to-r after:from-[var(--brand-blue)] after:to-[var(--brand-orange)] hover:after:w-full after:transition-all after:duration-300">
             Reviews
-          </a>
+          </Link>
 
           <div className="w-px h-5 bg-[var(--border)]" />
 
@@ -69,12 +70,12 @@ export default function Navbar() {
             Student Login
           </a>
 
-          <a
-            href="#contact"
+          <Link
+            href="/#contact"
             className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full hover:opacity-90 hover:-translate-y-px transition-all duration-300 shadow-md shadow-[var(--brand-blue)]/20 whitespace-nowrap"
           >
             Book a Demo
-          </a>
+          </Link>
         </div>
 
         {/* Mobile menu button */}
@@ -92,18 +93,18 @@ export default function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="xl:hidden bg-white/95 backdrop-blur-md border-t border-[var(--border)] px-6 py-6 flex flex-col gap-4">
-          <a href="#about" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+          <Link href="/#about" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
             About
-          </a>
-          <a href="#courses" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+          </Link>
+          <Link href="/#courses" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
             Programs
-          </a>
-          <a href="/pricing" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+          </Link>
+          <Link href="/pricing" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
             Pricing
-          </a>
-          <a href="#testimonials" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
+          </Link>
+          <Link href="/#testimonials" className="text-[var(--muted)] hover:text-[var(--foreground)]" onClick={() => setMenuOpen(false)}>
             Reviews
-          </a>
+          </Link>
 
           <div className="h-px bg-[var(--border)] my-1" />
 
@@ -126,13 +127,13 @@ export default function Navbar() {
             Student Login
           </a>
 
-          <a
-            href="#contact"
+          <Link
+            href="/#contact"
             className="text-sm px-5 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full text-center"
             onClick={() => setMenuOpen(false)}
           >
             Book a Demo
-          </a>
+          </Link>
         </div>
       )}
     </nav>

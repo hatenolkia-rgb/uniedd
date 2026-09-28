@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { FaUser, FaPhoneAlt, FaRegEnvelope, FaRegCalendarAlt, FaRegClock, FaCheckCircle, FaPaperPlane, FaGraduationCap } from "react-icons/fa";
-import { loadRazorpayScript, type RazorpayResponse } from "../lib/razorpay";
 import { COUNTRY_CODES } from "../lib/countryCodes";
 
 gsap.registerPlugin(ScrollTrigger);
-
-const DEMO_FEE_INR = 199;
 
 // Decorative preview grid — Mon-start, 4 weeks. "today" and "selected" are just illustrative.
 const CALENDAR_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
@@ -24,6 +21,31 @@ const INCLUDED = [
   "Available 24/7, any time zone",
 ];
 
+// The date only needs reading once per render; nothing to subscribe to.
+const subscribeNever = () => () => {};
+
+function toIsoDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// "2026-09-28" -> "Monday, 28 September 2026"
+function formatDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+// "19:45" -> "7:45 pm"
+function formatTime(time: string): string {
+  const [h, min] = time.split(":").map(Number);
+  return new Date(2000, 0, 1, h, min).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+}
+
 export default function CTA() {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -31,23 +53,21 @@ export default function CTA() {
   const previewRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  // TEMPORARILY DISABLED (2026-08-27): demo bookings are free for everyone
-  // right now, including India. To bring back the ₹199 India fee, restore
-  // the useState<boolean | null>(null) + this useEffect:
-  //   useEffect(() => {
-  //     fetch("/api/geo")
-  //       .then((r) => r.json())
-  //       .then((d) => setRequiresPayment(d.country === "IN"))
-  //       .catch(() => setRequiresPayment(false));
-  //   }, []);
-  const requiresPayment = false;
+  // Earliest bookable date, in the visitor's own time zone. Left unset on the
+  // server so the rendered HTML doesn't disagree with the client's clock.
+  const minDate = useSyncExternalStore(
+    subscribeNever,
+    () => toIsoDate(new Date()),
+    () => undefined
+  );
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const form = e.currentTarget;
     setStatus(null);
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const countryCode = formData.get("countryCode") as string;
@@ -62,99 +82,31 @@ export default function CTA() {
       demoDate: formData.get("demoDate") as string,
       demoTime: formData.get("demoTime") as string,
       timezone,
+      website: formData.get("website") as string,
     };
 
-    const finishBooking = async (paymentFields?: {
-      razorpayOrderId: string;
-      razorpayPaymentId: string;
-      razorpaySignature: string;
-    }) => {
-      try {
-        const res = await fetch("/api/contact", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...data, ...paymentFields }),
-        });
-        const result = await res.json();
-        if (res.ok) {
-          setStatus({
-            type: "success",
-            message: `Demo booked for ${data.demoDate} at ${data.demoTime}! A confirmation has been sent to your email.`,
-          });
-          (e.target as HTMLFormElement).reset();
-        } else {
-          setStatus({ type: "error", message: result.error || "Something went wrong." });
-        }
-      } catch {
-        setStatus({ type: "error", message: "Network error. Please try again." });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (!requiresPayment) {
-      await finishBooking();
-      return;
-    }
-
-    // India flow: pay ₹199 via Razorpay before the booking is created
     try {
-      const orderRes = await fetch("/api/create-order", { method: "POST" });
-      const order = await orderRes.json();
-      if (!orderRes.ok) {
-        setStatus({ type: "error", message: order.error || "Could not start payment." });
-        setLoading(false);
-        return;
-      }
-
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        setStatus({ type: "error", message: "Could not load payment gateway. Please try again." });
-        setLoading(false);
-        return;
-      }
-
-      const razorpay = new window.Razorpay({
-        key: order.keyId,
-        amount: order.amount,
-        currency: order.currency,
-        name: "UniEDD",
-        description: `Demo booking — ${data.instrument}`,
-        order_id: order.orderId,
-        prefill: { name: `${data.firstName} ${data.lastName}`.trim(), email: data.email, contact: data.phone },
-        theme: { color: "#3B82C4" },
-        handler: async (response: RazorpayResponse) => {
-          const verifyRes = await fetch("/api/verify-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              orderId: response.razorpay_order_id,
-              paymentId: response.razorpay_payment_id,
-              signature: response.razorpay_signature,
-            }),
-          });
-          const verifyResult = await verifyRes.json();
-          if (!verifyRes.ok || !verifyResult.verified) {
-            setStatus({ type: "error", message: "Payment could not be verified. Please contact us." });
-            setLoading(false);
-            return;
-          }
-          await finishBooking({
-            razorpayOrderId: response.razorpay_order_id,
-            razorpayPaymentId: response.razorpay_payment_id,
-            razorpaySignature: response.razorpay_signature,
-          });
-        },
-        modal: {
-          ondismiss: () => {
-            setLoading(false);
-            setStatus({ type: "error", message: "Payment cancelled — your demo wasn't booked." });
-          },
-        },
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
       });
-      razorpay.open();
+      const result = await res.json();
+      if (res.ok) {
+        const when = `${formatDate(data.demoDate)} at ${formatTime(data.demoTime)}`;
+        setStatus({
+          type: "success",
+          message: result.emailSent
+            ? `Demo booked for ${when}! A confirmation has been sent to your email.`
+            : `Demo booked for ${when}! Our team will contact you shortly to confirm.`,
+        });
+        form.reset();
+      } else {
+        setStatus({ type: "error", message: result.error || "Something went wrong." });
+      }
     } catch {
-      setStatus({ type: "error", message: "Could not start payment. Please try again." });
+      setStatus({ type: "error", message: "Network error. Please try again." });
+    } finally {
       setLoading(false);
     }
   };
@@ -386,6 +338,7 @@ export default function CTA() {
                     <input
                       type="date"
                       name="demoDate"
+                      min={minDate}
                       required
                       className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
                     />
@@ -405,6 +358,16 @@ export default function CTA() {
                 </p>
               </div>
 
+              {/* Honeypot: hidden from people, but bots filling every field trip it */}
+              <input
+                type="text"
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="hidden"
+              />
+
               <button
                 type="submit"
                 disabled={loading}
@@ -415,7 +378,7 @@ export default function CTA() {
                 ) : (
                   <>
                     <FaPaperPlane size={12} />
-                    {requiresPayment ? `Book a Demo — ₹${DEMO_FEE_INR}` : "Book a Demo"}
+                    Book a Demo
                   </>
                 )}
               </button>
@@ -436,14 +399,8 @@ export default function CTA() {
               <p className="text-[10px] tracking-widest uppercase text-[var(--muted)] font-medium">
                 Your Demo, At a Glance
               </p>
-              <span
-                className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
-                  requiresPayment
-                    ? "bg-[var(--brand-orange)]/10 text-[var(--brand-orange)]"
-                    : "bg-green-500/10 text-green-600"
-                }`}
-              >
-                {requiresPayment ? `₹${DEMO_FEE_INR}` : "FREE"}
+              <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-green-500/10 text-green-600">
+                FREE
               </span>
             </div>
 

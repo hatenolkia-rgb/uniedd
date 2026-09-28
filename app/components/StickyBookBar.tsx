@@ -1,36 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
+import { useStoredValue } from "../lib/useStoredValue";
 import { FaTimes, FaArrowRight } from "react-icons/fa";
 
 const DISMISS_KEY = "uniedd-sticky-bar-dismissed";
 
-// Links to the LMS's existing /demo booking flow (Razorpay + Sales CRM
-// already built there) rather than duplicating that funnel on this site.
-const BOOK_URL = "https://lms.uniedd.com/demo";
+// Same free booking form as the homepage's "Book a Demo" section (CTA.tsx),
+// so every entry point offers the same thing.
+const BOOK_URL = "/#contact";
 
 export default function StickyBookBar() {
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useStoredValue("sessionStorage", DISMISS_KEY);
 
-  useEffect(() => {
-    try {
-      if (sessionStorage.getItem(DISMISS_KEY) === "1") setDismissed(true);
-    } catch {
-      // Private browsing / storage blocked — just keep the bar visible.
-    }
-  }, []);
+  if (dismissed === "1") return null;
 
-  if (dismissed) return null;
-
-  const handleDismiss = () => {
-    setDismissed(true);
-    try {
-      sessionStorage.setItem(DISMISS_KEY, "1");
-    } catch {
-      // Ignore — worst case it reappears on next page load.
-    }
-  };
+  const handleDismiss = () => setDismissed("1");
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border)] bg-white/95 backdrop-blur-md shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
@@ -48,14 +34,12 @@ export default function StickyBookBar() {
           <p className="text-xs text-[var(--muted)] truncate">Live 1:1 trial class — Guitar, Chess, Dance & more</p>
         </div>
 
-        <a
+        <Link
           href={BOOK_URL}
-          target="_blank"
-          rel="noreferrer"
           className="shrink-0 inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] text-white rounded-full text-xs sm:text-sm font-semibold shadow-md hover:opacity-90 hover:-translate-y-px transition-all duration-300 whitespace-nowrap"
         >
           Book Now <FaArrowRight size={11} />
-        </a>
+        </Link>
 
         <button
           onClick={handleDismiss}

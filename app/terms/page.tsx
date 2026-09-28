@@ -24,7 +24,7 @@ export default function TermsPage() {
           >
             Terms &amp; Conditions
           </h1>
-          <p className="mt-4 text-sm text-[var(--muted)]">Last updated: 12 August 2026</p>
+          <p className="mt-4 text-sm text-[var(--muted)]">Last updated: 28 September 2026</p>
 
           <div className="mt-10 space-y-8 text-sm leading-relaxed text-[var(--foreground)]">
             <p>
@@ -72,9 +72,9 @@ export default function TermsPage() {
                 enrolment.
               </p>
               <p className="mt-3">
-                A one-time demo booking fee of ₹199 applies to visitors booking from India, determined by your
-                location at the time of booking; this fee is processed securely via Razorpay. Visitors booking from
-                outside India are not charged for the demo session.
+                Demo bookings are currently free for all visitors, regardless of location. No demo booking fee is
+                charged. Any fees and applicable payment, refund, or cancellation terms for paid programs will be
+                shared before enrolment.
               </p>
             </div>
 
@@ -137,12 +137,6 @@ export default function TermsPage() {
                 .
               </p>
             </div>
-
-            <p className="rounded-2xl border border-[var(--border)] bg-[#f7f7f7] p-5 text-xs text-[var(--muted)]">
-              This page is a general-purpose draft and has not been reviewed by a lawyer. We recommend having it
-              reviewed against applicable consumer-protection and contract law before relying on it as your
-              operative terms.
-            </p>
           </div>
         </div>
       </section>

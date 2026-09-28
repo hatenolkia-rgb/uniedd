@@ -1,14 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
-import crypto from "crypto";
 import { isRateLimited, clientKey } from "../rate-limit";
 import { getSupabase } from "../../lib/supabase";
 import { sendWhatsAppNotification, sendCustomerWelcomeMessage } from "../../lib/whatsapp";
 import { sendEmail } from "../../lib/resend";
 
-const DEMO_FEE_INR = 199;
 const VALID_INSTRUMENTS = ["Guitar", "Keyboard", "Vocals", "Tabla", "Dance", "Public Speaking", "Chess"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_LEN = 100;
+// Country code from the form's selector, then the local number, e.g. "+91 98765 43210".
+const PHONE_RE = /^\+\d{1,4} [\d\s().-]{6,20}$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^\d{2}:\d{2}$/;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function escapeHtml(input: string): string {
   return input
@@ -19,16 +22,9 @@ function escapeHtml(input: string): string {
     .replace(/'/g, "&#39;");
 }
 
-// Best-effort defense-in-depth against payment replay: rejects a Razorpay
-// payment ID that's already been used to complete a booking on this
-// (warm) serverless instance. This does NOT fully solve replay across
-// cold starts/instances -- that needs a persistent store (e.g. a DB row
-// per payment ID). Flagging here rather than pretending this is sufficient.
-const usedPaymentIds = new Set<string>();
-
 export async function POST(request: NextRequest) {
   try {
-    if (isRateLimited(`contact:${clientKey(request)}`, 5, 10 * 60 * 1000)) {
+    if (await isRateLimited(`contact:${clientKey(request)}`, 5, 10 * 60 * 1000)) {
       return NextResponse.json(
         { error: "Too many requests. Please try again in a few minutes." },
         { status: 429 }
@@ -47,10 +43,14 @@ export async function POST(request: NextRequest) {
       timezone,
       ageGroup,
       source,
-      razorpayOrderId,
-      razorpayPaymentId,
-      razorpaySignature,
+      website,
     } = body;
+
+    // Honeypot field (hidden in CTA.tsx) -- only bots fill it in. Pretend it
+    // worked so they don't learn to skip it, but don't send anything.
+    if (website) {
+      return NextResponse.json({ success: true, emailSent: true, message: "Booking confirmed!" });
+    }
 
     if (!firstName || !email || !phone || !instrument || !demoDate || !demoTime) {
       return NextResponse.json({ error: "Please fill all required fields." }, { status: 400 });
@@ -60,9 +60,10 @@ export async function POST(request: NextRequest) {
       typeof firstName !== "string" || firstName.length > MAX_LEN ||
       typeof lastName === "string" && lastName.length > MAX_LEN ||
       typeof email !== "string" || email.length > MAX_LEN || !EMAIL_RE.test(email) ||
-      typeof phone !== "string" || phone.length > 20 ||
+      typeof phone !== "string" || phone.length > 25 ||
       !VALID_INSTRUMENTS.includes(instrument) ||
-      typeof demoTime !== "string" || demoTime.length > 20 ||
+      typeof demoDate !== "string" || !DATE_RE.test(demoDate) ||
+      typeof demoTime !== "string" || !TIME_RE.test(demoTime) ||
       typeof timezone === "string" && timezone.length > 60 ||
       typeof ageGroup === "string" && ageGroup.length > 40 ||
       typeof source === "string" && source.length > 40
@@ -70,10 +71,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Please check your details and try again." }, { status: 400 });
     }
 
-    const [year, month, day] = String(demoDate).split("-").map(Number);
-    const chosenDate = new Date(year, month - 1, day);
-    if (Number.isNaN(chosenDate.getTime())) {
-      return NextResponse.json({ error: "Please choose a valid date." }, { status: 400 });
+    if (!PHONE_RE.test(phone)) {
+      return NextResponse.json(
+        { error: "Please enter your mobile number without the country code (choose that from the list)." },
+        { status: 400 }
+      );
+    }
+
+    // Rejects impossible dates like 2026-02-31 (which Date would roll over
+    // into March) as well as past dates or ones more than a year out. The
+    // one-day slack covers visitors whose local date is behind the server's.
+    const [year, month, day] = demoDate.split("-").map(Number);
+    const chosenDate = new Date(Date.UTC(year, month - 1, day));
+    const now = Date.now();
+    if (
+      chosenDate.getUTCFullYear() !== year ||
+      chosenDate.getUTCMonth() !== month - 1 ||
+      chosenDate.getUTCDate() !== day ||
+      chosenDate.getTime() < now - 2 * DAY_MS ||
+      chosenDate.getTime() > now + 366 * DAY_MS
+    ) {
+      return NextResponse.json({ error: "Please choose a valid upcoming date." }, { status: 400 });
+    }
+
+    // Each booking sends a WhatsApp template message to the submitted number,
+    // so cap how often one number can be targeted -- otherwise the form could
+    // be used to spam strangers from the business account.
+    if (await isRateLimited(`contact-phone:${phone.replace(/\D/g, "")}`, 2, DAY_MS)) {
+      return NextResponse.json(
+        { error: "This number already has a booking request. Our team will be in touch." },
+        { status: 429 }
+      );
     }
 
     const formattedDate = chosenDate.toLocaleDateString("en-IN", {
@@ -81,48 +109,9 @@ export async function POST(request: NextRequest) {
       day: "numeric",
       month: "long",
       year: "numeric",
+      timeZone: "UTC",
     });
 
-    // TEMPORARILY DISABLED (2026-08-27): demo bookings are free for everyone
-    // right now, including India. To bring back the ₹199 India fee, restore:
-    //   const country = request.headers.get("x-vercel-ip-country");
-    //   const requiresPayment = country === "IN";
-    // (Determine locale from the request itself, not a client-submitted flag
-    // -- that could be spoofed to skip payment once this is re-enabled.)
-    const requiresPayment = false;
-
-    if (requiresPayment) {
-      const keySecret = process.env.RAZORPAY_KEY_SECRET;
-      if (!keySecret || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
-        return NextResponse.json(
-          { error: "This demo requires payment. Please complete checkout before booking." },
-          { status: 402 }
-        );
-      }
-
-      if (usedPaymentIds.has(razorpayPaymentId)) {
-        return NextResponse.json({ error: "This payment has already been used for a booking." }, { status: 409 });
-      }
-
-      const expectedSignature = crypto
-        .createHmac("sha256", keySecret)
-        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-        .digest("hex");
-
-      if (expectedSignature !== razorpaySignature) {
-        return NextResponse.json({ error: "Payment could not be verified." }, { status: 402 });
-      }
-
-      usedPaymentIds.add(razorpayPaymentId);
-    }
-
-    // Note: payment-replay protection for the India flow now rests entirely
-    // on the in-memory `usedPaymentIds` Set above (best-effort within one
-    // warm serverless instance -- see its comment). There's no longer a
-    // permanent `bookings` table with a unique constraint on
-    // razorpay_payment_id backing this across cold starts/instances, since
-    // this route no longer persists bookings at all -- only a transient
-    // digest-queue row (see below), which isn't a reliable replay guard.
     const supabase = getSupabase();
     if (supabase) {
       // Not a permanent record -- see supabase/lead_digest_queue.sql. This
@@ -137,7 +126,6 @@ export async function POST(request: NextRequest) {
         demo_time: demoTime,
         timezone: timezone || null,
         age_group: ageGroup || null,
-        requires_payment: requiresPayment,
       });
 
       if (dbError) {
@@ -186,8 +174,9 @@ export async function POST(request: NextRequest) {
     // above. A booking is already captured (WhatsApp + digest queue) by this
     // point, so a delivery failure shouldn't fail the whole request and show
     // the visitor a false "booking failed" error.
+    let emailSent = false;
     try {
-      await sendEmail({
+      emailSent = await sendEmail({
         to: email,
         subject: `Your UniEDD Demo is Booked — ${formattedDate}`,
         html: `
@@ -197,7 +186,6 @@ export async function POST(request: NextRequest) {
             <strong>Program:</strong> ${safe.instrument}<br/>
             <strong>Date:</strong> ${formattedDate}<br/>
             <strong>Time:</strong> ${safe.demoTime}${safe.timezone ? ` (${safe.timezone})` : ""}
-            ${requiresPayment ? `<br/><strong>Amount paid:</strong> ₹${DEMO_FEE_INR}` : ""}
           </p>
           <p>Our team will reach out on ${safe.phone} to confirm this slot shortly. If you need to reschedule, just reply to this email or message us on WhatsApp.</p>
           <br/>
@@ -208,7 +196,7 @@ export async function POST(request: NextRequest) {
       console.error("Confirmation email failed:", mailError);
     }
 
-    return NextResponse.json({ success: true, message: "Booking confirmed!" });
+    return NextResponse.json({ success: true, emailSent, message: "Booking confirmed!" });
   } catch (error) {
     console.error("Booking error:", error);
     return NextResponse.json(

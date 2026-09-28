@@ -24,7 +24,7 @@ export default function PrivacyPage() {
           >
             Privacy Policy
           </h1>
-          <p className="mt-4 text-sm text-[var(--muted)]">Last updated: 12 August 2026</p>
+          <p className="mt-4 text-sm text-[var(--muted)]">Last updated: 28 September 2026</p>
 
           <div className="mt-10 space-y-8 text-sm leading-relaxed text-[var(--foreground)]">
             <p>
@@ -38,7 +38,8 @@ export default function PrivacyPage() {
               <ul className="list-disc pl-5 space-y-1.5">
                 <li>
                   <span className="font-medium">Contact and enquiry details</span> you submit through our forms:
-                  first name, last name, email address, mobile number, and the program you&rsquo;re interested in.
+                  first name, last name, email address, mobile number, the program you&rsquo;re interested in, and your
+                  preferred demo date, time, and time zone.
                 </li>
                 <li>
                   <span className="font-medium">Communication data</span> when you reach us via WhatsApp, phone, or
@@ -47,13 +48,16 @@ export default function PrivacyPage() {
                 <li>
                   <span className="font-medium">Technical data</span> such as browser type, device information, and
                   general usage of our website, collected automatically to keep the site secure and working correctly.
-                  This includes an approximate location (derived from IP address) used only to determine whether a
-                  demo booking fee applies.
                 </li>
                 <li>
-                  <span className="font-medium">Payment data</span>, for bookings made from India where a demo fee
-                  applies. Payments are processed by Razorpay; we do not receive or store your card, UPI, or bank
-                  details — only confirmation that a payment was completed.
+                  <span className="font-medium">Advertising and analytics data</span>, only if you accept our cookie
+                  banner: the Meta Pixel records the pages you visit on our site so we can measure our ads on
+                  Facebook and Instagram. See &ldquo;Cookies and tracking&rdquo; below.
+                </li>
+                <li>
+                  <span className="font-medium">Payment data</span> is not collected through the demo booking form,
+                  which is currently free for all visitors. Any payment terms for paid programs will be shared before
+                  enrolment.
                 </li>
               </ul>
             </div>
@@ -84,14 +88,32 @@ export default function PrivacyPage() {
             <div>
               <h2 className="text-lg font-semibold mb-2">4. Sharing of information</h2>
               <p>
-                We do not sell your personal information. We may share it with trusted service providers who help us
-                operate (for example, email delivery and hosting providers) under obligations to keep it confidential,
-                or where required by law.
+                We do not sell your personal information. We share it only with the service providers who help us
+                operate, or where required by law:
+              </p>
+              <ul className="mt-2 list-disc pl-5 space-y-1.5">
+                <li>Vercel, which hosts this website.</li>
+                <li>Supabase, where demo booking details are held briefly before being sent to our team.</li>
+                <li>Resend, which delivers our confirmation emails.</li>
+                <li>
+                  Meta, which delivers our WhatsApp messages (including the welcome message sent after you book) and,
+                  if you accept cookies, receives Meta Pixel data.
+                </li>
+              </ul>
+            </div>
+
+            <div id="tracking">
+              <h2 className="text-lg font-semibold mb-2">5. Cookies and tracking</h2>
+              <p>
+                We use the Meta Pixel to understand how visitors who see our ads use this site. It only loads after you
+                select &ldquo;Accept&rdquo; on the cookie banner; if you decline, it is never loaded. Your choice is saved
+                in your browser, and you can reset it at any time by clearing this site&rsquo;s data in your browser
+                settings. Meta&rsquo;s own use of this data is governed by Meta&rsquo;s Privacy Policy.
               </p>
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">5. Data retention</h2>
+              <h2 className="text-lg font-semibold mb-2">6. Data retention</h2>
               <p>
                 We retain enquiry and student information for as long as reasonably necessary to provide our
                 services and to meet legal, accounting, or reporting requirements, after which it is deleted or
@@ -100,7 +122,7 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">6. Your rights and choices</h2>
+              <h2 className="text-lg font-semibold mb-2">7. Your rights and choices</h2>
               <p>
                 You may ask us to access, correct, or delete the personal information we hold about you or your
                 child, or to stop contacting you, at any time by reaching out via the contact details below.
@@ -108,7 +130,7 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">7. Security</h2>
+              <h2 className="text-lg font-semibold mb-2">8. Security</h2>
               <p>
                 We use reasonable technical and organisational measures to protect the information you share with
                 us. No method of transmission or storage is completely secure, and we cannot guarantee absolute
@@ -117,7 +139,7 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">8. Changes to this policy</h2>
+              <h2 className="text-lg font-semibold mb-2">9. Changes to this policy</h2>
               <p>
                 We may update this Privacy Policy from time to time. The &ldquo;Last updated&rdquo; date at the top of this
                 page reflects the most recent revision.
@@ -125,7 +147,7 @@ export default function PrivacyPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">9. Contact us</h2>
+              <h2 className="text-lg font-semibold mb-2">10. Contact us</h2>
               <p>
                 For any privacy-related questions or requests, contact us on WhatsApp/phone at{" "}
                 <a href="tel:+918383857710" className="text-[var(--brand-blue)] hover:underline">
@@ -138,13 +160,6 @@ export default function PrivacyPage() {
                 .
               </p>
             </div>
-
-            <p className="rounded-2xl border border-[var(--border)] bg-[#f7f7f7] p-5 text-xs text-[var(--muted)]">
-              This page is a general-purpose draft and has not been reviewed by a lawyer. Given that UniEDD collects
-              information related to minors, we recommend having this policy reviewed against applicable law
-              (including India&rsquo;s Digital Personal Data Protection Act) before relying on it as your operative
-              privacy policy.
-            </p>
           </div>
         </div>
       </section>

@@ -15,11 +15,13 @@ export interface SendEmailOptions {
   html: string;
 }
 
-export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<void> {
+// Resolves true once Resend accepts the email, false if email isn't
+// configured; throws if Resend rejects it.
+export async function sendEmail({ to, subject, html }: SendEmailOptions): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error(`Email not sent (RESEND_API_KEY not configured) -- "${subject}" to ${to}`);
-    return;
+    return false;
   }
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -35,4 +37,5 @@ export async function sendEmail({ to, subject, html }: SendEmailOptions): Promis
     const body = await res.text().catch(() => "");
     throw new Error(`Resend send to ${to} rejected (${res.status}): ${body}`);
   }
+  return true;
 }

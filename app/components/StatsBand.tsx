@@ -1,6 +1,6 @@
 export default function StatsBand() {
   const stats = [
-    { value: "6", label: "Disciplines taught" },
+    { value: "7", label: "Disciplines taught" },
     { value: "1:1", label: "Personalised coaching" },
     { value: "100%", label: "Live online sessions" },
     { value: "All ages", label: "Kids to adults" },
