@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      {
+        // YouTube thumbnails for the "Meet our learners" videos
+        protocol: "https",
+        hostname: "i.ytimg.com",
+      },
     ],
   },
   async headers() {

@@ -99,3 +99,70 @@ section {
 .animate-ripple {
   animation: ripple 2s infinite ease-out;
 }
+
+/* Endless horizontal scroll (reviews). The track holds its content twice,
+   so shifting by exactly half loops seamlessly. */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee var(--marquee-duration, 60s) linear infinite;
+}
+
+.animate-marquee-reverse {
+  animation: marquee var(--marquee-duration, 60s) linear infinite reverse;
+}
+
+.marquee-row:hover .animate-marquee,
+.marquee-row:hover .animate-marquee-reverse,
+.marquee-row:focus-within .animate-marquee,
+.marquee-row:focus-within .animate-marquee-reverse {
+  animation-play-state: paused;
+}
+
+/* Soft fade at both edges of a scrolling row */
+.marquee-mask {
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+/* Light sweep across a button (navbar "Book a Demo") */
+@keyframes shine {
+  0%, 60% { transform: translateX(-120%) skewX(-20deg); }
+  100% { transform: translateX(220%) skewX(-20deg); }
+}
+
+.animate-shine {
+  animation: shine 3.5s ease-in-out infinite;
+}
+
+/* Slowly drifting brand gradient (navbar border) */
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 6s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee,
+  .animate-marquee-reverse,
+  .animate-shine,
+  .animate-gradient-x,
+  .animate-ripple,
+  .animate-float,
+  .animate-pulse-slow {
+    animation: none;
+  }
+}
+
+/* With motion off, let people swipe through reviews instead */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-row {
+    overflow-x: auto;
+  }
+}
