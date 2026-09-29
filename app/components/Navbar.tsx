@@ -113,7 +113,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      <div className="px-3 sm:px-5 pt-3">
+      <div className="relative px-3 sm:px-5 pt-3">
       {/* Gradient border: a 1px padded wrapper behind the glass bar */}
       <div
         className={`relative mx-auto max-w-6xl rounded-full p-px bg-gradient-to-r from-[var(--brand-blue)]/50 via-[var(--brand-orange)]/50 to-[var(--brand-blue)]/50 animate-gradient-x transition-shadow duration-300 ${
@@ -227,9 +227,12 @@ export default function Navbar() {
 
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu. Positioned over the page (not in the header's flow):
+          while closed it's invisible, and if it took up space it would
+          stretch the fixed header down the screen and swallow taps on
+          everything underneath it. */}
       <div
-        className={`lg:hidden mx-auto mt-2 max-w-6xl origin-top rounded-3xl border border-[var(--border)] bg-white/95 backdrop-blur-xl p-4 shadow-xl transition-all duration-300 ${
+        className={`lg:hidden absolute inset-x-3 sm:inset-x-5 top-full mx-auto mt-2 max-w-6xl origin-top rounded-3xl border border-[var(--border)] bg-white/95 backdrop-blur-xl p-4 shadow-xl transition-all duration-300 ${
           menuOpen ? "opacity-100 translate-y-0 scale-100 visible" : "opacity-0 -translate-y-2 scale-95 invisible pointer-events-none"
         }`}
       >
