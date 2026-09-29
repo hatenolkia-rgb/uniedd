@@ -23,6 +23,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Prices are hidden for now; each plan shows "Fees on request" instead.
+// Set to true to show the monthly fees again.
+const SHOW_PRICES = false;
+
 export default function PricingPage() {
   return (
     <main>
@@ -81,8 +85,17 @@ export default function PricingPage() {
             <div key={plan.name} className="rounded-3xl border border-[var(--border)] bg-white p-8 shadow-sm">
               <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">{plan.name}</p>
               <div className="mt-5">
-                <span className="text-2xl font-bold">{plan.price}</span>
-                <span className="ml-2 text-sm text-[var(--muted)]">{plan.note}</span>
+                {SHOW_PRICES ? (
+                  <>
+                    <span className="text-2xl font-bold">{plan.price}</span>
+                    <span className="ml-2 text-sm text-[var(--muted)]">{plan.note}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-2xl font-bold">Fees on request</span>
+                    <span className="mt-1 block text-sm text-[var(--muted)]">Message us on WhatsApp for current fees</span>
+                  </>
+                )}
               </div>
 
               <ul className="mt-7 space-y-3 text-sm text-[var(--foreground)]">

@@ -137,12 +137,12 @@ export default function Hero() {
           {/* Metrics */}
           <div ref={statsRef} className="grid grid-cols-3 gap-4 pt-5 mt-2 border-t border-[var(--border)]">
             <div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">785+</p>
+              <p className="text-2xl font-bold text-[var(--foreground)]">1,298+</p>
               <p className="text-[11px] text-[var(--muted)]">Students trained</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">64+</p>
-              <p className="text-[11px] text-[var(--muted)]">Educators</p>
+              <p className="text-2xl font-bold text-[var(--foreground)]">54+</p>
+              <p className="text-[11px] text-[var(--muted)]">Teachers</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-[var(--foreground)]">8+</p>
