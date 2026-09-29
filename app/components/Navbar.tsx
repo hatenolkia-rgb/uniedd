@@ -89,10 +89,10 @@ export default function Navbar() {
 
   return (
     <header ref={headerRef} className="fixed top-0 inset-x-0 z-50">
-      {/* Announcement strip: shown at the top of the page, collapses once
-          the visitor starts scrolling. */}
+      {/* Announcement strip (desktop and tablet only; hidden on phones):
+          shown at the top of the page, collapses once the visitor scrolls. */}
       <div
-        className={`overflow-hidden bg-gradient-to-r from-[#0a1622] via-[#13335a] to-[#0a1622] text-white transition-[max-height,opacity] duration-300 ${
+        className={`hidden sm:block overflow-hidden bg-gradient-to-r from-[#0a1622] via-[#13335a] to-[#0a1622] text-white transition-[max-height,opacity] duration-300 ${
           scrolled ? "max-h-0 opacity-0" : "max-h-10 opacity-100"
         }`}
       >
