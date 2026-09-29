@@ -38,7 +38,7 @@ export default function MetaPixel() {
     <div
       role="dialog"
       aria-label="Cookie consent"
-      className="fixed z-50 bottom-24 left-4 right-20 sm:right-auto sm:max-w-sm rounded-2xl border border-[var(--border)] bg-white p-4 shadow-xl"
+      className="fixed z-50 bottom-24 left-3 right-3 sm:left-4 sm:right-auto sm:max-w-sm rounded-2xl border border-[var(--border)] bg-white p-4 shadow-xl"
     >
       <p className="text-xs leading-relaxed text-[var(--foreground)]">
         We&rsquo;d like to use Meta Pixel cookies to measure our ads. Nothing is loaded unless you accept.{" "}

@@ -46,11 +46,20 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  appleWebApp: {
+    capable: true,
+    title: "UniEDD",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Lets the page use the full screen on phones with a notch; the bottom
+  // bar pads itself with the safe-area inset.
+  viewportFit: "cover",
+  themeColor: "#ffffff",
 };
 
 const structuredData = {
@@ -95,7 +104,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
         {children}
-        <div className="fixed z-40 bottom-20 right-2 md:right-6 flex flex-col gap-4">
+        <div className="fixed z-40 bottom-20 right-2 md:right-6 hidden sm:flex flex-col gap-4">
           <div className="relative w-14 h-14">
             {/* Ripple Background */}
             <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ripple"></span>

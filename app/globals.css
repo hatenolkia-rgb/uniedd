@@ -166,3 +166,43 @@ section {
     overflow-x: auto;
   }
 }
+
+/* ── Phones (under 640px) ─────────────────────────────────────────────
+   Card lists become sideways swipe rows (like an app) instead of one long
+   column, and section spacing is tightened. Wider screens are unaffected. */
+@media (max-width: 639px) {
+  .mobile-swipe {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-x: contain;
+    margin-inline: -24px;
+    padding: 4px 24px 12px;
+    scroll-padding-inline: 24px;
+    scrollbar-width: none;
+  }
+  .mobile-swipe::-webkit-scrollbar {
+    display: none;
+  }
+  .mobile-swipe > * {
+    flex: 0 0 82%;
+    scroll-snap-align: start;
+  }
+
+  main .py-32 {
+    padding-top: 4.5rem;
+    padding-bottom: 4.5rem;
+  }
+  main .py-28 {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+  main .py-24 {
+    padding-top: 3.5rem;
+    padding-bottom: 3.5rem;
+  }
+  main .mb-20 {
+    margin-bottom: 2.5rem;
+  }
+}

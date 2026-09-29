@@ -202,7 +202,7 @@ export default function Courses() {
           ))}
         </div>
 
-        <div ref={cardsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div ref={cardsRef} className="mobile-swipe grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((course, index) => {
             const isOpen = expanded === index;
             return (

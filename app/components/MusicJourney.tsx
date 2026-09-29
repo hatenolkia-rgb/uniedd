@@ -160,7 +160,7 @@ export default function MusicJourney() {
           <div className="connect-line hidden md:block absolute top-1/2 left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-[var(--brand-blue)] via-[var(--brand-orange)] to-[var(--brand-blue)] opacity-20 origin-left" />
 
           {/* Steps */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="mobile-swipe grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {steps.map((step, i) => (
               <div
                 key={i}

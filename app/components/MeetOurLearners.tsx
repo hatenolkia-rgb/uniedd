@@ -128,7 +128,7 @@ export default function MeetOurLearners() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mobile-swipe grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {LEARNER_VIDEOS.map((video) => (
             <VideoCard key={`${video.program}-${video.title}`} video={video} onPlay={() => setPlaying(video)} />
           ))}
