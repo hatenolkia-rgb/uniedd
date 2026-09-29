@@ -15,7 +15,7 @@ export default function PrivacyPage() {
     <main>
       <Navbar />
 
-      <section className="px-6 pb-24 pt-32">
+      <section className="px-6 pb-24 pt-40">
         <div className="mx-auto max-w-3xl">
           <p className="mb-4 text-sm uppercase tracking-[0.25em] text-[var(--muted)]">Legal</p>
           <h1

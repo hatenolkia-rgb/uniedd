@@ -32,7 +32,7 @@ export default function PricingPage() {
     <main>
       <Navbar />
 
-      <section className="px-6 pb-20 pt-32">
+      <section className="px-6 pb-20 pt-40">
         <div className="mx-auto max-w-5xl text-center">
           <p className="mb-4 text-sm uppercase tracking-[0.25em] text-[var(--muted)]">UniEDD Pricing</p>
           <h1

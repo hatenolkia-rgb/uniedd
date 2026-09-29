@@ -88,7 +88,32 @@ export default function Navbar() {
     link.section ? pathname === "/" && activeSection === link.section : pathname === link.href;
 
   return (
-    <header ref={headerRef} className="fixed top-0 inset-x-0 z-50 px-3 sm:px-5 pt-3">
+    <header ref={headerRef} className="fixed top-0 inset-x-0 z-50">
+      {/* Announcement strip: shown at the top of the page, collapses once
+          the visitor starts scrolling. */}
+      <div
+        className={`overflow-hidden bg-gradient-to-r from-[#0a1622] via-[#13335a] to-[#0a1622] text-white transition-[max-height,opacity] duration-300 ${
+          scrolled ? "max-h-0 opacity-0" : "max-h-10 opacity-100"
+        }`}
+      >
+        <div className="flex h-9 items-center justify-center gap-3 px-4 text-[13px] whitespace-nowrap">
+          <span className="inline-flex items-center gap-2 font-semibold">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75 motion-reduce:animate-none" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            Live 1:1 classes
+          </span>
+          <span className="hidden sm:inline opacity-40">·</span>
+          <span className="hidden sm:inline text-white/80">Learners worldwide, any timezone</span>
+          <span className="opacity-40">·</span>
+          <Link href="/#contact" className="font-bold text-[var(--brand-orange)] hover:underline">
+            Book a free 30-min demo →
+          </Link>
+        </div>
+      </div>
+
+      <div className="px-3 sm:px-5 pt-3">
       {/* Gradient border: a 1px padded wrapper behind the glass bar */}
       <div
         className={`relative mx-auto max-w-6xl rounded-full p-px bg-gradient-to-r from-[var(--brand-blue)]/50 via-[var(--brand-orange)]/50 to-[var(--brand-blue)]/50 animate-gradient-x transition-shadow duration-300 ${
@@ -255,6 +280,7 @@ export default function Navbar() {
           Book a Demo <FaArrowRight size={11} />
         </Link>
       </div>
+    </div>
     </header>
   );
 }
