@@ -5,8 +5,9 @@ import MusicJourney from "./components/MusicJourney";
 import Courses from "./components/Courses";
 import Parallax from "./components/Parallax";
 import ProgramShowcase from "./components/ProgramShowcase";
+import WorldFlags from "./components/WorldFlags";
 import Testimonials from "./components/Testimonials";
-import { displayedReviews } from "./lib/sampleReviews";
+import { TESTIMONIALS } from "./lib/testimonials";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
 
@@ -22,8 +23,9 @@ export default function Home() {
       {/* StatsBand (the "7 disciplines / 1:1 / 100% / All ages" strip) is
           hidden for now -- re-import it from ./components/StatsBand to bring
           it back. */}
-      <Testimonials items={displayedReviews()} />
+      <Testimonials items={TESTIMONIALS} />
       <ProgramShowcase />
+      <WorldFlags />
       <CTA />
       <Footer />
     </main>

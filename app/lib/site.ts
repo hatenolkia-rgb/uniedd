@@ -22,3 +22,13 @@ export const SOCIAL_LINKS = [
   { name: "LinkedIn", url: "https://www.linkedin.com/company/uniedd" },
   { name: "Medium", url: "https://medium.com/@social_94758" },
 ] as const;
+
+// Government registrations shown as trust badges on /about. Text badges
+// only: the Startup India logo needs separate prior approval from DPIIT
+// before it can be used on a website, and the Ministry of MSME emblem
+// implies government endorsement -- add a logo only once approved.
+// Fill in `number` to show it on the badge (it lets visitors verify).
+export const REGISTRATIONS = [
+  { title: "Registered MSME", detail: "Udyam registered with the Ministry of MSME, Government of India", numberLabel: "Udyam No.", number: "" },
+  { title: "DPIIT Recognised Startup", detail: "Recognised under the Startup India initiative, Government of India", numberLabel: "Certificate No.", number: "" },
+];

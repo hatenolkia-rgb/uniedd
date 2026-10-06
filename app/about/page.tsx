@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FaArrowRight, FaUserFriends, FaGlobeAsia, FaChalkboardTeacher, FaRoute } from "react-icons/fa";
+import { FaArrowRight, FaUserFriends, FaGlobeAsia, FaChalkboardTeacher, FaRoute, FaLaptop, FaChartLine, FaHome, FaShieldAlt } from "react-icons/fa";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import JsonLd from "../components/JsonLd";
 import { PROGRAMS, programPath } from "../lib/programs";
 import { PROGRAM_ICONS } from "../lib/programIcons";
-import { SITE_NAME, SITE_URL, STATS, PHONE_DISPLAY, PHONE_TEL, WHATSAPP_URL } from "../lib/site";
+import { SITE_NAME, SITE_URL, STATS, PHONE_DISPLAY, PHONE_TEL, WHATSAPP_URL, REGISTRATIONS } from "../lib/site";
 
-const title = "About UniEDD | Live 1:1 Online Classes for Kids & Adults";
+const title = "About UniEDD | Digital Online Music Academy for Kids & Adults";
 const description =
-  "UniEDD is a New Delhi-based academy offering live one-to-one online classes in music, dance, chess and public speaking for learners of every age, worldwide.";
+  "UniEDD is a digital online music academy from New Delhi. Live one-to-one Guitar, Keyboard, Vocals and Tabla classes, plus Dance, Chess and Public Speaking.";
 
 export const metadata: Metadata = {
   title,
@@ -44,6 +44,29 @@ const VALUES = [
   },
 ];
 
+const DIGITAL = [
+  {
+    Icon: FaLaptop,
+    title: "Live digital classrooms",
+    detail: "Every lesson happens live over video, so your mentor sees, hears and corrects you in real time.",
+  },
+  {
+    Icon: FaChartLine,
+    title: "Digital progress tracking",
+    detail: "Classes, practice and progress live in your UniEDD learning portal, so you always know what's next.",
+  },
+  {
+    Icon: FaHome,
+    title: "Learn from home",
+    detail: "No travel, no fixed studio hours. All you need is your instrument, a device and an internet connection.",
+  },
+  {
+    Icon: FaGlobeAsia,
+    title: "Borderless learning",
+    detail: "A digital academy has no city limits. Learners join from around the world, in their own time zone.",
+  },
+];
+
 const STEPS = [
   { title: "Book a free demo", detail: "Tell us your age, interest and goals, and pick a time that suits you." },
   { title: "Meet your mentor", detail: "Try a 30-minute live session and get matched with the right mentor for you." },
@@ -61,21 +84,29 @@ export default function AboutPage() {
           name: title,
           description,
           url: `${SITE_URL}/about`,
-          about: { "@type": "EducationalOrganization", name: SITE_NAME, url: SITE_URL },
+          about: { "@type": "EducationalOrganization", name: SITE_NAME, url: SITE_URL, description: "Digital online music academy" },
         }}
       />
 
       <section className="px-6 pt-32 pb-16 sm:pt-40 bg-gradient-to-b from-[#f4f9fd] to-white">
         <div className="mx-auto max-w-7xl">
           <Breadcrumbs items={[{ name: "About us", href: "/about" }]} />
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white px-4 py-1.5 text-xs text-[var(--muted)] shadow-sm">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+            Digital-first online music academy
+          </p>
           <h1 className="max-w-3xl text-4xl sm:text-5xl font-bold leading-[1.1] tracking-tight" style={{ fontFamily: "var(--font-playfair), serif" }}>
-            Music, dance &amp; confidence,{" "}
+            A digital music academy,{" "}
             <span className="bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] bg-clip-text text-transparent">taught one-to-one</span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-[var(--muted)] leading-relaxed">
-            UniEDD (Universal Education) is a New Delhi-based academy offering live online classes in Guitar, Keyboard, Vocals,
-            Tabla, Dance, Public Speaking and Chess. We help kids and adults discover what they love and grow in skill and
-            confidence, one live class at a time.
+            UniEDD (Universal Education) is a New Delhi-based online music academy built for the digital age. We teach Guitar,
+            Keyboard, Vocals and Tabla through live one-to-one digital classes, alongside Dance, Public Speaking and Chess, so kids
+            and adults can learn what they love from anywhere.
+          </p>
+          <p className="mt-4 max-w-2xl text-[var(--muted)] leading-relaxed">
+            Instead of a studio you have to travel to, our classroom is digital: live video lessons with a dedicated mentor, a
+            learning portal for your classes and progress, and a practice plan to follow between sessions.
           </p>
 
           <dl className="mt-12 grid max-w-3xl grid-cols-3 gap-4">
@@ -86,6 +117,54 @@ export default function AboutPage() {
               </div>
             ))}
           </dl>
+        </div>
+      </section>
+
+      {/* Government registrations */}
+      <section className="px-6 pb-4 bg-white">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-4 md:grid-cols-2">
+            {REGISTRATIONS.map((reg) => (
+              <div key={reg.title} className="flex items-start gap-4 rounded-2xl border border-[var(--border)] bg-gradient-to-r from-[#f4f9fd] to-white p-5">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FF9933]/20 via-white to-[#138808]/20 text-[#0b3d91]">
+                  <FaShieldAlt size={20} aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="font-semibold text-[var(--foreground)]">{reg.title}</p>
+                  <p className="mt-0.5 text-sm text-[var(--muted)]">{reg.detail}</p>
+                  {reg.number && (
+                    <p className="mt-1.5 text-xs font-medium text-[var(--foreground)]">
+                      {reg.numberLabel} <span className="font-mono">{reg.number}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 py-20 bg-white">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-sm tracking-widest uppercase text-[var(--brand-blue)] mb-3 font-medium">Digital learning</p>
+          <h2 className="mb-4 text-3xl sm:text-4xl font-bold tracking-tight" style={{ fontFamily: "var(--font-playfair), serif" }}>
+            Why learn music at a digital academy?
+          </h2>
+          <p className="mb-10 max-w-2xl text-[var(--muted)] leading-relaxed">
+            A digital music academy brings an expert mentor to you, wherever you are. You get the personal attention of a
+            one-to-one lesson with the flexibility of learning online.
+          </p>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {DIGITAL.map(({ Icon, title, detail }) => (
+              <div key={title} className="rounded-2xl border border-[var(--border)] bg-gradient-to-b from-[#f4f9fd] to-white p-6">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand-blue)] text-white">
+                  <Icon size={18} aria-hidden="true" />
+                </span>
+                <h3 className="mt-4 font-semibold">{title}</h3>
+                <p className="mt-1.5 text-sm text-[var(--muted)] leading-relaxed">{detail}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

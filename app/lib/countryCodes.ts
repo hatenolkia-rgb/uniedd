@@ -210,3 +210,15 @@ export const COUNTRY_CODES = [
   { code: "+260", label: "🇿🇲 Zambia (+260)" },
   { code: "+263", label: "🇿🇼 Zimbabwe (+263)" },
 ] as const;
+
+// Every country above as { iso, name }, derived from the flag emoji in its
+// label (a flag emoji is two "regional indicator" letters spelling the ISO
+// code). Used by the homepage's world flags block.
+export const COUNTRIES = COUNTRY_CODES.map(({ label }) => {
+  const iso = [...label]
+    .slice(0, 2)
+    .map((char) => String.fromCharCode(char.codePointAt(0)! - 0x1f1e6 + 97))
+    .join("");
+  const name = label.replace(/^\S+\s/, "").replace(/\s*\(\+.*\)$/, "");
+  return { iso, name };
+});

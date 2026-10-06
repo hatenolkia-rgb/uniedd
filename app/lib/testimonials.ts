@@ -16,8 +16,6 @@ export interface Testimonial {
   role: string;
   quote: string;
   initials: string;
-  // Placeholder for layout previews only (see sampleReviews.ts)
-  sample?: boolean;
 }
 
 export const TESTIMONIALS: Testimonial[] = [

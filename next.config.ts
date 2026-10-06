@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "i.ytimg.com",
       },
+      {
+        // Country flags for the homepage "Worldwide" block
+        protocol: "https",
+        hostname: "flagcdn.com",
+      },
     ],
   },
   async headers() {

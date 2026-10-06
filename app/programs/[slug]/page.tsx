@@ -11,7 +11,7 @@ import ProgramMedia from "../../components/ProgramMedia";
 import ReviewCard from "../../components/ReviewCard";
 import { PROGRAMS, getProgram, programPath } from "../../lib/programs";
 import { PROGRAM_ICONS } from "../../lib/programIcons";
-import { displayedReviews } from "../../lib/sampleReviews";
+import { TESTIMONIALS } from "../../lib/testimonials";
 import { SITE_NAME, SITE_URL, WHATSAPP_URL } from "../../lib/site";
 
 // Only the programs in lib/programs.ts exist; anything else is a 404.
@@ -66,7 +66,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
   if (!program) notFound();
 
   const Icon = PROGRAM_ICONS[program.name];
-  const reviews = displayedReviews().filter((t) => t.program === program.name);
+  const reviews = TESTIMONIALS.filter((t) => t.program === program.name);
   const others = PROGRAMS.filter((p) => p.slug !== program.slug);
   const url = `${SITE_URL}${programPath(program)}`;
 

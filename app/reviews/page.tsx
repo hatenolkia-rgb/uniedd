@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import ReviewCard from "../components/ReviewCard";
-import { displayedReviews } from "../lib/sampleReviews";
+import { TESTIMONIALS } from "../lib/testimonials";
 import { PROGRAMS, programPath } from "../lib/programs";
 import { SITE_NAME, SITE_URL, WHATSAPP_URL } from "../lib/site";
 
@@ -43,7 +43,7 @@ export default function ReviewsPage() {
 
       <section className="px-6 pb-20 bg-white">
         <div className="mx-auto grid max-w-7xl gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {displayedReviews().map((review, i) => {
+          {TESTIMONIALS.map((review, i) => {
             const program = PROGRAMS.find((p) => p.name === review.program);
             return (
               <div key={i} className="flex flex-col">

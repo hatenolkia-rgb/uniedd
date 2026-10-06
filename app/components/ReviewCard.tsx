@@ -15,14 +15,7 @@ function Stars() {
 export default function ReviewCard({ testimonial, className = "w-[300px] sm:w-[360px] shrink-0" }: { testimonial: Testimonial; className?: string }) {
   return (
     <figure className={`${className} p-7 rounded-2xl bg-white border border-[var(--border)] shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}>
-      <div className="flex items-center justify-between gap-3">
-        <Stars />
-        {testimonial.sample && (
-          <span className="rounded-full bg-[var(--brand-orange)]/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--brand-orange)]">
-            Sample
-          </span>
-        )}
-      </div>
+      <Stars />
       <blockquote className="mt-4 text-[var(--muted)] text-sm leading-relaxed">
         &ldquo;{testimonial.quote}&rdquo;
       </blockquote>
