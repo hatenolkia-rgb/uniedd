@@ -2,122 +2,26 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { PROGRAMS, PROGRAM_CATEGORIES, programPath } from "../lib/programs";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const categories = ["All", "Music", "Dance", "Public Speaking", "Chess"] as const;
+const categories = PROGRAM_CATEGORIES;
 type Category = (typeof categories)[number];
-
-const courses: {
-  category: Category;
-  image: string;
-  title: string;
-  tagline: string;
-  ageGroup: string;
-  duration: string;
-  format: string;
-  description: string;
-  tag: string | null;
-}[] = [
-  {
-    category: "Music",
-    image: "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=800&q=70&auto=format&fit=crop",
-    title: "Online Guitar Classes for Kids & Adults",
-    tagline: "Strum, create & shine — on stage & in life",
-    ageGroup: "5-45 Years",
-    duration: "48 sessions in 6 months for beginner level",
-    format: "Group or Individual Classes",
-    description:
-      "Learn chords, rhythm, melody, fingerstyle, and confidence-building practice in structured weekly sessions with a dedicated coach.",
-    tag: "Popular",
-  },
-  {
-    category: "Music",
-    image: "/piano-hero.jpg",
-    title: "Online Keyboard & Piano Classes for Kids & Adults",
-    tagline: "Every key unlocks a little more confidence",
-    ageGroup: "5-45 Years",
-    duration: "48 sessions in 6 months for beginner level",
-    format: "Group or Individual Classes",
-    description:
-      "Develop timing, hand coordination, and musical expression with personalised keyboard coaching designed around your pace.",
-    tag: "New",
-  },
-  {
-    category: "Music",
-    image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=800&q=70&auto=format&fit=crop",
-    title: "Online Vocals & Singing Classes for Kids & Adults",
-    tagline: "Find your voice, then find your stage",
-    ageGroup: "5-45 Years",
-    duration: "48 sessions in 6 months for beginner level",
-    format: "Group or Individual Classes",
-    description:
-      "Improve pitch, voice control, breathing, and performance confidence through guided vocal practice with regular performance opportunities.",
-    tag: null,
-  },
-  {
-    category: "Music",
-    image: "https://images.unsplash.com/photo-1568219656418-15c329312bf1?w=800&q=70&auto=format&fit=crop",
-    title: "Online Tabla Classes for Kids & Adults",
-    tagline: "Build rhythm, build discipline",
-    ageGroup: "5-45 Years",
-    duration: "48 sessions in 6 months for beginner level",
-    format: "Group or Individual Classes",
-    description:
-      "Build taal, rhythm patterns, and deep musical sensitivity through traditional learning methods passed down through generations.",
-    tag: "Classic",
-  },
-  {
-    category: "Dance",
-    image: "https://images.unsplash.com/photo-1547153760-18fc86324498?w=800&q=70&auto=format&fit=crop",
-    title: "Online Dance Classes for Kids & Adults",
-    tagline: "Move, express & perform with joy",
-    ageGroup: "5-45 Years",
-    duration: "48 sessions in 6 months for beginner level",
-    format: "Group or Individual Classes",
-    description:
-      "Learn movement, rhythm, posture, and performance quality in a fun and encouraging format that builds discipline and self-expression.",
-    tag: null,
-  },
-  {
-    category: "Public Speaking",
-    image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=800&q=70&auto=format&fit=crop",
-    title: "Online Public Speaking Classes for Kids & Adults",
-    tagline: "Build sharper communication for school, work & life",
-    ageGroup: "5-45 Years",
-    duration: "48 sessions in 6 months for beginner level",
-    format: "Group or Individual Classes",
-    description:
-      "Strengthen voice, storytelling, presence, and speaking confidence for school, work, and leadership through live guided practice.",
-    tag: "In demand",
-  },
-  {
-    category: "Chess",
-    image: "https://images.unsplash.com/photo-1528819622765-d6bcf132f793?w=800&q=70&auto=format&fit=crop",
-    title: "Online Chess Classes for Kids & Adults",
-    tagline: "Master the board, sharpen the mind",
-    ageGroup: "5-45 Years",
-    duration: "48 sessions in 6 months for beginner level",
-    format: "Group or Individual Classes",
-    description:
-      "Learn piece moves, tactics, openings, and strategy-building practice in structured weekly sessions with a dedicated coach.",
-    tag: "New",
-  },
-];
 
 export default function Courses() {
   const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
   const [activeCategory, setActiveCategory] = useState<Category>("All");
-  const [expanded, setExpanded] = useState<number | null>(null);
 
   const filtered =
     activeCategory === "All"
-      ? courses
-      : courses.filter((c) => c.category === activeCategory);
+      ? PROGRAMS
+      : PROGRAMS.filter((c) => c.category === activeCategory);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -189,7 +93,6 @@ export default function Courses() {
               key={cat}
               onClick={() => {
                 setActiveCategory(cat);
-                setExpanded(null);
               }}
               className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 border ${
                 activeCategory === cat
@@ -203,18 +106,17 @@ export default function Courses() {
         </div>
 
         <div ref={cardsRef} className="mobile-swipe grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((course, index) => {
-            const isOpen = expanded === index;
+          {filtered.map((course) => {
             return (
               <div
                 key={course.title}
                 className="group relative rounded-3xl border border-[var(--border)] hover:border-[var(--brand-blue)]/30 hover:shadow-xl transition-all duration-500 overflow-hidden bg-white flex flex-col"
               >
                 {/* Visual header */}
-                <div className="relative h-44 overflow-hidden">
+                <Link href={programPath(course)} tabIndex={-1} aria-hidden="true" className="relative block h-44 overflow-hidden">
                   <Image
                     src={course.image}
-                    alt={course.title}
+                    alt={course.imageAlt}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -225,11 +127,13 @@ export default function Courses() {
                       {course.tag}
                     </span>
                   )}
-                </div>
+                </Link>
 
                 <div className="p-6 flex flex-col flex-1">
                   <h3 className="text-lg font-semibold text-[var(--brand-blue)] mb-1.5 leading-snug">
-                    {course.title}
+                    <Link href={programPath(course)} className="hover:underline underline-offset-2">
+                      {course.title}
+                    </Link>
                   </h3>
                   <p className="text-sm text-[var(--muted)] mb-4">{course.tagline}</p>
 
@@ -248,25 +152,19 @@ export default function Courses() {
                     </div>
                   </div>
 
-                  {isOpen && (
-                    <p className="text-sm text-[var(--muted)] leading-relaxed mb-6 border-t border-[var(--border)] pt-4">
-                      {course.description}
-                    </p>
-                  )}
-
                   <div className="mt-auto flex flex-col items-center gap-3">
-                    <a
-                      href="#contact"
+                    <Link
+                      href="/#contact"
                       className="w-full text-center px-6 py-3 bg-[var(--brand-blue)]/80 text-white rounded-full text-sm font-semibold hover:opacity-90 hover:-translate-y-px transition-all duration-300"
                     >
                       Book a Demo
-                    </a>
-                    <button
-                      onClick={() => setExpanded(isOpen ? null : index)}
+                    </Link>
+                    <Link
+                      href={programPath(course)}
                       className="text-sm text-[var(--foreground)] underline underline-offset-2 hover:text-[var(--brand-blue)] transition-colors"
                     >
-                      {isOpen ? "Hide details" : "View details"}
-                    </button>
+                      View course details
+                    </Link>
                   </div>
                 </div>
               </div>

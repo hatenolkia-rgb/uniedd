@@ -4,6 +4,7 @@ import "./globals.css";
 import Link from "next/link";
 import { FaWhatsapp } from "react-icons/fa";
 import StickyBookBar from "./components/StickyBookBar";
+import { PROGRAMS, programPath } from "./lib/programs";
 import MetaPixel from "./components/MetaPixel";
 
 const inter = Inter({
@@ -73,17 +74,10 @@ const structuredData = {
   areaServed: "New Delhi, India",
   telephone: "+91-8383857710",
   sameAs: ["https://lms.uniedd.com"],
-  hasCourse: [
-    "Guitar",
-    "Keyboard & Piano",
-    "Vocals & Singing",
-    "Tabla",
-    "Dance",
-    "Public Speaking",
-    "Chess",
-  ].map((name) => ({
+  hasCourse: PROGRAMS.map((program) => ({
     "@type": "Course",
-    name: `Online ${name} Classes for Kids & Adults`,
+    name: program.title,
+    url: `https://uniedd.com${programPath(program)}`,
     provider: { "@type": "EducationalOrganization", name: "UniEDD", sameAs: "https://uniedd.com" },
   })),
 };

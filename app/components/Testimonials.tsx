@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { TESTIMONIALS, type Testimonial } from "../lib/testimonials";
+import ReviewCard from "./ReviewCard";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,38 +31,6 @@ function splitRows(items: Testimonial[]): [Testimonial[], Testimonial[]] {
     fillRow(items.filter((_, i) => i % 2 === 0)),
     fillRow(items.filter((_, i) => i % 2 === 1)),
   ];
-}
-
-function Stars() {
-  return (
-    <div className="flex gap-0.5" aria-label="5 out of 5 stars">
-      {[...Array(5)].map((_, i) => (
-        <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill="var(--brand-orange)" aria-hidden="true">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-        </svg>
-      ))}
-    </div>
-  );
-}
-
-function ReviewCard({ testimonial }: { testimonial: Testimonial }) {
-  return (
-    <figure className="w-[300px] sm:w-[360px] shrink-0 p-7 rounded-2xl bg-white border border-[var(--border)] shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-      <Stars />
-      <blockquote className="mt-4 text-[var(--muted)] text-sm leading-relaxed">
-        &ldquo;{testimonial.quote}&rdquo;
-      </blockquote>
-      <figcaption className="mt-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--brand-blue)] to-[var(--brand-orange)] flex items-center justify-center text-sm font-semibold text-white">
-          {testimonial.initials}
-        </div>
-        <div>
-          <p className="text-sm font-medium text-[var(--foreground)]">{testimonial.name}</p>
-          <p className="text-xs text-[var(--muted)]">{testimonial.role}</p>
-        </div>
-      </figcaption>
-    </figure>
-  );
 }
 
 function MarqueeRow({ items, reverse, duration }: { items: Testimonial[]; reverse?: boolean; duration: number }) {

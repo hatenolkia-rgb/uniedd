@@ -6,15 +6,19 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Image from "next/image";
 import { FaChevronDown, FaArrowRight, FaUserGraduate, FaChalkboardTeacher } from "react-icons/fa";
+import { PROGRAMS, programPath } from "../lib/programs";
+import { PROGRAM_ICONS } from "../lib/programIcons";
 
 const LMS_URL = "https://lms.uniedd.com";
 
-// `section` = the homepage section id this link highlights while it's on screen.
-const NAV_LINKS = [
-  { href: "/#about", label: "About", section: "about" },
-  { href: "/#courses", label: "Programs", section: "courses" },
+// `section` = the homepage section id this link highlights while it's on
+// screen; links without one are pages, active on that page and below it.
+// `programsMenu` = also show the list of programs (dropdown / mobile chips).
+const NAV_LINKS: { href: string; label: string; section?: string; programsMenu?: boolean }[] = [
+  { href: "/about", label: "About" },
+  { href: "/programs", label: "Programs", programsMenu: true },
   { href: "/#showcase", label: "Showcase", section: "showcase" },
-  { href: "/#testimonials", label: "Reviews", section: "testimonials" },
+  { href: "/reviews", label: "Reviews" },
   { href: "/pricing", label: "Pricing" },
 ];
 
@@ -28,9 +32,11 @@ export default function Navbar() {
   const headerRef = useRef<HTMLElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const loginRef = useRef<HTMLDivElement>(null);
+  const programsRef = useRef<HTMLLIElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [programsOpen, setProgramsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   // Entrance animation, shrink-on-scroll, and the scroll progress line
@@ -84,8 +90,25 @@ export default function Navbar() {
     };
   }, [loginOpen]);
 
+  // Close the programs dropdown on outside click or Escape
+  useEffect(() => {
+    if (!programsOpen) return;
+    const onPointer = (e: PointerEvent) => {
+      if (!programsRef.current?.contains(e.target as Node)) setProgramsOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setProgramsOpen(false);
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [programsOpen]);
+
   const isActive = (link: (typeof NAV_LINKS)[number]) =>
-    link.section ? pathname === "/" && activeSection === link.section : pathname === link.href;
+    link.section
+      ? pathname === "/" && activeSection === link.section
+      : pathname === link.href || pathname.startsWith(`${link.href}/`);
 
   return (
     <header ref={headerRef} className="fixed top-0 inset-x-0 z-50">
@@ -140,11 +163,18 @@ export default function Navbar() {
           {/* Desktop links */}
           <ul className="hidden lg:flex items-center gap-1">
             {NAV_LINKS.map((link) => (
-              <li key={link.href}>
+              <li
+                key={link.href}
+                ref={link.programsMenu ? programsRef : undefined}
+                className="relative flex items-center"
+                onMouseEnter={link.programsMenu ? () => setProgramsOpen(true) : undefined}
+                onMouseLeave={link.programsMenu ? () => setProgramsOpen(false) : undefined}
+              >
                 <Link
                   href={link.href}
-                  aria-current={isActive(link) ? "location" : undefined}
-                  className={`relative block rounded-full px-4 py-2 text-sm transition-all duration-300 ${
+                  aria-current={isActive(link) ? "page" : undefined}
+                  onClick={() => setProgramsOpen(false)}
+                  className={`relative flex items-center gap-1.5 rounded-full px-4 py-2 text-sm transition-all duration-300 ${
                     isActive(link)
                       ? "bg-gradient-to-r from-[var(--brand-blue)]/10 to-[var(--brand-orange)]/10 text-[var(--foreground)] font-medium"
                       : "text-[var(--muted)] hover:text-[var(--foreground)] hover:bg-black/[0.04]"
@@ -152,6 +182,54 @@ export default function Navbar() {
                 >
                   {link.label}
                 </Link>
+                {link.programsMenu && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setProgramsOpen((open) => !open)}
+                      aria-expanded={programsOpen}
+                      aria-label="Show all programs"
+                      className="-ml-3 flex h-8 w-6 items-center justify-center rounded-full text-[var(--muted)] hover:text-[var(--foreground)]"
+                    >
+                      <FaChevronDown size={9} className={`transition-transform duration-200 ${programsOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {programsOpen && (
+                      // pt-3 bridges the gap so the menu stays open while the pointer moves down
+                      <div className="absolute left-1/2 top-full -translate-x-1/2 pt-3">
+                        <div className="w-[480px] rounded-2xl border border-[var(--border)] bg-white p-2 shadow-xl">
+                          <div className="grid grid-cols-2 gap-1">
+                            {PROGRAMS.map((program) => {
+                              const Icon = PROGRAM_ICONS[program.name];
+                              return (
+                                <Link
+                                  key={program.slug}
+                                  href={programPath(program)}
+                                  onClick={() => setProgramsOpen(false)}
+                                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-[var(--background)] transition-colors"
+                                >
+                                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--brand-blue)]/15 to-[var(--brand-orange)]/15 text-[var(--brand-blue)]">
+                                    <Icon size={15} aria-hidden="true" />
+                                  </span>
+                                  <span>
+                                    <span className="block text-sm font-medium text-[var(--foreground)]">{program.name}</span>
+                                    <span className="block text-xs text-[var(--muted)]">{program.showcaseLine}</span>
+                                  </span>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                          <Link
+                            href="/programs"
+                            onClick={() => setProgramsOpen(false)}
+                            className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-[var(--background)] px-3 py-2.5 text-sm font-semibold text-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/10 transition-colors"
+                          >
+                            View all programs <FaArrowRight size={10} />
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -232,7 +310,7 @@ export default function Navbar() {
           stretch the fixed header down the screen and swallow taps on
           everything underneath it. */}
       <div
-        className={`lg:hidden absolute inset-x-3 sm:inset-x-5 top-full mx-auto mt-2 max-w-6xl origin-top rounded-3xl border border-[var(--border)] bg-white/95 backdrop-blur-xl p-4 shadow-xl transition-all duration-300 ${
+        className={`lg:hidden absolute inset-x-3 sm:inset-x-5 top-full mx-auto mt-2 max-w-6xl max-h-[calc(100dvh-7rem)] overflow-y-auto origin-top rounded-3xl border border-[var(--border)] bg-white/95 backdrop-blur-xl p-4 shadow-xl transition-all duration-300 ${
           menuOpen ? "opacity-100 translate-y-0 scale-100 visible" : "opacity-0 -translate-y-2 scale-95 invisible pointer-events-none"
         }`}
       >
@@ -253,6 +331,28 @@ export default function Navbar() {
                 {link.label}
                 <FaArrowRight size={11} className="text-[var(--muted)]/60" />
               </Link>
+              {link.programsMenu && (
+                <div className="grid grid-cols-2 gap-1.5 px-2 pb-2 pt-1">
+                  {PROGRAMS.map((program) => {
+                    const Icon = PROGRAM_ICONS[program.name];
+                    return (
+                      <Link
+                        key={program.slug}
+                        href={programPath(program)}
+                        onClick={() => setMenuOpen(false)}
+                        className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm ${
+                          pathname === programPath(program)
+                            ? "border-[var(--brand-blue)]/40 bg-[var(--brand-blue)]/5 text-[var(--foreground)]"
+                            : "border-[var(--border)] text-[var(--muted)]"
+                        }`}
+                      >
+                        <Icon size={13} className="shrink-0 text-[var(--brand-blue)]" aria-hidden="true" />
+                        {program.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </li>
           ))}
         </ul>

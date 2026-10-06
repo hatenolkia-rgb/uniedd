@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { FaWhatsapp, FaPhoneAlt } from "react-icons/fa";
+import { PROGRAMS, programPath } from "../lib/programs";
 
 export default function Footer() {
   return (
@@ -24,41 +25,13 @@ export default function Footer() {
           <div>
             <p className="text-sm font-medium mb-4">Programs</p>
             <ul className="space-y-3">
-              <li>
-                <Link href="/#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Guitar
-                </Link>
-              </li>
-              <li>
-                <Link href="/#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Keyboard
-                </Link>
-              </li>
-              <li>
-                <Link href="/#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Vocals
-                </Link>
-              </li>
-              <li>
-                <Link href="/#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Tabla
-                </Link>
-              </li>
-              <li>
-                <Link href="/#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Dance
-                </Link>
-              </li>
-              <li>
-                <Link href="/#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Public Speaking
-                </Link>
-              </li>
-              <li>
-                <Link href="/#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Chess
-                </Link>
-              </li>
+              {PROGRAMS.map((program) => (
+                <li key={program.slug}>
+                  <Link href={programPath(program)} className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                    {program.name}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -66,8 +39,8 @@ export default function Footer() {
             <p className="text-sm font-medium mb-4">Company</p>
             <ul className="space-y-3">
               <li>
-                <Link href="/#about" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  About
+                <Link href="/about" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  About us
                 </Link>
               </li>
               <li>
@@ -76,8 +49,13 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/#courses" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
-                  Programs
+                <Link href="/programs" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  All programs
+                </Link>
+              </li>
+              <li>
+                <Link href="/reviews" className="text-sm text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+                  Reviews
                 </Link>
               </li>
               <li>
@@ -120,7 +98,7 @@ export default function Footer() {
             © 2026 UniEDD. All rights reserved.
           </p>
           <div className="flex gap-6">
-            <Link href="/#about" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+            <Link href="/about" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               About
             </Link>
             <Link href="/#contact" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">

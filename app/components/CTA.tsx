@@ -46,7 +46,7 @@ function formatTime(time: string): string {
   return new Date(2000, 0, 1, h, min).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
 }
 
-export default function CTA() {
+export default function CTA({ defaultProgram = "" }: { defaultProgram?: string }) {
   const sectionRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const bgElementsRef = useRef<HTMLDivElement>(null);
@@ -312,7 +312,7 @@ export default function CTA() {
                       name="instrument"
                       required
                       className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--muted)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors appearance-none"
-                      defaultValue=""
+                      defaultValue={defaultProgram}
                     >
                       <option value="" disabled>What do you want to learn?</option>
                       <option value="Guitar">Guitar</option>

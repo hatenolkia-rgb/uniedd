@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Image from "next/image";
+import { STATS } from "../lib/site";
 
 const HERO_SLIDES = [
   {
@@ -136,18 +137,12 @@ export default function Hero() {
 
           {/* Metrics */}
           <div ref={statsRef} className="grid grid-cols-3 gap-4 pt-5 mt-2 border-t border-[var(--border)]">
-            <div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">1,298+</p>
-              <p className="text-[11px] text-[var(--muted)]">Students trained</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">54+</p>
-              <p className="text-[11px] text-[var(--muted)]">Teachers</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">8+</p>
-              <p className="text-[11px] text-[var(--muted)]">Years of experience</p>
-            </div>
+            {STATS.map((stat) => (
+              <div key={stat.label}>
+                <p className="text-2xl font-bold text-[var(--foreground)]">{stat.value}</p>
+                <p className="text-[11px] text-[var(--muted)]">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </div>
 
