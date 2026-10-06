@@ -13,7 +13,7 @@ const LMS_URL = "https://lms.uniedd.com";
 const NAV_LINKS = [
   { href: "/#about", label: "About", section: "about" },
   { href: "/#courses", label: "Programs", section: "courses" },
-  { href: "/#learners", label: "Learners", section: "learners" },
+  { href: "/#showcase", label: "Showcase", section: "showcase" },
   { href: "/#testimonials", label: "Reviews", section: "testimonials" },
   { href: "/pricing", label: "Pricing" },
 ];

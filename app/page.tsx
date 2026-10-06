@@ -4,7 +4,7 @@ import Features from "./components/Features";
 import MusicJourney from "./components/MusicJourney";
 import Courses from "./components/Courses";
 import Parallax from "./components/Parallax";
-import MeetOurLearners from "./components/MeetOurLearners";
+import ProgramShowcase from "./components/ProgramShowcase";
 import Testimonials from "./components/Testimonials";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
@@ -22,7 +22,7 @@ export default function Home() {
           hidden for now -- re-import it from ./components/StatsBand to bring
           it back. */}
       <Testimonials />
-      <MeetOurLearners />
+      <ProgramShowcase />
       <CTA />
       <Footer />
     </main>
