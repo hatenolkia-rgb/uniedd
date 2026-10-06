@@ -14,11 +14,9 @@ const LMS_URL = "https://lms.uniedd.com";
 // `section` = the homepage section id this link highlights while it's on
 // screen; links without one are pages, active on that page and below it.
 // `programsMenu` = also show the list of programs (dropdown / mobile chips).
-// `homeOnly` = only shown on the homepage.
-const NAV_LINKS: { href: string; label: string; section?: string; programsMenu?: boolean; homeOnly?: boolean }[] = [
+const NAV_LINKS: { href: string; label: string; section?: string; programsMenu?: boolean }[] = [
   { href: "/about", label: "About" },
   { href: "/programs", label: "Programs", programsMenu: true },
-  { href: "/#showcase", label: "Showcase", section: "showcase", homeOnly: true },
   { href: "/reviews", label: "Reviews" },
   { href: "/pricing", label: "Pricing" },
 ];
@@ -106,8 +104,6 @@ export default function Navbar() {
     };
   }, [programsOpen]);
 
-  const links = NAV_LINKS.filter((link) => !link.homeOnly || pathname === "/");
-
   const isActive = (link: (typeof NAV_LINKS)[number]) =>
     link.section
       ? pathname === "/" && activeSection === link.section
@@ -165,7 +161,7 @@ export default function Navbar() {
 
           {/* Desktop links */}
           <ul className="hidden lg:flex items-center gap-1">
-            {links.map((link) => (
+            {NAV_LINKS.map((link) => (
               <li
                 key={link.href}
                 ref={link.programsMenu ? programsRef : undefined}
@@ -318,7 +314,7 @@ export default function Navbar() {
         }`}
       >
         <ul className="flex flex-col">
-          {links.map((link, i) => (
+          {NAV_LINKS.map((link, i) => (
             <li
               key={link.href}
               className={`transition-all duration-300 ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3"}`}

@@ -6,6 +6,7 @@ import Courses from "./components/Courses";
 import Parallax from "./components/Parallax";
 import ProgramShowcase from "./components/ProgramShowcase";
 import Testimonials from "./components/Testimonials";
+import { displayedReviews } from "./lib/sampleReviews";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
 
@@ -21,7 +22,7 @@ export default function Home() {
       {/* StatsBand (the "7 disciplines / 1:1 / 100% / All ages" strip) is
           hidden for now -- re-import it from ./components/StatsBand to bring
           it back. */}
-      <Testimonials />
+      <Testimonials items={displayedReviews()} />
       <ProgramShowcase />
       <CTA />
       <Footer />

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { TESTIMONIALS, type Testimonial } from "../lib/testimonials";
+import type { Testimonial } from "../lib/testimonials";
 import ReviewCard from "./ReviewCard";
 
 gsap.registerPlugin(ScrollTrigger);
@@ -53,10 +53,10 @@ function MarqueeRow({ items, reverse, duration }: { items: Testimonial[]; revers
   );
 }
 
-export default function Testimonials() {
+export default function Testimonials({ items }: { items: Testimonial[] }) {
   const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
-  const [topRow, bottomRow] = splitRows(TESTIMONIALS);
+  const [topRow, bottomRow] = splitRows(items);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -80,7 +80,7 @@ export default function Testimonials() {
     return () => ctx.revert();
   }, []);
 
-  if (TESTIMONIALS.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <section ref={sectionRef} id="testimonials" className="py-32 bg-[#f8f8f8] overflow-hidden">

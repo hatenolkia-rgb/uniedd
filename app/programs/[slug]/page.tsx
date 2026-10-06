@@ -11,7 +11,7 @@ import ProgramMedia from "../../components/ProgramMedia";
 import ReviewCard from "../../components/ReviewCard";
 import { PROGRAMS, getProgram, programPath } from "../../lib/programs";
 import { PROGRAM_ICONS } from "../../lib/programIcons";
-import { TESTIMONIALS } from "../../lib/testimonials";
+import { displayedReviews } from "../../lib/sampleReviews";
 import { SITE_NAME, SITE_URL, WHATSAPP_URL } from "../../lib/site";
 
 // Only the programs in lib/programs.ts exist; anything else is a 404.
@@ -66,7 +66,7 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
   if (!program) notFound();
 
   const Icon = PROGRAM_ICONS[program.name];
-  const reviews = TESTIMONIALS.filter((t) => t.program === program.name);
+  const reviews = displayedReviews().filter((t) => t.program === program.name);
   const others = PROGRAMS.filter((p) => p.slug !== program.slug);
   const url = `${SITE_URL}${programPath(program)}`;
 
@@ -237,8 +237,8 @@ export default async function ProgramPage({ params }: { params: Promise<{ slug: 
           <div className="mx-auto max-w-7xl">
             <SectionHeading eyebrow="Reviews" title={`What ${program.name.toLowerCase()} learners say`} />
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {reviews.map((review) => (
-                <ReviewCard key={review.name} testimonial={review} className="w-full" />
+              {reviews.map((review, i) => (
+                <ReviewCard key={i} testimonial={review} className="w-full" />
               ))}
             </div>
             <Link href="/reviews" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-[var(--brand-blue)] hover:underline">
