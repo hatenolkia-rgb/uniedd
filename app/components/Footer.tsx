@@ -1,7 +1,18 @@
 import Link from "next/link";
 import Image from "next/image";
-import { FaWhatsapp, FaPhoneAlt } from "react-icons/fa";
+import type { IconType } from "react-icons";
+import { FaWhatsapp, FaPhoneAlt, FaYoutube, FaFacebookF, FaInstagram, FaLinkedinIn, FaMedium } from "react-icons/fa";
 import { PROGRAMS, programPath } from "../lib/programs";
+import { SOCIAL_LINKS } from "../lib/site";
+
+// Brand colour each icon turns on hover
+const SOCIAL_STYLE: Record<(typeof SOCIAL_LINKS)[number]["name"], { Icon: IconType; hover: string }> = {
+  YouTube: { Icon: FaYoutube, hover: "hover:bg-[#FF0000]" },
+  Facebook: { Icon: FaFacebookF, hover: "hover:bg-[#1877F2]" },
+  Instagram: { Icon: FaInstagram, hover: "hover:bg-gradient-to-br hover:from-[#F58529] hover:via-[#DD2A7B] hover:to-[#8134AF]" },
+  LinkedIn: { Icon: FaLinkedinIn, hover: "hover:bg-[#0A66C2]" },
+  Medium: { Icon: FaMedium, hover: "hover:bg-black" },
+};
 
 export default function Footer() {
   return (
@@ -19,6 +30,27 @@ export default function Footer() {
             <p className="mt-4 text-sm text-[var(--muted)] leading-relaxed">
               UniEDD is a New Delhi-based academy offering personalised online music, dance, public speaking, and chess coaching to kids and adults.
             </p>
+
+            <p className="mt-6 mb-3 text-sm font-medium">Follow us</p>
+            <ul className="flex flex-wrap gap-2.5">
+              {SOCIAL_LINKS.map(({ name, url }) => {
+                const { Icon, hover } = SOCIAL_STYLE[name];
+                return (
+                  <li key={name}>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`UniEDD on ${name}`}
+                      title={name}
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] text-[var(--muted)] hover:border-transparent hover:text-white hover:-translate-y-0.5 transition-all duration-300 ${hover}`}
+                    >
+                      <Icon size={15} aria-hidden="true" />
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
           {/* Links */}

@@ -12,3 +12,13 @@ export const STATS = [
   { value: "54+", label: "Teachers" },
   { value: "8+", label: "Years of experience" },
 ];
+
+// Official social profiles: shown in the footer on every page and listed in
+// the site-wide structured data (layout.tsx) so search engines link them.
+export const SOCIAL_LINKS = [
+  { name: "YouTube", url: "https://www.youtube.com/@UniEdd" },
+  { name: "Facebook", url: "https://www.facebook.com/profile.php?id=61586535061276" },
+  { name: "Instagram", url: "https://www.instagram.com/uniedd_universaleducation/" },
+  { name: "LinkedIn", url: "https://www.linkedin.com/company/uniedd" },
+  { name: "Medium", url: "https://medium.com/@social_94758" },
+] as const;
