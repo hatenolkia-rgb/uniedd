@@ -29,6 +29,6 @@ export const SOCIAL_LINKS = [
 // implies government endorsement -- add a logo only once approved.
 // Fill in `number` to show it on the badge (it lets visitors verify).
 export const REGISTRATIONS = [
-  { title: "Registered MSME", detail: "Udyam registered with the Ministry of MSME, Government of India", numberLabel: "Udyam No.", number: "" },
+  { title: "Registered MSME", detail: "Udyam registered with the Ministry of MSME, Government of India", numberLabel: "Udyam No.", number: "UDYAM-DL-11-0157877" },
   { title: "DPIIT Recognised Startup", detail: "Recognised under the Startup India initiative, Government of India", numberLabel: "Certificate No.", number: "" },
 ];
