@@ -59,7 +59,7 @@ const courses: {
   },
   {
     category: "Music",
-    image: "https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=800&q=70&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1568219656418-15c329312bf1?w=800&q=70&auto=format&fit=crop",
     title: "Online Tabla Classes for Kids & Adults",
     tagline: "Build rhythm, build discipline",
     ageGroup: "5-45 Years",
