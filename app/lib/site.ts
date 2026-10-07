@@ -6,6 +6,14 @@ export const PHONE_DISPLAY = "+91 83838 57710";
 export const PHONE_TEL = "+918383857710";
 export const WHATSAPP_URL = "https://wa.me/918383857710";
 
+// Phone lines shown wherever we list contact details (footer, /about,
+// privacy and terms) and in the site's structured data. `iso` picks the flag.
+export const PHONE_NUMBERS = [
+  { country: "India", iso: "in", display: "+91 83838 57710", tel: "+918383857710" },
+  { country: "United Kingdom", iso: "gb", display: "+44 20 3807 3128", tel: "+442038073128" },
+  { country: "United States", iso: "us", display: "+1 646 980 2733", tel: "+16469802733" },
+] as const;
+
 // Shown in the homepage hero and on /about -- keep them in sync by editing here.
 export const STATS = [
   { value: "1,298+", label: "Students trained" },

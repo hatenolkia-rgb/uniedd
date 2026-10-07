@@ -7,7 +7,8 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import JsonLd from "../components/JsonLd";
 import { PROGRAMS, programPath } from "../lib/programs";
 import { PROGRAM_ICONS } from "../lib/programIcons";
-import { SITE_NAME, SITE_URL, STATS, PHONE_DISPLAY, PHONE_TEL, WHATSAPP_URL, REGISTRATIONS } from "../lib/site";
+import { SITE_NAME, SITE_URL, STATS, WHATSAPP_URL, REGISTRATIONS } from "../lib/site";
+import PhoneList from "../components/PhoneList";
 
 const title = "About UniEDD | Digital Online Music Academy for Kids & Adults";
 const description =
@@ -244,9 +245,9 @@ export default function AboutPage() {
             Ready to start?
           </h2>
           <p className="mt-3 max-w-xl text-white/90">
-            Book a free 30-minute demo, or talk to us on WhatsApp or by phone at{" "}
-            <a href={`tel:${PHONE_TEL}`} className="font-semibold underline underline-offset-2">{PHONE_DISPLAY}</a>.
+            Book a free 30-minute demo, or talk to us on WhatsApp or by phone:
           </p>
+          <PhoneList className="mt-4 flex flex-wrap gap-x-6 gap-y-2" linkClassName="font-semibold text-white underline-offset-2 hover:underline" />
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/#contact" className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-[var(--foreground)] hover:-translate-y-px transition-transform">
               Book a free demo <FaArrowRight size={11} />

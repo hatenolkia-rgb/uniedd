@@ -1,4 +1,6 @@
 import Link from "next/link";
+import PhoneList from "../components/PhoneList";
+import { WHATSAPP_URL } from "../lib/site";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -149,16 +151,17 @@ export default function PrivacyPage() {
             <div>
               <h2 className="text-lg font-semibold mb-2">10. Contact us</h2>
               <p>
-                For any privacy-related questions or requests, contact us on WhatsApp/phone at{" "}
-                <a href="tel:+918383857710" className="text-[var(--brand-blue)] hover:underline">
+                For any privacy-related questions or requests, contact us on WhatsApp at{" "}
+                <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="text-[var(--brand-blue)] hover:underline">
                   +91 83838 57710
-                </a>{" "}
-                or through the enquiry form on our{" "}
+                </a>
+                , through the enquiry form on our{" "}
                 <Link href="/#contact" className="text-[var(--brand-blue)] hover:underline">
                   Contact section
                 </Link>
-                .
+                , or by phone:
               </p>
+              <PhoneList className="mt-3 space-y-2" linkClassName="text-[var(--brand-blue)] hover:underline" />
             </div>
           </div>
         </div>

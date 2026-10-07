@@ -4,6 +4,7 @@ import type { IconType } from "react-icons";
 import { FaWhatsapp, FaPhoneAlt, FaYoutube, FaFacebookF, FaInstagram, FaLinkedinIn, FaMedium } from "react-icons/fa";
 import { PROGRAMS, programPath } from "../lib/programs";
 import { SOCIAL_LINKS } from "../lib/site";
+import PhoneList from "./PhoneList";
 
 // Brand colour each icon turns on hover
 const SOCIAL_STYLE: Record<(typeof SOCIAL_LINKS)[number]["name"], { Icon: IconType; hover: string }> = {
@@ -107,9 +108,13 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="tel:+918383857710" className="flex items-center gap-2 text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">
+                <p className="flex items-center gap-2 text-sm text-[var(--muted)] mb-2">
                   <FaPhoneAlt size={12} /> Call us
-                </a>
+                </p>
+                <PhoneList
+                  className="space-y-2 pl-0.5"
+                  linkClassName="text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors"
+                />
               </li>
               <li>
                 <Link href="/#contact" className="text-sm text-[var(--muted)] hover:text-[var(--brand-blue)] transition-colors">

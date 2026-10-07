@@ -5,7 +5,7 @@ import Link from "next/link";
 import { FaWhatsapp } from "react-icons/fa";
 import StickyBookBar from "./components/StickyBookBar";
 import { PROGRAMS, programPath } from "./lib/programs";
-import { SOCIAL_LINKS } from "./lib/site";
+import { SOCIAL_LINKS, PHONE_NUMBERS } from "./lib/site";
 import MetaPixel from "./components/MetaPixel";
 
 const inter = Inter({
@@ -74,6 +74,12 @@ const structuredData = {
   description: siteDescription,
   areaServed: "New Delhi, India",
   telephone: "+91-8383857710",
+  contactPoint: PHONE_NUMBERS.map((phone) => ({
+    "@type": "ContactPoint",
+    telephone: phone.tel,
+    contactType: "customer service",
+    areaServed: phone.iso.toUpperCase(),
+  })),
   sameAs: ["https://lms.uniedd.com", ...SOCIAL_LINKS.map((social) => social.url)],
   hasCourse: PROGRAMS.map((program) => ({
     "@type": "Course",
