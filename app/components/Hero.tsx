@@ -94,7 +94,7 @@ export default function Hero() {
       <div className="absolute top-0 right-0 w-[60%] h-full bg-gradient-to-l from-[var(--brand-orange)]/[0.03] to-transparent" />
       <div className="absolute bottom-0 left-0 w-[40%] h-[60%] bg-gradient-to-tr from-[var(--brand-blue)]/[0.03] to-transparent" />
 
-      <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 items-center pt-24 sm:pt-32 pb-12 md:pt-36 md:pb-20">
+      <div className="relative z-10 max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 items-center pt-32 pb-12 md:pt-36 md:pb-20">
         {/* Left — Text */}
         <div className="flex flex-col gap-6 max-w-xl min-w-0">
           <div ref={badgeRef} className="inline-flex items-center gap-2 border border-[var(--border)] rounded-full px-4 py-1.5 w-fit bg-white shadow-sm">

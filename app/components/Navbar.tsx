@@ -8,6 +8,7 @@ import Image from "next/image";
 import { FaChevronDown, FaArrowRight, FaUserGraduate, FaChalkboardTeacher } from "react-icons/fa";
 import { PROGRAMS, programPath } from "../lib/programs";
 import { PROGRAM_ICONS } from "../lib/programIcons";
+import PhoneList from "./PhoneList";
 
 const LMS_URL = "https://lms.uniedd.com";
 
@@ -111,14 +112,16 @@ export default function Navbar() {
 
   return (
     <header ref={headerRef} className="fixed top-0 inset-x-0 z-50">
-      {/* Announcement strip (desktop and tablet only; hidden on phones):
-          shown at the top of the page, collapses once the visitor scrolls. */}
+      {/* Announcement strip: shown at the top of the page, collapses once the
+          visitor scrolls. Phone numbers on every screen size; the offer text
+          joins them on wide screens. */}
       <div
-        className={`hidden sm:block overflow-hidden bg-gradient-to-r from-[#0a1622] via-[#13335a] to-[#0a1622] text-white transition-[max-height,opacity] duration-300 ${
+        className={`overflow-hidden bg-gradient-to-r from-[#0a1622] via-[#13335a] to-[#0a1622] text-white transition-[max-height,opacity] duration-300 ${
           scrolled ? "max-h-0 opacity-0" : "max-h-10 opacity-100"
         }`}
       >
-        <div className="flex h-9 items-center justify-center gap-3 px-4 text-[13px] whitespace-nowrap">
+        <div className="mx-auto flex h-9 max-w-6xl items-center justify-center lg:justify-between gap-3 px-4 text-[13px] whitespace-nowrap">
+          <div className="hidden lg:flex items-center gap-3">
           <span className="inline-flex items-center gap-2 font-semibold">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75 motion-reduce:animate-none" />
@@ -126,12 +129,17 @@ export default function Navbar() {
             </span>
             Live 1:1 classes
           </span>
-          <span className="hidden sm:inline opacity-40">·</span>
-          <span className="hidden sm:inline text-white/80">Learners worldwide, any timezone</span>
+          <span className="hidden xl:inline opacity-40">·</span>
+          <span className="hidden xl:inline text-white/80">Learners worldwide, any timezone</span>
           <span className="opacity-40">·</span>
           <Link href="/#contact" className="font-bold text-[var(--brand-orange)] hover:underline">
             Book a free 30-min demo →
           </Link>
+          </div>
+          <PhoneList
+            className="flex items-center gap-3 sm:gap-5 overflow-x-auto [scrollbar-width:none]"
+            linkClassName="text-[12px] sm:text-[13px] font-medium text-white/90 hover:text-white transition-colors"
+          />
         </div>
       </div>
 
