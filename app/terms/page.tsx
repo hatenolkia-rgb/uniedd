@@ -26,7 +26,7 @@ export default function TermsPage() {
           >
             Terms &amp; Conditions
           </h1>
-          <p className="mt-4 text-sm text-[var(--muted)]">Last updated: 28 September 2026</p>
+          <p className="mt-4 text-sm text-[var(--muted)]">Last updated: 10 October 2026</p>
 
           <div className="mt-10 space-y-8 text-sm leading-relaxed text-[var(--foreground)]">
             <p>
@@ -63,7 +63,30 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">4. Fees and payment</h2>
+              <h2 className="text-lg font-semibold mb-2">4. Online classes, recordings and AI notes</h2>
+              <p>
+                Live classes are held on Google Meet using the class link provided in your UniEDD learning account.
+                Each class is automatically recorded, transcribed and summarised into class notes by Google&rsquo;s
+                Gemini AI, as explained in our{" "}
+                <Link href="/privacy#class-recordings" className="text-[var(--brand-blue)] hover:underline">
+                  Privacy Policy
+                </Link>
+                . By enrolling, you (or, for a learner under 18, the parent or guardian on the learner&rsquo;s
+                behalf) agree to this. You can ask us to stop recording, transcribing or taking AI notes in future
+                classes at any time; some features, such as revisiting past lessons, will then not be available.
+              </p>
+              <p className="mt-3">
+                Recordings, transcripts and notes are provided for the learner&rsquo;s personal study only. You must
+                not download, record, screenshot, share, publish or otherwise redistribute classes, recordings,
+                transcripts or notes, or share their links with anyone else, without UniEDD&rsquo;s written
+                permission. Joining a class with your camera and microphone on means you may appear in its recording.
+                AI-generated notes are provided for convenience and may contain errors; your trainer&rsquo;s guidance
+                takes precedence.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold mb-2">5. Fees and payment</h2>
               <p>
                 Plan pricing is displayed on our{" "}
                 <Link href="/pricing" className="text-[var(--brand-blue)] hover:underline">
@@ -81,7 +104,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">5. Code of conduct</h2>
+              <h2 className="text-lg font-semibold mb-2">6. Code of conduct</h2>
               <p>
                 We expect respectful behaviour from all learners, parents/guardians, and trainers. UniEDD reserves
                 the right to suspend or terminate access to classes in cases of abusive behaviour, harassment, or
@@ -90,15 +113,16 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">6. Intellectual property</h2>
+              <h2 className="text-lg font-semibold mb-2">7. Intellectual property</h2>
               <p>
-                All course materials, curriculum, branding, and content provided by UniEDD remain the property of
-                UniEDD and may not be reproduced or redistributed without permission.
+                All course materials, curriculum, branding, and content provided by UniEDD, including class
+                recordings, transcripts and notes, remain the property of UniEDD and may not be reproduced or
+                redistributed without permission.
               </p>
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">7. Limitation of liability</h2>
+              <h2 className="text-lg font-semibold mb-2">8. Limitation of liability</h2>
               <p>
                 UniEDD strives to deliver a high-quality learning experience but does not guarantee specific
                 outcomes or results from participation in its programs. To the extent permitted by law, UniEDD is
@@ -107,7 +131,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">8. Privacy</h2>
+              <h2 className="text-lg font-semibold mb-2">9. Privacy</h2>
               <p>
                 Our collection and use of personal information is described in our{" "}
                 <Link href="/privacy" className="text-[var(--brand-blue)] hover:underline">
@@ -118,7 +142,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">9. Changes to these Terms</h2>
+              <h2 className="text-lg font-semibold mb-2">10. Changes to these Terms</h2>
               <p>
                 We may update these Terms from time to time. Continued use of our website or services after changes
                 are posted constitutes acceptance of the revised Terms.
@@ -126,7 +150,7 @@ export default function TermsPage() {
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">10. Contact us</h2>
+              <h2 className="text-lg font-semibold mb-2">11. Contact us</h2>
               <p>
                 Questions about these Terms can be sent to us on WhatsApp at{" "}
                 <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="text-[var(--brand-blue)] hover:underline">
