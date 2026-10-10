@@ -170,9 +170,10 @@ export default function PrivacyPage() {
                 anonymised.
               </p>
               <p className="mt-3">
-                Class recordings, transcripts and AI notes are kept for up to 12 months after the class, so learners
-                can revise, and are then deleted, unless you ask us to delete them sooner or we need to keep a
-                specific recording longer to resolve a complaint or meet a legal obligation.
+                Class recordings, transcripts and AI notes are kept for as long as the learner is enrolled with
+                UniEDD, so they can revisit past lessons. They are deleted when you ask us to, and in any case within
+                12 months after the learner&rsquo;s enrolment ends, unless we need to keep a specific recording longer to
+                resolve a complaint or meet a legal obligation.
               </p>
             </div>
 
