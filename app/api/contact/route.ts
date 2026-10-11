@@ -24,6 +24,28 @@ function escapeHtml(input: string): string {
     .replace(/'/g, "&#39;");
 }
 
+// POSTs the booking to the LMS (lms.uniedd.com/api/meta, action
+// 'website-booking'). True when the LMS took it; never throws.
+async function sendBookingToLms(booking: Record<string, unknown>): Promise<boolean> {
+  const secret = process.env.LMS_BOOKING_SECRET?.trim();
+  if (!secret) return false;
+  try {
+    const res = await fetch("https://lms.uniedd.com/api/meta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-booking-secret": secret },
+      body: JSON.stringify({ action: "website-booking", booking }),
+    });
+    if (!res.ok) {
+      console.error("LMS booking handoff rejected:", res.status, await res.text().catch(() => ""));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("LMS booking handoff failed:", err);
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     if (await isRateLimited(`contact:${clientKey(request)}`, 5, 10 * 60 * 1000)) {
@@ -118,7 +140,16 @@ export async function POST(request: NextRequest) {
       timeZone: "UTC",
     });
 
-    const supabase = getSupabase();
+    // The LMS has the WhatsApp and database credentials this site doesn't:
+    // it saves the booking to its Leads page, sends the visitor's WhatsApp
+    // welcome and alerts the team. The direct paths below are only used
+    // when LMS_BOOKING_SECRET isn't set.
+    const handedToLms = await sendBookingToLms({
+      firstName, lastName, email, phone, instrument, learnerFor, experience,
+      demoDate, demoTime, timezone, formattedDate,
+    });
+
+    const supabase = handedToLms ? null : getSupabase();
     if (supabase) {
       // Not a permanent record -- see supabase/lead_digest_queue.sql. This
       // row gets emailed out and deleted by api/send-lead-digest within 24h.
@@ -200,7 +231,7 @@ export async function POST(request: NextRequest) {
     // in lead_digest_queue once every 24 hours instead.
 
     // WhatsApp notification to the team — no-ops if not configured (see lib/whatsapp.ts)
-    await sendWhatsAppNotification({
+    if (!handedToLms) await sendWhatsAppNotification({
       source: safe.source,
       name: `${firstName} ${lastName || ""}`.trim(),
       program: [instrument, ageGroup, learnerFor && `for ${learnerFor.toLowerCase()}`, experience].filter(Boolean).join(" · "),
@@ -210,7 +241,7 @@ export async function POST(request: NextRequest) {
 
     // WhatsApp welcome message back to the customer — separate template/
     // number from the team alert above, no-ops if not configured.
-    await sendCustomerWelcomeMessage({
+    if (!handedToLms) await sendCustomerWelcomeMessage({
       name: firstName,
       program: instrument,
       phone,
