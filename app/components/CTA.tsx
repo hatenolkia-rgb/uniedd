@@ -15,6 +15,10 @@ const SELECTED_INDEX = 17;
 const PREVIEW_CHIPS = ["6:30 AM", "1:00 PM", "7:45 PM", "11:00 PM"];
 const SELECTED_CHIP_INDEX = 2;
 
+// Several countries share a calling code (+1, +44…), so the selector's value
+// is the option's label and the code is looked up from it on submit.
+const DEFAULT_COUNTRY: string = COUNTRY_CODES.find((c) => c.code === "+91")?.label ?? COUNTRY_CODES[0].label;
+
 const INCLUDED = [
   "30-minute live 1:1 session",
   "Meet your mentor before you commit",
@@ -53,6 +57,8 @@ export default function CTA({ defaultProgram = "" }: { defaultProgram?: string }
   const previewRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [countryLabel, setCountryLabel] = useState<string>(DEFAULT_COUNTRY);
+  const country = COUNTRY_CODES.find((c) => c.label === countryLabel) ?? COUNTRY_CODES[0];
   // Earliest bookable date, in the visitor's own time zone. Left unset on the
   // server so the rendered HTML doesn't disagree with the client's clock.
   const minDate = useSyncExternalStore(
@@ -70,7 +76,7 @@ export default function CTA({ defaultProgram = "" }: { defaultProgram?: string }
     const formData = new FormData(form);
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-    const countryCode = formData.get("countryCode") as string;
+    const countryCode = country.code;
     const phoneDigits = formData.get("phone") as string;
 
     const data = {
@@ -103,6 +109,7 @@ export default function CTA({ defaultProgram = "" }: { defaultProgram?: string }
             : `Demo booked for ${when}! Our team will contact you shortly to confirm.`,
         });
         form.reset();
+        setCountryLabel(DEFAULT_COUNTRY);
       } else {
         setStatus({ type: "error", message: result.error || "Something went wrong." });
       }
@@ -276,22 +283,35 @@ export default function CTA({ defaultProgram = "" }: { defaultProgram?: string }
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex gap-2">
-                      <select
-                        name="countryCode"
-                        defaultValue="+91"
-                        aria-label="Country code"
-                        className="px-2.5 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
-                      >
-                        {COUNTRY_CODES.map((c) => (
-                          <option key={c.label} value={c.code}>{c.label}</option>
-                        ))}
-                      </select>
+                      {/* Compact flag + code; the invisible native select on top keeps
+                          the full country names in its list. Sized to its longest
+                          option, a visible select squeezed the number field. */}
+                      <div className="group relative shrink-0 w-[5.75rem]">
+                        <div
+                          aria-hidden="true"
+                          className="flex h-full items-center justify-between gap-1 px-3 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm transition-colors group-focus-within:border-[var(--brand-blue)]/50"
+                        >
+                          <span className="truncate">{country.label.split(" ")[0]} {country.code}</span>
+                          <span className="text-[10px] text-[var(--muted)]">▼</span>
+                        </div>
+                        <select
+                          name="countryCode"
+                          value={countryLabel}
+                          onChange={(e) => setCountryLabel(e.target.value)}
+                          aria-label="Country code"
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        >
+                          {COUNTRY_CODES.map((c) => (
+                            <option key={c.label} value={c.label}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
                       <div className="relative flex-1 min-w-0">
                         <FaPhoneAlt className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--muted)]" size={13} />
                         <input
                           type="tel"
                           name="phone"
-                          placeholder="Mobile number"
+                          placeholder="Mobile no."
                           required
                           className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--foreground)] text-sm placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors"
                         />
