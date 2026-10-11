@@ -13,9 +13,10 @@
 //
 // Team alert only:
 //   WHATSAPP_NOTIFY_TO           — comma-separated destination numbers in
-//                                   E.164 without "+", e.g. "918383857710"
+//                                   E.164 without "+"; default "919310458154",
+//                                   the same alert number the LMS uses
 //   WHATSAPP_TEMPLATE_NAME       — default "new_lead_alert"
-//   WHATSAPP_TEMPLATE_LANG       — default "en_US"
+//   WHATSAPP_TEMPLATE_LANG       — default "en" (new_lead_alert's language)
 //
 // Customer welcome message only:
 //   WHATSAPP_STUDENT_TEMPLATE_NAME — default "student_welcome"
@@ -94,11 +95,10 @@ export interface LeadNotification {
 }
 
 export async function sendWhatsAppNotification(lead: LeadNotification): Promise<void> {
-  const notifyTo = process.env.WHATSAPP_NOTIFY_TO;
-  if (!notifyTo) return;
+  const notifyTo = process.env.WHATSAPP_NOTIFY_TO || "919310458154";
 
   const templateName = process.env.WHATSAPP_TEMPLATE_NAME || "new_lead_alert";
-  const templateLang = process.env.WHATSAPP_TEMPLATE_LANG || "en_US";
+  const templateLang = process.env.WHATSAPP_TEMPLATE_LANG || "en";
   const recipients = notifyTo.split(",").map((n) => n.trim()).filter(Boolean);
 
   await Promise.all(

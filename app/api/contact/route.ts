@@ -5,6 +5,8 @@ import { sendWhatsAppNotification, sendCustomerWelcomeMessage } from "../../lib/
 import { sendEmail } from "../../lib/resend";
 
 const VALID_INSTRUMENTS = ["Guitar", "Keyboard", "Vocals", "Tabla", "Dance", "Public Speaking", "Chess"];
+const VALID_LEARNER_FOR = ["Myself", "My child"];
+const VALID_EXPERIENCE = ["Complete beginner", "Learned before"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_LEN = 100;
 // Country code from the form's selector, then the local number, e.g. "+91 98765 43210".
@@ -38,6 +40,8 @@ export async function POST(request: NextRequest) {
       email,
       phone,
       instrument,
+      learnerFor,
+      experience,
       demoDate,
       demoTime,
       timezone,
@@ -62,6 +66,8 @@ export async function POST(request: NextRequest) {
       typeof email !== "string" || email.length > MAX_LEN || !EMAIL_RE.test(email) ||
       typeof phone !== "string" || phone.length > 25 ||
       !VALID_INSTRUMENTS.includes(instrument) ||
+      (learnerFor !== undefined && !VALID_LEARNER_FOR.includes(learnerFor)) ||
+      (experience !== undefined && !VALID_EXPERIENCE.includes(experience)) ||
       typeof demoDate !== "string" || !DATE_RE.test(demoDate) ||
       typeof demoTime !== "string" || !TIME_RE.test(demoTime) ||
       typeof timezone === "string" && timezone.length > 60 ||
@@ -135,6 +141,46 @@ export async function POST(request: NextRequest) {
         // hasn't been run yet.
         console.error("lead_digest_queue insert error:", dbError);
       }
+
+      // Also onto the LMS Leads page (same Supabase project), so sales can
+      // follow up there like every other lead. A number already on the
+      // Leads page gets this booking added to its notes instead of a
+      // second row. Best-effort, like the queue above.
+      try {
+        const digits = phone.replace(/\D/g, "");
+        const note = [
+          `Website booking: ${formattedDate} at ${demoTime}${timezone ? ` (${timezone})` : ""}`,
+          learnerFor && `Learning for: ${learnerFor}`,
+          experience && `Level: ${experience}`,
+        ].filter(Boolean).join(" · ");
+        const { data: existing } = await supabase
+          .from("leads").select("id, notes").or(`phone.eq.${digits},whatsapp_number.eq.${digits}`).limit(1);
+        if (existing?.length) {
+          await supabase.from("leads").update({
+            status: "Demo Requested",
+            notes: [existing[0].notes, note].filter(Boolean).join("\n"),
+          }).eq("id", existing[0].id);
+        } else {
+          const today = new Date();
+          const { error: leadError } = await supabase.from("leads").insert({
+            full_name: `${firstName} ${lastName || ""}`.trim(),
+            email,
+            phone: digits,
+            whatsapp_number: digits,
+            course_interest: instrument,
+            source: "Website",
+            stage: "Intake",
+            owner: "Unassigned",
+            status: "Demo Requested",
+            notes: note,
+            created_date: today.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }),
+            import_date: today.toISOString().slice(0, 10),
+          });
+          if (leadError) console.error("LMS leads insert error:", leadError);
+        }
+      } catch (leadErr) {
+        console.error("LMS leads insert failed:", leadErr);
+      }
     }
 
     // Escape every user-supplied value before it goes into an HTML email —
@@ -157,7 +203,7 @@ export async function POST(request: NextRequest) {
     await sendWhatsAppNotification({
       source: safe.source,
       name: `${firstName} ${lastName || ""}`.trim(),
-      program: `${instrument}${ageGroup ? ` (${ageGroup})` : ""}`,
+      program: [instrument, ageGroup, learnerFor && `for ${learnerFor.toLowerCase()}`, experience].filter(Boolean).join(" · "),
       phone,
       slot: `${formattedDate} at ${demoTime}${timezone ? ` (${timezone})` : ""}`,
     });

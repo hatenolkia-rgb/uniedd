@@ -79,6 +79,8 @@ export default function CTA({ defaultProgram = "" }: { defaultProgram?: string }
       email: formData.get("email") as string,
       phone: `${countryCode} ${phoneDigits}`.trim(),
       instrument: formData.get("instrument") as string,
+      learnerFor: formData.get("learnerFor") as string,
+      experience: formData.get("experience") as string,
       demoDate: formData.get("demoDate") as string,
       demoTime: formData.get("demoTime") as string,
       timezone,
@@ -322,6 +324,30 @@ export default function CTA({ defaultProgram = "" }: { defaultProgram?: string }
                       <option value="Dance">Dance</option>
                       <option value="Public Speaking">Public Speaking</option>
                       <option value="Chess">Chess</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <select
+                      name="learnerFor"
+                      required
+                      defaultValue=""
+                      aria-label="Who is learning?"
+                      className="w-full px-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--muted)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors appearance-none"
+                    >
+                      <option value="" disabled>Who is learning?</option>
+                      <option value="Myself">Myself</option>
+                      <option value="My child">My child</option>
+                    </select>
+                    <select
+                      name="experience"
+                      required
+                      defaultValue=""
+                      aria-label="Experience"
+                      className="w-full px-4 py-3 bg-white border border-[var(--border)] rounded-xl text-[var(--muted)] text-sm focus:outline-none focus:border-[var(--brand-blue)]/50 transition-colors appearance-none"
+                    >
+                      <option value="" disabled>Experience</option>
+                      <option value="Complete beginner">Complete beginner</option>
+                      <option value="Learned before">Learned before</option>
                     </select>
                   </div>
                 </div>
