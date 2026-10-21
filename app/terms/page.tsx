@@ -26,7 +26,7 @@ export default function TermsPage() {
           >
             Terms &amp; Conditions
           </h1>
-          <p className="mt-4 text-sm text-[var(--muted)]">Last updated: 10 October 2026</p>
+          <p className="mt-4 text-sm text-[var(--muted)]">Last updated: 22 October 2026</p>
 
           <div className="mt-10 space-y-8 text-sm leading-relaxed text-[var(--foreground)]">
             <p>
@@ -56,9 +56,12 @@ export default function TermsPage() {
             <div>
               <h2 className="text-lg font-semibold mb-2">3. Scheduling and attendance</h2>
               <p>
-                Class schedules are agreed with your assigned trainer subject to availability. Rescheduling and
-                make-up class policies for missed sessions are communicated separately by our team at the time of
-                enrolment and may vary by plan.
+                Class schedules are agreed with your assigned trainer subject to availability. Cancelling and
+                rescheduling classes follow our{" "}
+                <Link href="/policies" className="text-[var(--brand-blue)] hover:underline">
+                  Cancellation, Rescheduling &amp; Refund Policy
+                </Link>
+                .
               </p>
             </div>
 
@@ -93,8 +96,11 @@ export default function TermsPage() {
                   Pricing page
                 </Link>{" "}
                 and is subject to change without prior notice; changes will not affect an already-confirmed billing
-                cycle. Payment terms, refund eligibility, and cancellation windows are confirmed at the time of
-                enrolment.
+                cycle. Refunds and cancellation windows are set out in our{" "}
+                <Link href="/policies" className="text-[var(--brand-blue)] hover:underline">
+                  Cancellation, Rescheduling &amp; Refund Policy
+                </Link>
+                , which you agree to before paying.
               </p>
               <p className="mt-3">
                 Demo bookings are currently free for all visitors, regardless of location. No demo booking fee is

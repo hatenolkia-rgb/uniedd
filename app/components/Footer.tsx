@@ -4,6 +4,7 @@ import type { IconType } from "react-icons";
 import { FaWhatsapp, FaPhoneAlt, FaYoutube, FaFacebookF, FaInstagram, FaLinkedinIn, FaMedium } from "react-icons/fa";
 import { PROGRAMS, programPath } from "../lib/programs";
 import { SOCIAL_LINKS } from "../lib/site";
+import { POLICY_SUMMARY } from "../lib/policies";
 import PhoneList from "./PhoneList";
 
 // Brand colour each icon turns on hover
@@ -130,11 +131,29 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Class policies, in short; full text on /policies */}
+        <div className="mt-14 rounded-2xl border border-[var(--border)] p-6">
+          <div className="mb-4 flex items-center gap-3">
+            <Image src="/logo.png" className="h-7 w-20 object-contain" alt="" width={2332} height={908} />
+            <p className="text-sm font-medium">Class policies</p>
+          </div>
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {POLICY_SUMMARY.map(({ title, text }) => (
+              <li key={title} className="text-sm leading-relaxed text-[var(--muted)]">
+                <span className="font-medium text-[var(--foreground)]">{title}:</span> {text}
+              </li>
+            ))}
+          </ul>
+          <Link href="/policies" className="mt-4 inline-block text-sm font-medium text-[var(--brand-blue)] hover:underline">
+            Read the full cancellation, rescheduling &amp; refund policy →
+          </Link>
+        </div>
+
+        <div className="mt-10 pt-8 border-t border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-[var(--muted)]">
             © 2026 UniEDD. All rights reserved.
           </p>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
             <Link href="/about" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               About
             </Link>
@@ -149,6 +168,9 @@ export default function Footer() {
             </Link>
             <Link href="/terms" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
               Terms &amp; Conditions
+            </Link>
+            <Link href="/policies" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
+              Cancellation &amp; Refund Policy
             </Link>
           </div>
         </div>
