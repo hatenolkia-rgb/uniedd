@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
         hostname: "i.ytimg.com",
       },
       {
+        // Pictures in Medium posts listed on /blog
+        protocol: "https",
+        hostname: "cdn-images-1.medium.com",
+      },
+      {
         // Country flags for the homepage "Worldwide" block
         protocol: "https",
         hostname: "flagcdn.com",
