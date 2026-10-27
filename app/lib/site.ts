@@ -26,7 +26,7 @@ export const STATS = [
 export const SOCIAL_LINKS = [
   { name: "YouTube", url: "https://www.youtube.com/@UniEdd" },
   { name: "Facebook", url: "https://www.facebook.com/profile.php?id=61586535061276" },
-  { name: "Instagram", url: "https://www.instagram.com/uniedd_universaleducation/" },
+  { name: "Instagram", url: "https://www.instagram.com/uniedd.academy/" },
   { name: "LinkedIn", url: "https://www.linkedin.com/company/uniedd" },
   { name: "Medium", url: "https://medium.com/@social_94758" },
 ] as const;
