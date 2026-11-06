@@ -116,7 +116,7 @@ export const GAMES: GameDef[] = [
   {
     slug: "piano-chords",
     title: "Keyboard Chord Builder",
-    blurb: "Build major, minor and seventh chords by tapping the right keys.",
+    blurb: "Build major and minor chords by tapping the right keys.",
     category: "piano",
     kind: "piano-chord",
     minutes: "3 min",
@@ -236,7 +236,7 @@ export const GAMES: GameDef[] = [
   {
     slug: "scale-builder",
     title: "Scale Builder",
-    blurb: "Drag or tap notes into place to build major, minor and pentatonic scales.",
+    blurb: "Tap notes into place to build major, minor, modal, pentatonic and blues scales.",
     category: "theory",
     kind: "scale-builder",
     minutes: "3 min",

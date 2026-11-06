@@ -5,7 +5,7 @@ import type { GameDef } from "../catalog";
 import { Hud } from "../components/Hud";
 import { ChoiceGrid, ChordDiagram, Fretboard } from "../components/visuals";
 import { playMidi, playMiss, playSuccess, playClick } from "../audio";
-import { fretNote, midiToName, OPEN_CHORDS, pickAt, rand, shuffleAt } from "../theory";
+import { enharmonicLabel, fretNote, FRETBOARD_FRETS, midiToName, NOTE_NAMES, OPEN_CHORDS, pickAt, rand, shuffleAt } from "../theory";
 
 const ROUNDS = 10;
 export function GuitarGames({ game, onFinish }: { game: GameDef; onFinish: (score: number) => void }) {
@@ -22,19 +22,21 @@ function FretboardGame({ onFinish }: { onFinish: (score: number) => void }) {
   const [picked, setPicked] = useState<number | null>(null);
   const target = useMemo(() => {
     const s = Math.floor(rand(round + 1) * 6);
-    const f = Math.floor(rand(round + 17) * 6);
+    const f = Math.floor(rand(round + 17) * (FRETBOARD_FRETS + 1));
     const midi = fretNote(s, f);
-    return { s, f, midi, name: midiToName(midi) };
+    const name = midiToName(midi);
+    return { s, f, midi, name, label: enharmonicLabel(name) };
   }, [round]);
   const choices = useMemo(() => {
-    const pool = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"].filter((n) => n !== target.name);
-    return shuffleAt([target.name, ...shuffleAt(pool, round + 3).slice(0, 3)], round + 5);
+    const answer = target.label;
+    const pool = NOTE_NAMES.map((n) => enharmonicLabel(n)).filter((n, i, arr) => n !== answer && arr.indexOf(n) === i);
+    return shuffleAt([answer, ...shuffleAt(pool, round + 3).slice(0, 3)], round + 5);
   }, [target, round]);
 
   function choose(i: number) {
     if (picked !== null) return;
     setPicked(i);
-    const ok = choices[i] === target.name;
+    const ok = choices[i] === target.label;
     const gained = ok ? 100 + streak * 15 : 0;
     const next = score + gained;
     setScore(next);
@@ -59,7 +61,7 @@ function FretboardGame({ onFinish }: { onFinish: (score: number) => void }) {
         <Fretboard stringFromHigh={target.s} fret={target.f} />
       </div>
       <div className="mt-4">
-        <ChoiceGrid choices={choices} picked={picked} answer={choices.indexOf(target.name)} reveal={picked !== null} disabled={picked !== null} onPick={choose} />
+        <ChoiceGrid choices={choices} picked={picked} answer={choices.indexOf(target.label)} reveal={picked !== null} disabled={picked !== null} onPick={choose} />
       </div>
     </div>
   );
@@ -187,20 +189,21 @@ function TabGame({ onFinish }: { onFinish: (score: number) => void }) {
   const [picked, setPicked] = useState<number | null>(null);
   const item = useMemo(() => {
     const s = Math.floor(rand(round + 11) * 6);
-    const f = Math.floor(rand(round + 23) * 6);
+    const f = Math.floor(rand(round + 23) * (FRETBOARD_FRETS + 1));
     const midi = fretNote(s, f);
-    return { s, f, name: midiToName(midi) };
+    const name = midiToName(midi);
+    return { s, f, name, label: enharmonicLabel(name) };
   }, [round]);
   const lines = TAB_STRINGS.map((label, s) => {
     const cells = [0, 1, 2, 3].map((i) => (s === item.s && i === 1 ? String(item.f) : "-"));
     return `${label}|${cells.join("--")}|`;
   });
   const mode = round % 2 === 0 ? "note" : "string";
-  const answer = mode === "note" ? item.name : TAB_STRINGS[item.s];
+  const answer = mode === "note" ? item.label : TAB_STRINGS[item.s];
   const choices = useMemo(() => {
     if (mode === "note") {
-      const pool = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"].filter((n) => n !== item.name);
-      return shuffleAt([item.name, ...shuffleAt(pool, round + 6).slice(0, 3)], round + 7);
+      const pool = NOTE_NAMES.map((n) => enharmonicLabel(n)).filter((n, i, arr) => n !== item.label && arr.indexOf(n) === i);
+      return shuffleAt([item.label, ...shuffleAt(pool, round + 6).slice(0, 3)], round + 7);
     }
     return shuffleAt([TAB_STRINGS[item.s], ...shuffleAt(TAB_STRINGS.filter((_, i) => i !== item.s), round + 6).slice(0, 3)], round + 7);
   }, [item, mode, round]);

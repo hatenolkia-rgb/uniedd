@@ -12,7 +12,7 @@ function Q(q: string, choices: string[], answer: string): Question {
 
 export const BANKS: Record<string, Question[]> = {
   "guitar-parts": [
-    Q("Which part do you press to change the pitch of a string?", ["Bridge", "Fret", "Pickguard", "Jack"], "Fret"),
+    Q("The metal bar that shortens a string to change its pitch is the…", ["Bridge", "Fret", "Pickguard", "Jack"], "Fret"),
     Q("The long wooden neck is covered by the…", ["Sound hole", "Fretboard", "Tuner", "Strap button"], "Fretboard"),
     Q("Tuning pegs live on the…", ["Headstock", "Bridge", "Body", "Nut"], "Headstock"),
     Q("On an acoustic guitar, sound comes out of the…", ["Pickup", "Sound hole", "Jack", "Whammy bar"], "Sound hole"),
@@ -23,7 +23,7 @@ export const BANKS: Record<string, Question[]> = {
     Q("Electric guitars usually hear the strings with…", ["A sound hole", "Pickups", "A capo", "A metronome"], "Pickups"),
     Q("The thin pick you strum with is also called a…", ["Plectrum", "Slide", "Saddle", "Fret"], "Plectrum"),
     Q("Six strings in standard tuning, lowest to highest, are…", ["E A D G B E", "E A D G C E", "D A D G B E", "E B G D A E"], "E A D G B E"),
-    Q("A whammy bar is most common on…", ["Classical guitars", "Electric guitars", "Ukuleles", "Harps"], "Electricguitars".replace("Electricguitars","Electric guitars")),
+    Q("A whammy bar is most common on…", ["Classical guitars", "Electric guitars", "Ukuleles", "Harps"], "Electric guitars"),
   ],
   "sharps-flats": [
     Q("A sharp (#) does what to a note?", ["Raises it one semitone", "Lowers it one semitone", "Makes it twice as long", "Mutes it"], "Raises it one semitone"),
@@ -33,7 +33,7 @@ export const BANKS: Record<string, Question[]> = {
     Q("There is no black key between…", ["E and F", "C and D", "F and G", "A and B"], "E and F"),
     Q("The black key just above C is…", ["C# / Db", "B", "D#", "Cb"], "C# / Db"),
     Q("A natural sign (♮) means…", ["Cancel a sharp or flat", "Play louder", "Hold the note", "Play staccato"], "Cancel a sharp or flat"),
-    Q("Which pair is NOT the same key?", ["C# and Db", "F# and Gb", "E and Fb", "D# and Eb"], "E and Fb"),
+    Q("Which pair is NOT the same pitch?", ["C# and Db", "F# and Gb", "E and F", "D# and Eb"], "E and F"),
     Q("How many black keys are in one octave?", ["5", "7", "12", "8"], "5"),
     Q("G# is one semitone above…", ["G", "A", "F#", "Ab"], "G"),
     Q("The note a semitone below C is…", ["B", "C#", "D", "Bb"], "B"),
@@ -127,5 +127,3 @@ export const BANKS: Record<string, Question[]> = {
   ],
 };
 
-// Fix the intentional oops if any slipped
-BANKS["guitar-parts"] = BANKS["guitar-parts"].map((item) => item);
