@@ -35,8 +35,9 @@ const nextConfig: NextConfig = {
           // Stops browsers from guessing content-types away from what's declared.
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          // No use for camera/mic/browser-geolocation on this site.
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // Camera and location stay off. Microphone is allowed for Jam (tuner,
+          // voice type) and Games (pitch match, sustain, interval singing).
+          { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
         ],
       },
     ];
