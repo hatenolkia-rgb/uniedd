@@ -1,6 +1,15 @@
 "use client";
 
-import { GUITAR_TUNING, midiToName, type ChordShape } from "../theory";
+import {
+  DOUBLE_FRET_MARKERS,
+  FRET_MARKERS,
+  FRETBOARD_FRETS,
+  midiToName,
+  noteAtFret,
+  staffStepsFromBottom,
+  STRING_NUMBERS_TOP_TO_BOTTOM,
+  type ChordShape,
+} from "../theory";
 
 export function StaffNote({
   letter,
@@ -13,10 +22,7 @@ export function StaffNote({
   accidental?: "" | "#" | "b";
   clef?: "treble" | "bass";
 }) {
-  const letters = "CDEFGAB";
-  const diatonic = octave * 7 + letters.indexOf(letter);
-  const bottom = clef === "treble" ? 4 * 7 + 2 : 2 * 7 + 3; // E4 or G2
-  const steps = diatonic - bottom;
+  const steps = staffStepsFromBottom(letter, octave, clef);
   const y = 92 - steps * 8;
   const ledgers: number[] = [];
   if (steps < 0) {
@@ -59,52 +65,86 @@ export function Fretboard({
   interactive?: boolean;
   onPick?: (stringFromHigh: number, fret: number) => void;
 }) {
-  const frets = [0, 1, 2, 3, 4, 5];
+  const frets = Array.from({ length: FRETBOARD_FRETS + 1 }, (_, i) => i);
+  const columns = `56px repeat(${frets.length}, minmax(22px, 1fr))`;
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[300px]">
-        <div className="mb-1 grid grid-cols-7 text-center text-[10px] uppercase tracking-wide text-[var(--muted)]">
+      <div className="min-w-[640px]">
+        <p className="mb-2 text-center text-[11px] text-[var(--muted)]">
+          Player view: string 6 (low E) on top, string 1 (high E) on the bottom, nut on the left
+        </p>
+        <div className="mb-1 grid items-center gap-1 text-center text-[10px] uppercase tracking-wide text-[var(--muted)]" style={{ gridTemplateColumns: columns }}>
           <span />
           {frets.map((f) => (
             <span key={f}>{f === 0 ? "open" : f}</span>
           ))}
         </div>
-        {GUITAR_TUNING.map((midi, s) => (
-          <div key={s} className="grid grid-cols-7 items-center gap-1 py-0.5">
-            <span className="text-right text-xs font-semibold">{midiToName(midi)}</span>
-            {frets.map((f) => {
-              const on = s === stringFromHigh && f === fret;
-              return (
-                <button
-                  key={f}
-                  type="button"
-                  disabled={!interactive}
-                  onClick={() => onPick?.(s, f)}
-                  className={`h-8 rounded-md border text-xs transition ${
-                    on
-                      ? "border-[#e8962e] bg-[#e8962e] text-white shadow"
-                      : "border-amber-200 bg-amber-50 hover:bg-amber-100"
-                  }`}
-                  aria-label={`${midiToName(midi)} string fret ${f}`}
-                >
-                  {on ? "●" : ""}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+        {STRING_NUMBERS_TOP_TO_BOTTOM.map((stringNumber) => {
+          const midi = noteAtFret(stringNumber, 0);
+          const openName = stringNumber === 1 ? "e" : midiToName(midi);
+          return (
+            <div key={stringNumber} className="grid items-center gap-1 py-0.5" style={{ gridTemplateColumns: columns }}>
+              <span className="text-right text-[11px] font-semibold leading-tight">
+                {stringNumber} {openName}
+                <span className="block text-[9px] font-normal text-[var(--muted)]">{stringNumber === 6 ? "low" : stringNumber === 1 ? "high" : ""}</span>
+              </span>
+              {frets.map((f) => {
+                const on = stringNumber - 1 === stringFromHigh && f === fret;
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    disabled={!interactive}
+                    onClick={() => onPick?.(stringNumber - 1, f)}
+                    className={`h-7 rounded-md border text-xs transition ${
+                      on
+                        ? "border-[#e8962e] bg-[#e8962e] text-white shadow"
+                        : "border-amber-200 bg-amber-50 hover:bg-amber-100"
+                    }`}
+                    aria-label={`String ${stringNumber} ${openName} fret ${f}`}
+                  >
+                    {on ? "●" : ""}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+        <div className="mt-1 grid items-center gap-1" style={{ gridTemplateColumns: columns }} aria-hidden>
+          <span />
+          {frets.map((f) => (
+            <div key={f} className="flex h-4 items-center justify-center gap-0.5">
+              {FRET_MARKERS.includes(f as (typeof FRET_MARKERS)[number]) ? (
+                DOUBLE_FRET_MARKERS.includes(f as (typeof DOUBLE_FRET_MARKERS)[number]) ? (
+                  <>
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-700/70" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-700/70" />
+                  </>
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-700/70" />
+                )
+              ) : null}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-export function ChordDiagram({ chord }: { chord: ChordShape }) {
+export function ChordDiagram({ chord, showName = false }: { chord: ChordShape; showName?: boolean }) {
   const start = Math.max(1, Math.min(...chord.frets.filter((f) => f > 0), 1));
   return (
-    <svg viewBox="0 0 140 170" className="mx-auto h-44 w-36" role="img" aria-label={`${chord.name} chord`}>
+    <svg viewBox="0 0 140 170" className="mx-auto h-44 w-36" role="img" aria-label={showName ? `${chord.name} chord` : "Guitar chord diagram"}>
+      {showName ? (
       <text x="70" y="20" textAnchor="middle" fontWeight="700" fontSize="16">
         {chord.name}
       </text>
+      ) : (
+      <text x="70" y="20" textAnchor="middle" fontSize="11" fill="#888">
+        low E ← strings → high E
+      </text>
+      )}
       {[0, 1, 2, 3, 4, 5].map((s) => (
         <line key={`s${s}`} x1={25 + s * 18} x2={25 + s * 18} y1="40" y2="150" stroke="#444" strokeWidth="1.5" />
       ))}

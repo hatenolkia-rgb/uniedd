@@ -5,7 +5,7 @@ import type { GameDef } from "../catalog";
 import { Hud } from "../components/Hud";
 import { ChoiceGrid, PianoKeys, StaffNote } from "../components/visuals";
 import { playMidi, playMiss, playSequence, playSuccess } from "../audio";
-import { CHORD_INTERVALS, nameToPc, pick, pickAt, rand, shuffleAt } from "../theory";
+import { CHORD_INTERVALS, enharmonicLabel, nameToPc, NOTE_NAMES, pick, pickAt, rand, shuffleAt } from "../theory";
 
 const ROUNDS = 10;
 const LETTERS = ["C", "D", "E", "F", "G", "A", "B"] as const;
@@ -27,15 +27,16 @@ function KeyFinder({ onFinish }: { onFinish: (score: number) => void }) {
     if (useSharp) return pickAt(["C#", "D#", "F#", "G#", "A#"], round + 4);
     return pickAt(LETTERS, round + 4);
   }, [round]);
+  const answer = enharmonicLabel(target);
   const choices = useMemo(() => {
-    const pool = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"].filter((n) => n !== target);
-    return shuffleAt([target, ...shuffleAt(pool, round + 2).slice(0, 3)], round + 5);
-  }, [target, round]);
+    const pool = NOTE_NAMES.map((n) => enharmonicLabel(n)).filter((n, i, arr) => n !== answer && arr.indexOf(n) === i);
+    return shuffleAt([answer, ...shuffleAt(pool, round + 2).slice(0, 3)], round + 5);
+  }, [answer, round]);
 
   function choose(i: number) {
     if (picked !== null) return;
     setPicked(i);
-    const ok = choices[i] === target;
+    const ok = choices[i] === answer;
     const next = score + (ok ? 100 + streak * 15 : 0);
     setScore(next);
     setStreak(ok ? streak + 1 : 0);
@@ -55,7 +56,7 @@ function KeyFinder({ onFinish }: { onFinish: (score: number) => void }) {
       <Hud score={score} streak={streak} label={`${round + 1} / ${ROUNDS}`} />
       <p className="mt-4 text-center font-medium">Which note is glowing?</p>
       <PianoKeys active={[target]} />
-      <ChoiceGrid choices={choices} picked={picked} answer={choices.indexOf(target)} reveal={picked !== null} disabled={picked !== null} onPick={choose} />
+      <ChoiceGrid choices={choices} picked={picked} answer={choices.indexOf(answer)} reveal={picked !== null} disabled={picked !== null} onPick={choose} />
     </div>
   );
 }

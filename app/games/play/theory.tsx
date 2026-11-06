@@ -14,6 +14,7 @@ import {
   NOTE_NAMES,
   pickAt,
   rand,
+  SCALE_NOTE_PALETTE,
   shuffleAt,
 } from "../theory";
 
@@ -236,9 +237,14 @@ function ScaleBuilder({ onFinish }: { onFinish: (score: number) => void }) {
     { root: "A", type: "minor" as const },
     { root: "D", type: "major" as const },
     { root: "E", type: "minor" as const },
+    { root: "F", type: "major" as const },
     { root: "C", type: "major pentatonic" as const },
     { root: "A", type: "minor pentatonic" as const },
     { root: "G", type: "blues" as const },
+    { root: "D", type: "dorian" as const },
+    { root: "G", type: "mixolydian" as const },
+    { root: "F", type: "lydian" as const },
+    { root: "E", type: "phrygian" as const },
   ];
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
@@ -292,7 +298,7 @@ function ScaleBuilder({ onFinish }: { onFinish: (score: number) => void }) {
         ))}
       </div>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {NOTE_NAMES.map((note) => (
+        {SCALE_NOTE_PALETTE.map((note) => (
           <button
             key={note}
             type="button"
