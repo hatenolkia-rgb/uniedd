@@ -20,6 +20,7 @@ const NAV_LINKS: { href: string; label: string; section?: string; programsMenu?:
   { href: "/programs", label: "Programs", programsMenu: true },
   { href: "/practice", label: "Practice" },
   { href: "/jam", label: "Jam" },
+  { href: "/games", label: "Games" },
   { href: "/reviews", label: "Reviews" },
   { href: "/pricing", label: "Pricing" },
   { href: "/blog", label: "Blog" },

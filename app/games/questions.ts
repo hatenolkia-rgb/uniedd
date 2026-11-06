@@ -1,0 +1,131 @@
+export type Question = {
+  q: string;
+  choices: string[];
+  answer: number;
+};
+
+function Q(q: string, choices: string[], answer: string): Question {
+  const i = choices.indexOf(answer);
+  if (i < 0) throw new Error(`Bad question answer: ${answer} // ${q}`);
+  return { q, choices, answer: i };
+}
+
+export const BANKS: Record<string, Question[]> = {
+  "guitar-parts": [
+    Q("Which part do you press to change the pitch of a string?", ["Bridge", "Fret", "Pickguard", "Jack"], "Fret"),
+    Q("The long wooden neck is covered by the…", ["Sound hole", "Fretboard", "Tuner", "Strap button"], "Fretboard"),
+    Q("Tuning pegs live on the…", ["Headstock", "Bridge", "Body", "Nut"], "Headstock"),
+    Q("On an acoustic guitar, sound comes out of the…", ["Pickup", "Sound hole", "Jack", "Whammy bar"], "Sound hole"),
+    Q("The metal strip at the top of the fretboard is the…", ["Saddle", "Nut", "Truss rod", "Pick"], "Nut"),
+    Q("Strings attach to the body at the…", ["Bridge", "Headstock", "Capo", "Tuner"], "Bridge"),
+    Q("A capo is used to…", ["Raise the pitch of open strings", "Make the guitar quieter", "Change string gauges", "Power an amp"], "Raise the pitch of open strings"),
+    Q("The lowest-sounding string in standard tuning is…", ["High E", "B", "G", "Low E"], "Low E"),
+    Q("Electric guitars usually hear the strings with…", ["A sound hole", "Pickups", "A capo", "A metronome"], "Pickups"),
+    Q("The thin pick you strum with is also called a…", ["Plectrum", "Slide", "Saddle", "Fret"], "Plectrum"),
+    Q("Six strings in standard tuning, lowest to highest, are…", ["E A D G B E", "E A D G C E", "D A D G B E", "E B G D A E"], "E A D G B E"),
+    Q("A whammy bar is most common on…", ["Classical guitars", "Electric guitars", "Ukuleles", "Harps"], "Electricguitars".replace("Electricguitars","Electric guitars")),
+  ],
+  "sharps-flats": [
+    Q("A sharp (#) does what to a note?", ["Raises it one semitone", "Lowers it one semitone", "Makes it twice as long", "Mutes it"], "Raises it one semitone"),
+    Q("A flat (b) does what to a note?", ["Raises it one semitone", "Lowers it one semitone", "Repeats it", "Makes it louder"], "Lowers it one semitone"),
+    Q("F# is the same piano key as…", ["Gb", "G#", "E#", "Fb"], "Gb"),
+    Q("Bb is the same piano key as…", ["A#", "B#", "Cb", "C#"], "A#"),
+    Q("There is no black key between…", ["E and F", "C and D", "F and G", "A and B"], "E and F"),
+    Q("The black key just above C is…", ["C# / Db", "B", "D#", "Cb"], "C# / Db"),
+    Q("A natural sign (♮) means…", ["Cancel a sharp or flat", "Play louder", "Hold the note", "Play staccato"], "Cancel a sharp or flat"),
+    Q("Which pair is NOT the same key?", ["C# and Db", "F# and Gb", "E and Fb", "D# and Eb"], "E and Fb"),
+    Q("How many black keys are in one octave?", ["5", "7", "12", "8"], "5"),
+    Q("G# is one semitone above…", ["G", "A", "F#", "Ab"], "G"),
+    Q("The note a semitone below C is…", ["B", "C#", "D", "Bb"], "B"),
+    Q("Enharmonic notes are…", ["Two names for the same pitch", "Notes an octave apart", "Only rest symbols", "Always flats"], "Two names for the same pitch"),
+  ],
+  "vocal-warmup": [
+    Q("A gentle vocal warm-up often starts with…", ["Screaming high notes", "Easy humming or lip trills", "Whispering only", "Holding your breath for a minute"], "Easy humming or lip trills"),
+    Q("Good singing posture looks like…", ["Slouched on the couch", "Tall spine, relaxed shoulders", "Chin jammed into the chest", "Locked stiff knees only"], "Tall spine, relaxed shoulders"),
+    Q("Breath for singing should feel…", ["High and tight in the shoulders", "Low and easy in the ribs / belly", "Held until you turn red", "Only through the mouth"], "Low and easy in the ribs / belly"),
+    Q("A siren exercise is…", ["Sliding smoothly from low to high", "Clapping the beat", "Naming notes on a staff", "Playing power chords"], "Sliding smoothly from low to high"),
+    Q("If your throat feels sore, you should…", ["Push harder", "Rest and drink water", "Whisper for an hour", "Skip water"], "Rest and drink water"),
+    Q("Water helps singers because it…", ["Keeps vocal folds comfortable", "Changes your vocal range overnight", "Replaces warming up", "Makes songs shorter"], "Keeps vocal folds comfortable"),
+    Q("A yawn-sigh is useful because it…", ["Opens the throat gently", "Trains drum fills", "Tunes a guitar", "Fixes a cracked reed"], "Opens the throat gently"),
+    Q("Before a performance, avoid…", ["Light stretching", "Shouting over loud music", "Quiet humming", "Slow breaths"], "Shouting over loud music"),
+    Q("Diction means…", ["How clearly you say words", "How loud the drums are", "The song’s key", "The guitar capo"], "How clearly you say words"),
+    Q("Warm-ups should feel…", ["Easy and gradual", "Painful immediately", "Exactly like the concert volume", "Totally silent"], "Easy and gradual"),
+    Q("Lip trills (brrr) help because they…", ["Balance air flow and gentle voice", "Replace learning lyrics", "Hurt on purpose", "Only work for bass singers"], "Balance air flow and gentle voice"),
+    Q("Your singing range is…", ["The notes you can sing comfortably", "Only the highest note you can scream", "The tempo of a song", "How many songs you know"], "The notes you can sing comfortably"),
+  ],
+  "key-signatures": [
+    Q("C major has…", ["No sharps or flats", "1 sharp", "1 flat", "2 sharps"], "No sharps or flats"),
+    Q("G major has…", ["1 sharp (F#)", "2 sharps", "1 flat", "No accidentals"], "1 sharp (F#)"),
+    Q("F major has…", ["1 flat (Bb)", "1 sharp", "2 flats", "3 sharps"], "1 flat (Bb)"),
+    Q("D major has…", ["2 sharps (F#, C#)", "3 sharps", "2 flats", "1 sharp"], "2 sharps (F#, C#)"),
+    Q("A major has how many sharps?", ["3", "1", "0", "2"], "3"),
+    Q("Bb major has…", ["2 flats", "2 sharps", "3 flats", "1 flat"], "2 flats"),
+    Q("The relative minor of C major is…", ["A minor", "E minor", "D minor", "G minor"], "A minor"),
+    Q("The relative minor of G major is…", ["E minor", "A minor", "B minor", "D minor"], "E minor"),
+    Q("A key signature of 3 flats is…", ["Eb major (or C minor)", "Ab major", "Bb major", "F major"], "Eb major (or C minor)"),
+    Q("Order of sharps in a key signature starts…", ["F# C# G# …", "C# F# G# …", "Bb Eb Ab …", "G# D# A# …"], "F# C# G# …"),
+    Q("Order of flats in a key signature starts…", ["Bb Eb Ab …", "F# C# …", "Eb Bb Ab …", "Ab Eb Bb …"], "Bb Eb Ab …"),
+    Q("E major has how many sharps?", ["4", "3", "2", "5"], "4"),
+  ],
+  music: [
+    Q("A standard music staff has how many lines?", ["5", "4", "6", "8"], "5"),
+    Q("How many beats does a quarter note usually get in 4/4?", ["1", "2", "4", "1/2"], "1"),
+    Q("forte (f) means…", ["Loud", "Soft", "Fast", "Slow"], "Loud"),
+    Q("piano (p) means…", ["Soft", "Loud", "Short", "High"], "Soft"),
+    Q("A metronome helps you practice…", ["Steady tempo", "Better lyrics", "Guitar intonation only", "Stage lights"], "Steady tempo"),
+    Q("An octave is…", ["12 semitones / the same letter name higher or lower", "3 beats", "A kind of drum", "A flat only"], "12 semitones / the same letter name higher or lower"),
+    Q("The treble clef is also called the…", ["G clef", "F clef", "C clef", "Tab clef"], "G clef"),
+    Q("The bass clef is also called the…", ["F clef", "G clef", "Alto clef", "Neutral clef"], "F clef"),
+    Q("A rest is a symbol that means…", ["Silence for a counted time", "Play as loud as possible", "Repeat the song", "Change key"], "Silence for a counted time"),
+    Q("4/4 time is often nicknamed…", ["Common time", "Cut time", "Waltz time", "Free time"], "Common time"),
+    Q("A waltz is usually in…", ["3/4", "4/4", "5/4", "7/8"], "3/4"),
+    Q("Harmony is…", ["Notes sounding well together", "Only the drum beat", "How fast you sing", "A broken string"], "Notes sounding well together"),
+    Q("A scale is…", ["A stepwise pattern of notes", "A guitar strap", "A recording studio", "A kind of mute"], "A stepwise pattern of notes"),
+    Q("BPM stands for…", ["Beats per minute", "Bass plus melody", "Big piano move", "Bar per measure"], "Beats per minute"),
+  ],
+  art: [
+    Q("The three primary colors of paint are…", ["Red, yellow, blue", "Red, green, blue", "Cyan, magenta, yellow", "Orange, purple, green"], "Red, yellow, blue"),
+    Q("Mixing red and yellow makes…", ["Orange", "Purple", "Green", "Brown only"], "Orange"),
+    Q("Mixing blue and yellow makes…", ["Green", "Purple", "Orange", "Pink"], "Green"),
+    Q("Warm colors include…", ["Reds, oranges, yellows", "Blues and greens only", "Only black and white", "Only gray"], "Reds, oranges, yellows"),
+    Q("Cool colors include…", ["Blues, greens, purples", "Reds and oranges", "Only gold", "Only brown"], "Blues, greens, purples"),
+    Q("A complementary pair is…", ["Colors opposite on the color wheel", "Any two pastels", "Black and gray", "Only primary colors"], "Colors opposite on the color wheel"),
+    Q("A sketch is usually…", ["A quick first drawing", "The finished bronze sculpture", "A photo filter", "A type of clay"], "A quick first drawing"),
+    Q("Foreground means…", ["The parts that look closest", "The sky only", "The frame", "The signature"], "The parts that look closest"),
+    Q("A portrait is art that shows…", ["A person (often the face)", "Only landscapes", "Only letters", "Only animals running"], "A person (often the face)"),
+    Q("Negative space is…", ["The empty shapes around a subject", "A sad color", "An eraser brand", "A cracked canvas"], "The empty shapes around a subject"),
+    Q("A landscape painting usually shows…", ["Outdoor scenery", "Only shoes", "A bar chart", "A close-up of an eye always"], "Outdoor scenery"),
+    Q("Shading helps a drawing look…", ["More three-dimensional", "Completely flat", "Out of focus", "Pixelated"], "More three-dimensional"),
+  ],
+  speaking: [
+    Q("Looking at your listeners now and then is called…", ["Eye contact", "Stage diving", "Filler talking", "Monotone"], "Eye contact"),
+    Q("Speaking a bit slower usually helps people…", ["Understand you", "Fall asleep instantly", "Forget the topic", "Talk over you"], "Understand you"),
+    Q("Words like “um” and “uh” are…", ["Filler words", "Power poses", "Call-backs", "Citations"], "Filler words"),
+    Q("A good way to start a talk is…", ["A clear hook or friendly greeting", "Reading the last slide first", "Apologizing for two minutes", "Whispering at the floor"], "A clear hook or friendly greeting"),
+    Q("Standing tall with relaxed shoulders shows…", ["Confident posture", "That you are hiding", "That the talk is over", "A magic trick"], "Confident posture"),
+    Q("Pausing after an important line…", ["Lets the idea land", "Always ruins the talk", "Is only for comedians", "Means you forgot everything"], "Lets the idea land"),
+    Q("Projecting your voice means…", ["Speaking so the back row can hear", "Shouting angrily", "Using only a robot voice", "Turning your back"], "Speaking so the back row can hear"),
+    Q("Knowing your first and last lines helps you…", ["Start and finish smoothly", "Skip practicing", "Memorize a whole book", "Avoid smiling"], "Start and finish smoothly"),
+    Q("Hands during a speech should mostly…", ["Move naturally to support words", "Stay stuffed in pockets the whole time", "Spin wildly nonstop", "Hide behind your back always"], "Move naturally to support words"),
+    Q("If you lose your place, you can…", ["Pause, breathe, and glance at notes", "Run off the stage", "Talk faster and faster", "Blame the audience"], "Pause, breathe, and glance at notes"),
+    Q("A story in a speech is useful because it…", ["Makes the idea memorable", "Replaces facts every time", "Must be twenty minutes", "Has to be made up"], "Makes the idea memorable"),
+    Q("Smiling (when it fits the topic) can…", ["Help you and listeners feel welcome", "Ruin every serious talk automatically", "Replace your words", "Turn off the mic"], "Help you and listeners feel welcome"),
+  ],
+  ai: [
+    Q("AI is short for…", ["Artificial Intelligence", "Automatic Instruments", "Amazing Internet", "Artist Ink"], "Artificial Intelligence"),
+    Q("A prompt is…", ["The instruction you give an AI tool", "A kind of piano pedal", "A broken cable", "A stage light"], "The instruction you give an AI tool"),
+    Q("AI tools learn patterns from…", ["Lots of examples (training data)", "One lucky guess only", "Moonlight", "A single button battery"], "Lots of examples (training data)"),
+    Q("AI can be wrong, so you should…", ["Double-check important facts", "Believe every answer instantly", "Never ask questions", "Hide the answer"], "Double-check important facts"),
+    Q("A chatbot is…", ["A program you can talk with in text", "A physical robot dog", "A guitar pedal", "A type of drum"], "A program you can talk with in text"),
+    Q("Being kind and honest with AI tools means…", ["Not asking them to hurt or trick people", "Giving away passwords", "Copying classmates’ private work to share", "Turning the screen upside down"], "Not asking them to hurt or trick people"),
+    Q("Generative AI can create…", ["New text, pictures or sounds from a prompt", "Only paper airplanes", "Electricity", "Real live animals"], "New text, pictures or sounds from a prompt"),
+    Q("If an AI writes a story for you, you should…", ["Say you had help if you share it as schoolwork", "Claim a famous author wrote it", "Never read it", "Tattoo it immediately"], "Say you had help if you share it as schoolwork"),
+    Q("AI does not truly…", ["Feel emotions like a person", "Use electricity", "Follow instructions", "Make mistakes"], "Feel emotions like a person"),
+    Q("A good prompt is usually…", ["Clear and specific", "One vague word only", "Written in invisible ink", "As confusing as possible"], "Clear and specific"),
+    Q("Personal secrets (passwords, addresses) should be…", ["Kept off public AI chats", "Typed in every prompt", "Posted on a leaderboard", "Sung into a tuner"], "Kept off public AI chats"),
+    Q("Machine learning means a program…", ["Improves at a task from examples", "Never needs data", "Can only add numbers", "Replaces every teacher overnight"], "Improves at a task from examples"),
+  ],
+};
+
+// Fix the intentional oops if any slipped
+BANKS["guitar-parts"] = BANKS["guitar-parts"].map((item) => item);
