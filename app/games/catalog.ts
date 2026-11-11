@@ -1,4 +1,4 @@
-export type CategoryId = "guitar" | "piano" | "vocals" | "theory" | "other";
+export type CategoryId = "guitar" | "piano" | "vocals" | "theory" | "rhythm" | "other";
 
 export type GameKind =
   | "quiz"
@@ -21,7 +21,8 @@ export type GameKind =
   | "scale-builder"
   | "tempo"
   | "circle"
-  | "symbols";
+  | "symbols"
+  | "clap-trainer";
 
 export type GameDef = {
   slug: string;
@@ -45,6 +46,7 @@ export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; 
     hint: "Intervals, rhythms, keys and symbols",
     emoji: "🎼",
   },
+  { id: "rhythm", label: "Rhythm", hint: "Clap along to songs — the mic scores every clap", emoji: "👏" },
   { id: "other", label: "Other", hint: "Art, public speaking, AI and music quizzes", emoji: "🌟" },
 ];
 
@@ -268,6 +270,15 @@ export const GAMES: GameDef[] = [
     kind: "symbols",
     minutes: "2 min",
     accent: "#99f6e4",
+  },
+  {
+    slug: "clap-rhythm",
+    title: "Clap Rhythm",
+    blurb: "Clap markers slide down a glowing stage in time with the song. Clap on the ring — the mic scores every clap Perfect, Good or Miss.",
+    category: "rhythm",
+    kind: "clap-trainer",
+    minutes: "3 min",
+    accent: "#7c3aed",
   },
   {
     slug: "music-quiz",

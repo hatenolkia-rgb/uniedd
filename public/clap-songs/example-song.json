@@ -1,0 +1,12 @@
+{
+  "id": "example-song",
+  "title": "Example Song",
+  "subtitle": "4/4 · 100 BPM",
+  "difficulty": "Easy",
+  "bpm": 100,
+  "timeSignature": "4/4",
+  "audio": "example-song.mp3",
+  "offset": 1.2,
+  "claps": [0, 1, 2, 3, 4, 5, 6, 6.5, 7],
+  "lyrics": ["One", "two", "three", "four", "clap", "your", "hands", "to", "-day"]
+}

@@ -11,6 +11,20 @@ npm run lint
 npm run build
 ```
 
+## Clap Rhythm game
+
+`/games/clap-rhythm` is a rhythm trainer: clap markers scroll down a highway in time with a song and the
+student claps on the hit ring. Code lives in `app/games/clap/` (`songs.ts` song data, `engine.ts` Web Audio
+synth + mic clap detector, `highway.ts` canvas renderer, `ClapTrainer.tsx` UI).
+
+- **Mic claps:** the mic signal is high-passed (claps are bright, voices and hum are not) and an AudioWorklet
+  flags sudden energy spikes above an adaptive noise floor (80 ms debounce). Space / tap is the fallback.
+- **Calibration:** the student claps along to 12 clicks; the median offset is saved per device and
+  subtracted from every clap.
+- **Add songs:** drop an audio file and a song JSON into `public/clap-songs/` and list it in
+  `public/clap-songs/songs.json` — see `public/clap-songs/README.md`. The in-game chart maker
+  ("For teachers") creates the JSON by tapping along to the audio.
+
 ## How demo bookings work
 
 1. A visitor submits the "Book a Demo" form (`app/components/CTA.tsx`). Demos are free.

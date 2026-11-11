@@ -5,6 +5,7 @@ import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import JsonLd from "../components/JsonLd";
 import { SITE_NAME, SITE_URL } from "../lib/site";
+import Link from "next/link";
 import JamStudio from "./JamStudio";
 
 const title = "Jam | Free metronome, guitar tuner & backing tracks | UniEDD";
@@ -110,6 +111,23 @@ export default function JamPage() {
       <section className="px-4 sm:px-6 pb-24 bg-white">
         <div className="mx-auto max-w-7xl">
           <JamStudio />
+          <Link
+            href="/games/clap-rhythm"
+            className="group mt-8 flex flex-col gap-3 rounded-3xl bg-gradient-to-br from-[#0b0820] via-[#1b1446] to-[#2a1240] p-6 text-white shadow-md transition hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span>
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">New · Rhythm game</span>
+              <span className="mt-1 block text-xl font-bold" style={{ fontFamily: "var(--font-playfair), serif" }}>
+                👏 Clap Rhythm — clap along to Jingle Bells, Happy Birthday and more
+              </span>
+              <span className="mt-1 block text-sm text-white/70">
+                The mic hears your claps and scores each one Perfect, Good or Miss. Train your timing like a pro.
+              </span>
+            </span>
+            <span className="shrink-0 rounded-full bg-white px-5 py-2 text-sm font-bold text-[#1b1446] group-hover:scale-105">
+              Play →
+            </span>
+          </Link>
         </div>
       </section>
 
