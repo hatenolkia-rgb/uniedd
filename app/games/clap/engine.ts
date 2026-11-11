@@ -7,7 +7,7 @@
  * - a tiny synth for the melody, chords, bass, metronome and guide claps
  */
 
-import { chordMidis, clapNotes, type ClapSong } from "./songs";
+import { beatToTime, chordMidis, type ClapSong } from "./songs";
 
 export const midiFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -104,18 +104,136 @@ export class ClapEngine {
     if (this.ctx.state !== "running") await this.ctx.resume();
   }
 
-  /** Context time of the sound the listener is hearing right now. */
-  heardNow(perfNow = performance.now()) {
-    const ts = this.ctx.getOutputTimestamp?.();
-    if (ts && ts.contextTime !== undefined && ts.performanceTime !== undefined && ts.performanceTime > 0) {
-      return ts.contextTime + (perfNow - ts.performanceTime) / 1000;
+  /** Output latency the browser reports (seconds): time from scheduling to the speaker. */
+  get outputLatency() {
+    const c = this.ctx as AudioContext & { outputLatency?: number };
+    const v = c.outputLatency || c.baseLatency || 0;
+    return Number.isFinite(v) ? Math.max(0, Math.min(0.5, v)) : 0;
+  }
+
+  // Smoothed "heard clock": ctx.currentTime - outputLatency, but ctx.currentTime only
+  // moves in audio-callback steps, so we run it through a tiny phase-locked loop driven
+  // by performance.now() for a jitter-free, drift-free value every animation frame.
+  private est = 0;
+  private estPerf = -1;
+  private lastRaw = -1;
+  private step = 0;
+  private lat = -1;
+
+  private updateClock(nowPerf: number) {
+    const cur = this.ctx.currentTime;
+    if (this.lastRaw >= 0 && cur > this.lastRaw) {
+      const jump = cur - this.lastRaw;
+      if (jump < 0.05) this.step = this.step ? this.step * 0.9 + jump * 0.1 : jump;
     }
-    return this.ctx.currentTime - (this.ctx.outputLatency || this.ctx.baseLatency || 0);
+    // outputLatency can wobble from callback to callback; follow it slowly so markers never jump
+    const L = this.outputLatency;
+    this.lat = this.lat < 0 || Math.abs(L - this.lat) > 0.1 ? L : this.lat + (L - this.lat) * 0.02;
+    // Fallback: currentTime marks the end of the block just handed to the device, so the
+    // sample at the speaker right now is ~half a callback behind it, minus output latency.
+    let raw = cur - this.step / 2 - this.lat;
+    // Preferred: the browser's own (context time, performance time) pair for the sample
+    // reaching the output right now — already includes the device/OS latency.
+    const ts = this.ctx.getOutputTimestamp?.();
+    if (ts && ts.contextTime && ts.performanceTime) {
+      const viaTs = ts.contextTime + (nowPerf - ts.performanceTime) / 1000;
+      if (Math.abs(viaTs - raw) < 0.15) raw = viaTs;
+    }
+    this.lastRaw = cur;
+    if (this.ctx.state !== "running" || this.estPerf < 0) {
+      this.est = raw;
+    } else {
+      const pred = this.est + (nowPerf - this.estPerf) / 1000;
+      const err = raw - pred;
+      this.est = Math.abs(err) > 0.04 ? raw : pred + err * 0.06;
+    }
+    this.estPerf = nowPerf;
+  }
+
+  /**
+   * Context time of the sound reaching the listener's ears at performance time `perfT`
+   * (= ctx.currentTime - outputLatency, smoothed). Visuals and input judging use this.
+   */
+  heardAt(perfT = performance.now()) {
+    const nowPerf = performance.now();
+    if (nowPerf - this.estPerf > 1 || this.estPerf < 0) this.updateClock(nowPerf);
+    return this.est - (nowPerf - perfT) / 1000;
+  }
+
+  /** Back-compat alias. */
+  heardNow(perfNow = performance.now()) {
+    return this.heardAt(perfNow);
   }
 
   /** Convert an event timestamp (performance.now domain) to heard context time. */
   eventToCtx(eventTimeStamp: number) {
-    return this.heardNow(eventTimeStamp);
+    return this.heardAt(eventTimeStamp);
+  }
+
+  // ---------- decoded audio files ----------
+  private buffers = new Map<string, Promise<AudioBuffer>>();
+
+  /** Fetch + decode an audio file once into an AudioBuffer (sample-exact playback). */
+  loadBuffer(url: string) {
+    let p = this.buffers.get(url);
+    if (!p) {
+      p = fetch(url)
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.arrayBuffer();
+        })
+        .then((ab) => this.ctx.decodeAudioData(ab));
+      p.catch(() => this.buffers.delete(url));
+      this.buffers.set(url, p);
+    }
+    return p;
+  }
+
+  /**
+   * Play `buffer` so that buffer position `offset` sounds at context time `when`,
+   * at `rate` (pitch follows the rate, which keeps it locked to the audio clock).
+   */
+  playBuffer(buffer: AudioBuffer, when: number, offset: number, rate: number, vol = 0.95) {
+    const src = this.track(this.ctx.createBufferSource());
+    src.buffer = buffer;
+    src.playbackRate.value = rate;
+    const g = this.ctx.createGain();
+    g.gain.value = vol;
+    src.connect(g).connect(this.master);
+    src.start(when, Math.max(0, offset));
+    return src;
+  }
+
+  // ---------- lookahead scheduler ----------
+  private timer: number | null = null;
+
+  /**
+   * Schedule `events` (each with an exact context time) a little ahead of the audio
+   * clock, Web-Audio style: a JS timer wakes every 25 ms and queues anything due in
+   * the next ~500 ms with sample-accurate start times.
+   */
+  runSchedule(events: { at: number; play: (at: number) => void }[]) {
+    this.stopSchedule();
+    const list = [...events].sort((a, b) => a.at - b.at);
+    let i = 0;
+    const pump = () => {
+      if (this.ctx.state !== "running") return;
+      const ahead = typeof document !== "undefined" && document.hidden ? 1.5 : 0.5;
+      const horizon = this.ctx.currentTime + ahead;
+      while (i < list.length && list[i].at < horizon) {
+        const ev = list[i++];
+        if (ev.at < this.ctx.currentTime - 0.03) continue; // too late, skip rather than smear
+        ev.play(Math.max(ev.at, this.ctx.currentTime));
+      }
+      if (i >= list.length) this.stopSchedule();
+    };
+    pump();
+    this.timer = window.setInterval(pump, 25);
+  }
+
+  stopSchedule() {
+    if (this.timer !== null) window.clearInterval(this.timer);
+    this.timer = null;
   }
 
   get micOn() {
@@ -182,6 +300,7 @@ export class ClapEngine {
   }
 
   stopAll() {
+    this.stopSchedule();
     for (const n of this.scheduled) {
       try {
         n.stop();
@@ -205,6 +324,20 @@ export class ClapEngine {
     o.connect(g).connect(this.master);
     o.start(at);
     o.stop(at + 0.1);
+  }
+
+  /** Guide click: a short, crisp tick exactly on a marker time. */
+  guideClick(at: number, vol = 0.5) {
+    const o = this.track(this.ctx.createOscillator());
+    const g = this.ctx.createGain();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(1250, at);
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(vol * 0.5, at + 0.0015);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.045);
+    o.connect(g).connect(this.master);
+    o.start(at);
+    o.stop(at + 0.06);
   }
 
   /** Synth hand clap (noise burst). Loud & bright — mic users should wear headphones. */
@@ -285,35 +418,49 @@ export class ClapEngine {
   }
 
   /**
-   * Schedule a synth performance of the song. `start` = context time of beat 0,
-   * `rate` = speed (1 = original tempo). Returns nothing; use stopAll() to cut.
+   * Build the timed sound events for a play-through. Every time is in SONG seconds and
+   * converted with `toCtx` — the same mapping the markers use — so sound and visuals
+   * share one clock. `guideTimes` are the marker times (one click per marker).
    */
-  scheduleSong(
+  songEvents(
     song: ClapSong,
-    start: number,
+    toCtx: (songT: number) => number,
     rate: number,
-    opts: { melody: boolean; backing: boolean; metronome: boolean; guideClaps: boolean },
+    opts: { melody: boolean; backing: boolean; metronome: boolean; guideTimes: number[] | null },
   ) {
-    const spb = 60 / song.bpm / rate;
-    if (opts.melody) {
-      for (const n of song.notes) if (n.midi !== undefined) this.tone(n.midi, start + n.beat * spb, n.len * spb * 0.92);
+    const out: { at: number; play: (at: number) => void }[] = [];
+    const spb = 60 / song.bpm; // song seconds per beat
+    const bt = (beat: number) => beatToTime(song, beat);
+    if (opts.melody && !song.audio) {
+      for (const n of song.notes) {
+        if (n.midi === undefined) continue;
+        const midi = n.midi;
+        const dur = (n.len * spb * 0.92) / rate;
+        out.push({ at: toCtx(bt(n.beat)), play: (at) => this.tone(midi, at, dur) });
+      }
     }
-    if (opts.guideClaps) for (const n of clapNotes(song)) this.clap(start + n.beat * spb, 0.22);
-    const bars = Math.ceil(song.lengthBeats / song.beatsPerBar);
-    if (opts.backing && song.chords) {
+    if (opts.backing && !song.audio && song.chords) {
+      const bars = Math.ceil(song.lengthBeats / song.beatsPerBar);
       for (let bar = 0; bar < bars; bar++) {
         const parts = (song.chords[bar] || "").split(/\s+/).filter(Boolean);
         parts.forEach((name, i) => {
           const midis = chordMidis(name);
           if (!midis) return;
           const len = song.beatsPerBar / parts.length;
-          this.pad(midis, start + (bar * song.beatsPerBar + i * len) * spb, len * spb);
+          const beat = bar * song.beatsPerBar + i * len;
+          out.push({ at: toCtx(bt(beat)), play: (at) => this.pad(midis, at, (len * spb) / rate) });
         });
       }
     }
     if (opts.metronome) {
-      for (let b = 0; b < song.lengthBeats; b++) this.click(start + b * spb, b % song.beatsPerBar === 0, 0.35);
+      const beats =
+        song.beatTimes && song.beatTimes.length > 1
+          ? song.beatTimes.filter((t) => t >= (song.offset ?? 0) - 0.01)
+          : Array.from({ length: Math.ceil(song.lengthBeats) }, (_, b) => bt(b));
+      beats.forEach((t, b) => out.push({ at: toCtx(t), play: (at) => this.click(at, b % song.beatsPerBar === 0, 0.35) }));
     }
+    if (opts.guideTimes) for (const t of opts.guideTimes) out.push({ at: toCtx(t), play: (at) => this.guideClick(at) });
+    return out;
   }
 
   close() {

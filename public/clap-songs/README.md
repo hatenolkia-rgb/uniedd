@@ -25,7 +25,7 @@ Reload the game: the song takes the next free slot. No code changes are needed.
 | `bpm` | yes | Tempo, used for the beat lines and to turn `claps` (beats) into seconds |
 | `timeSignature` | no | `"4/4"` (default), `"3/4"`, `"6/8"`… only the top number is used |
 | `audio` | no | Audio file name in this folder (or a full URL). Without it the game plays a synth tune if `notes` have `midi`, otherwise just the clicks |
-| `offset` | no | Seconds into the audio where beat 0 (the first downbeat) happens |
+| `offset` | no | Seconds into the audio where beat 0 (the first downbeat) happens. Only used to turn beats into seconds — `clapTimes` and `beatTimes` are always plain seconds from the start of the audio file, so they are never shifted twice |
 | `claps` | one of these | Clap moments in **beats** from beat 0, e.g. `[0, 1, 2, 2.5, 3]` |
 | `clapTimes` | one of these | Clap moments in **seconds** from the start of the audio (what the chart maker exports) |
 | `notes` | one of these | `[{ "beat": 0, "len": 1, "midi": 64, "lyric": "Jin" }]` — claps plus a synth melody |

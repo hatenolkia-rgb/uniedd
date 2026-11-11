@@ -27,6 +27,14 @@ synth + mic clap detector, `highway.ts` canvas renderer, `ClapTrainer.tsx` UI).
 - **Difficulty stars:** every song shows 1–5 ★. Set `difficulty` in the song data, or it is computed from
   the chart (clap density, shortest gap, off-beat claps, tempo) by `autoStars()` in `songs.ts`.
 - **Kids & Nursery Rhymes:** public-domain tunes written as melody data in `songs.ts` (`kids: true`).
+- **Sync (one clock):** audio files are decoded to an `AudioBuffer` and started with
+  `AudioBufferSourceNode.start(when, offset)`; synth notes, metronome, count-in and guide clicks are queued by a
+  25 ms / 500 ms lookahead scheduler on `AudioContext` time. All of them, and the markers, use
+  `songTime = anchorSong + (ctxTime - anchorCtx) * speed`. Slower speeds use `playbackRate` (the pitch drops).
+  Visuals use the *heard* time `ctx.currentTime - outputLatency` (fallback `baseLatency`), smoothed every frame.
+  The mic/tap calibration only shifts how claps are judged, never visuals or audio. Players can fine-tune
+  ±150 ms with the **Audio sync** slider (`localStorage["uniedd-clap-audio-sync"]`), checking with **Guide clap**.
+  Add `?clapdebug=1` to the URL to log every marker crossing in `window.__clapSync`.
 
 ## How demo bookings work
 

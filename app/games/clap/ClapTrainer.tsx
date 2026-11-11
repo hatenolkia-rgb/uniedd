@@ -57,6 +57,24 @@ const SPEEDS = [0.5, 0.75, 0.9, 1, 1.15];
 const OFFSET_KEY = (m: InputMode) => `uniedd-clap-offset:${m}`;
 const BEST_KEY = (id: string) => `uniedd-clap-best:${id}`;
 const OPTS_KEY = "uniedd-clap-options";
+const SYNC_KEY = "uniedd-clap-audio-sync";
+const SYNC_LIMIT_MS = 150;
+
+/** Debug crossing log (enable with ?clapdebug=1): when each marker reached the ring. */
+type Crossing = { i: number; chart: number; perf: number };
+declare global {
+  interface Window {
+    __clapSync?: {
+      song: string;
+      rate: number;
+      anchorCtx: number;
+      anchorSong: number;
+      crossings: Crossing[];
+      frames: number[][];
+      done: boolean;
+    };
+  }
+}
 
 function readNumber(key: string, fallback: number) {
   if (typeof window === "undefined") return fallback;
@@ -107,10 +125,11 @@ type Run = {
   // clock: songTime(ctxT) = anchorSong + (ctxT - anchorCtx) * rate
   anchorCtx: number;
   anchorSong: number;
-  audio: HTMLAudioElement | null;
-  audioStarted: boolean;
-  audioSmooth: number;
+  source: AudioBufferSourceNode | null;
+  syncSec: number;
+  lastVisual: number;
   lastPerf: number;
+  debug: boolean;
   firstBeatTime: number;
   countInStart: number;
   endTime: number;
@@ -138,6 +157,9 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   const [mic, setMic] = useState<MicStatus>("off");
   const [micOffsetMs, setMicOffsetMs] = useState(() => readNumber(OFFSET_KEY("mic"), 0));
   const [tapOffsetMs, setTapOffsetMs] = useState(() => readNumber(OFFSET_KEY("tap"), 0));
+  const [syncMs, setSyncMsState] = useState(() =>
+    Math.max(-SYNC_LIMIT_MS, Math.min(SYNC_LIMIT_MS, Math.round(readNumber(SYNC_KEY, 0)))),
+  );
   const [result, setResult] = useState<Result | null>(null);
   const [paused, setPaused] = useState(false);
   const [loadingAudio, setLoadingAudio] = useState(false);
@@ -152,6 +174,17 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   const meterRef = useRef<HTMLDivElement | null>(null);
   const levelRef = useRef(0);
   const inputHandlerRef = useRef<((ctxT: number, source: InputMode) => void) | null>(null);
+  const setSyncMs = useCallback((ms: number) => {
+    const v = Math.max(-SYNC_LIMIT_MS, Math.min(SYNC_LIMIT_MS, Math.round(ms)));
+    setSyncMsState(v);
+    try {
+      localStorage.setItem(SYNC_KEY, String(v));
+    } catch {
+      /* ignore */
+    }
+    const run = runRef.current;
+    if (run) run.syncSec = v / 1000; // live while playing
+  }, []);
 
   const allSongs = [...BUILT_IN_SONGS, ...uploaded, ...(customSong ? [customSong] : [])];
   const song = allSongs.find((s) => s.id === songId) || BUILT_IN_SONGS[0];
@@ -175,7 +208,6 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     });
     return () => {
       alive = false;
-      runRef.current?.audio?.pause();
       engineRef.current?.close();
       engineRef.current = null;
     };
@@ -286,8 +318,8 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     const run = runRef.current;
     if (!run || run.finished) return;
     run.finished = true;
-    run.audio?.pause();
     engineRef.current?.stopAll();
+    if (run.debug && window.__clapSync) window.__clapSync.done = true;
     const total = run.notes.length;
     const accuracy = total ? (run.perfect + run.good * 0.6) / total : 0;
     const stars = starsFor(accuracy);
@@ -352,53 +384,47 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     const countInStart = firstBeatTime - song.beatsPerBar * spb;
     const preRoll = 0.9 * rate; // a little breathing room before the count-in
     const startSong = countInStart - preRoll;
-    const now = e.ctx.currentTime + 0.12;
-    let audio: HTMLAudioElement | null = null;
+    let buffer: AudioBuffer | null = null;
     if (song.audio) {
       setLoadingAudio(true);
-      audio = new Audio(song.audio);
-      audio.preload = "auto";
-      (audio as HTMLAudioElement & { preservesPitch?: boolean }).preservesPitch = true;
-      audio.playbackRate = rate;
-      const ok = await new Promise<boolean>((resolve) => {
-        const done = (v: boolean) => {
-          audio?.removeEventListener("canplaythrough", yes);
-          audio?.removeEventListener("error", no);
-          resolve(v);
-        };
-        const yes = () => done(true);
-        const no = () => done(false);
-        audio?.addEventListener("canplaythrough", yes);
-        audio?.addEventListener("error", no);
-        audio?.load();
-        window.setTimeout(() => done(audio ? audio.readyState >= 3 : false), 15000);
-      });
+      try {
+        buffer = await e.loadBuffer(song.audio);
+      } catch {
+        buffer = null;
+      }
       setLoadingAudio(false);
-      if (!ok) {
+      if (!buffer) {
         setError(`Could not load the audio file for “${song.title}”. Check the file name in songs.json.`);
         return;
       }
+      await e.resume();
     }
-    const anchorCtx = now;
+    // ONE clock for everything: songTime(ctxT) = anchorSong + (ctxT - anchorCtx) * rate.
+    // Audio, synth notes, clicks and markers are all placed with ctxFor(), so they can't drift.
+    const anchorCtx = e.ctx.currentTime + 0.15;
     const anchorSong = startSong;
-    // schedule the count-in clicks and (for built-in songs) the synth performance
     const ctxFor = (songT: number) => anchorCtx + (songT - anchorSong) / rate;
-    for (let b = 0; b < song.beatsPerBar; b++) e.click(ctxFor(countInStart + b * spb), b === 0, 0.55);
-    if (!song.audio) {
-      e.scheduleSong(song, ctxFor(firstBeatTime), rate, {
-        melody: opts.melody,
-        backing: opts.melody,
-        metronome: opts.metronome,
-        guideClaps: opts.guideClaps,
-      });
-    } else {
-      if (opts.metronome) {
-        for (let b = 0; b < song.lengthBeats; b++) e.click(ctxFor(firstBeatTime + b * spb), b % song.beatsPerBar === 0, 0.35);
-      }
-      if (opts.guideClaps) for (const n of notes) e.clap(ctxFor(n.t), 0.22);
+    let source: AudioBufferSourceNode | null = null;
+    if (buffer) {
+      // buffer position p (seconds into the clip) sounds exactly at ctxFor(p)
+      source = anchorSong < 0 ? e.playBuffer(buffer, ctxFor(0), 0, rate) : e.playBuffer(buffer, anchorCtx, anchorSong, rate);
     }
+    const events = e.songEvents(song, ctxFor, rate, {
+      melody: opts.melody,
+      backing: opts.melody,
+      metronome: opts.metronome,
+      guideTimes: opts.guideClaps ? notes.map((n) => n.t) : null,
+    });
+    for (let b = 0; b < song.beatsPerBar; b++) {
+      const at = ctxFor(countInStart + b * spb);
+      events.push({ at, play: (t) => e.click(t, b === 0, 0.55) });
+    }
+    e.runSchedule(events);
+    const debug = typeof window !== "undefined" && /[?&]clapdebug=1/.test(window.location.search);
+    if (debug) window.__clapSync = { song: song.id, rate, anchorCtx, anchorSong, crossings: [], frames: [], done: false };
     const lastNote = notes.length ? notes[notes.length - 1].t : 0;
-    const endTime = Math.max(lastNote + 1.6 * rate, song.audio ? Math.min(songDuration(song), lastNote + 4) : songDuration(song) + 0.4);
+    const audioEnd = buffer ? Math.min(buffer.duration, songDuration(song)) : 0;
+    const endTime = Math.max(lastNote + 1.6 * rate, buffer ? Math.min(audioEnd, lastNote + 4) : songDuration(song) + 0.4);
     runRef.current = {
       song,
       notes,
@@ -406,10 +432,11 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       practice: opts.practice,
       anchorCtx,
       anchorSong,
-      audio,
-      audioStarted: false,
-      audioSmooth: 0,
+      source,
+      syncSec: syncMs / 1000,
+      lastVisual: startSong,
       lastPerf: performance.now(),
+      debug,
       firstBeatTime,
       countInStart,
       endTime,
@@ -451,7 +478,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     };
     setPaused(false);
     setView("play");
-  }, [engine, enableMic, opts, song, micOffsetMs, tapOffsetMs]);
+  }, [engine, enableMic, opts, song, micOffsetMs, tapOffsetMs, syncMs]);
 
   // animation + timing loop while playing
   useEffect(() => {
@@ -489,27 +516,22 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       lastFrame = perfNow;
       const st = run.draw;
       if (!run.paused && !run.finished) {
-        const heard = e.heardNow(perfNow);
-        // audio files: start the element when its time comes, then follow its clock
-        if (run.audio) {
-          const songNow = songTimeAt(run, heard);
-          if (!run.audioStarted && songNow >= 0) {
-            run.audio.currentTime = Math.max(0, songNow);
-            void run.audio.play().catch(() => setError("The browser blocked audio playback — press Play again."));
-            run.audioStarted = true;
-            run.audioSmooth = songNow;
-          } else if (run.audioStarted && !run.audio.paused) {
-            run.audioSmooth += dt * run.rate;
-            const actual = run.audio.currentTime;
-            const drift = actual - run.audioSmooth;
-            if (Math.abs(drift) > 0.08) run.audioSmooth = actual;
-            else run.audioSmooth += drift * 0.08;
-            run.anchorSong = run.audioSmooth;
-            run.anchorCtx = heard;
+        // Visual clock = audio clock minus output latency (what the ears hear right now),
+        // plus the user's "Audio sync" fine-tune. Never touched by the mic/tap calibration.
+        const heard = e.heardAt(perfNow);
+        const now = songTimeAt(run, heard - run.syncSec);
+        if (run.debug && window.__clapSync) {
+          // raw clock samples + the instant each marker crossed the ring (analysed offline)
+          const ts = e.ctx.getOutputTimestamp?.();
+          window.__clapSync.frames.push([perfNow, e.ctx.currentTime, e.outputLatency, ts?.contextTime ?? 0, ts?.performanceTime ?? 0]);
+          for (const [i, n] of run.notes.entries()) {
+            if (n.t <= run.lastVisual || n.t > now) continue;
+            const f = (n.t - run.lastVisual) / Math.max(1e-6, now - run.lastVisual);
+            window.__clapSync.crossings.push({ i, chart: n.t, perf: run.lastPerf + f * (perfNow - run.lastPerf) });
           }
-          if (run.audioStarted && run.audio.ended) run.endTime = Math.min(run.endTime, songTimeAt(run, heard));
         }
-        const now = songTimeAt(run, heard);
+        run.lastVisual = now;
+        run.lastPerf = perfNow;
         st.now = now;
         // misses: a note is gone once it is past the late window (plus input delay)
         const lateW = (run.practice ? PRACTICE_GOOD_S : GOOD_S) * run.rate;
@@ -557,12 +579,10 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     if (!run || !e || run.finished) return;
     if (!run.paused) {
       run.paused = true;
-      run.audio?.pause();
-      await e.ctx.suspend();
+      await e.ctx.suspend(); // freezes the audio clock: music, clicks and markers stop together
       setPaused(true);
     } else {
       await e.ctx.resume();
-      if (run.audio && run.audioStarted) void run.audio.play();
       run.paused = false;
       setPaused(false);
     }
@@ -572,7 +592,6 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     const run = runRef.current;
     if (run) {
       run.finished = true;
-      run.audio?.pause();
     }
     const e = engineRef.current;
     if (e) {
@@ -835,10 +854,38 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
               <Toggle label="Play the tune" checked={opts.melody} onChange={(v) => setOpts({ melody: v })} />
               <Toggle label="Metronome click" checked={opts.metronome} onChange={(v) => setOpts({ metronome: v })} />
               <Toggle
-                label="Guide claps (use headphones with the mic)"
+                label="Guide clap — a click on every marker (headphones with the mic)"
                 checked={opts.guideClaps}
                 onChange={(v) => setOpts({ guideClaps: v })}
               />
+            </div>
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs text-white/70">
+                <label htmlFor="clap-audio-sync">Audio sync</label>
+                <span className="font-mono">
+                  {syncMs > 0 ? "+" : ""}
+                  {syncMs} ms
+                  {syncMs !== 0 ? (
+                    <button type="button" onClick={() => setSyncMs(0)} className="ml-2 text-amber-300 hover:underline">
+                      reset
+                    </button>
+                  ) : null}
+                </span>
+              </div>
+              <input
+                id="clap-audio-sync"
+                type="range"
+                min={-SYNC_LIMIT_MS}
+                max={SYNC_LIMIT_MS}
+                step={5}
+                value={syncMs}
+                onChange={(ev) => setSyncMs(Number(ev.target.value))}
+                className="mt-1 w-full accent-amber-400"
+              />
+              <p className="text-[11px] text-white/55">
+                Markers reach the ring before you hear the beat? Slide right. After it? Slide left. (Turn on Guide clap to
+                check — the click should land exactly on the ring.)
+              </p>
             </div>
           </div>
         </div>
