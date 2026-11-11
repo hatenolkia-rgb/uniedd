@@ -8,6 +8,10 @@ export type RunNote = {
   t: number; // song seconds
   end: number; // song seconds (tail end)
   lyric?: string;
+  /** Lyric syllable continues the same word (no space before the next one). */
+  joinNext?: boolean;
+  /** Index of the lyric line this clap belongs to. */
+  line: number;
   judged: Judgement | null;
   judgedAt: number; // performance.now()
 };
@@ -35,6 +39,8 @@ export type DrawState = {
   paused: boolean;
   micLevel: number; // 0..1
   inputLabel: string;
+  /** Lyric lines: note indices per line (karaoke strip). */
+  lines: number[][];
 };
 
 const LOOKAHEAD = 2.3; // real seconds of notes visible above the hit line
@@ -256,7 +262,7 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.font = `600 ${Math.round(11 + 7 * p.scale)}px system-ui, sans-serif`;
       ctx.textAlign = "left";
-      ctx.fillText(n.lyric, cx + p.half + 10, p.y + 5);
+      ctx.fillText(n.lyric.replace(/-$/, ""), cx + p.half + 10, p.y + 5);
     }
     ctx.globalAlpha = 1;
   }
@@ -332,6 +338,8 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     ctx.fillRect(14, h - 34, 80 * Math.min(1, st.micLevel), 6);
   }
 
+  drawKaraoke(ctx, w, h, st);
+
   // Count-in
   if (now < st.firstBeatTime) {
     const beatsLeft = Math.ceil((st.firstBeatTime - now) / spb);
@@ -382,4 +390,86 @@ function hexA(hex: string, a: number) {
   if (!m) return `rgba(255,255,255,${a})`;
   const n = parseInt(m[1], 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+/** Karaoke strip: the current lyric line with the syllable to clap next highlighted. */
+function drawKaraoke(ctx: CanvasRenderingContext2D, w: number, h: number, st: DrawState) {
+  if (!st.lines.length) return;
+  const { notes, now, rate } = st;
+  let idx = notes.findIndex((n) => n.t + 0.2 * rate > now);
+  if (idx < 0) return;
+  const lineNo = notes[idx].line;
+  const line = st.lines[lineNo]?.filter((i) => notes[i].lyric);
+  if (!line || !line.length) return;
+  // Hide lines that are still far away (long instrumental gaps)
+  if (notes[line[0]].t - now > 4 * rate) return;
+  if (!notes[idx].lyric) idx = line.find((i) => notes[i].t + 0.2 * rate > now) ?? idx;
+  const small = w < 520;
+  let size = small ? 18 : 24;
+  const pieces = line.map((i) => {
+    const n = notes[i];
+    const text = (n.lyric || "").replace(/-$/, "") + (n.joinNext || /-$/.test(n.lyric || "") ? "" : " ");
+    return { i, text };
+  });
+  const measure = () => {
+    ctx.font = `800 ${size}px system-ui, sans-serif`;
+    return pieces.reduce((sum, p) => sum + ctx.measureText(p.text).width, 0);
+  };
+  let total = measure();
+  while (total > w * 0.86 && size > 11) {
+    size -= 1;
+    total = measure();
+  }
+  const y = small ? 96 : 116;
+  ctx.fillStyle = "rgba(5,5,25,0.55)";
+  const padX = 16;
+  roundRect(ctx, (w - total) / 2 - padX, y - size - 8, total + padX * 2, size + 20, 14);
+  ctx.fill();
+  let x = (w - total) / 2;
+  ctx.textAlign = "left";
+  for (const p of pieces) {
+    const n = notes[p.i];
+    const active = p.i === idx;
+    let color = "rgba(255,255,255,0.55)";
+    if (n.judged === "perfect") color = "#facc15";
+    else if (n.judged === "good") color = "#22d3ee";
+    else if (n.judged === "miss") color = "#f87171";
+    else if (active) color = "#ffffff";
+    ctx.fillStyle = color;
+    if (active) {
+      ctx.shadowColor = st.song.accent;
+      ctx.shadowBlur = 14;
+    }
+    ctx.font = `800 ${size}px system-ui, sans-serif`;
+    ctx.fillText(p.text, x, y);
+    ctx.shadowBlur = 0;
+    if (active) {
+      const tw = ctx.measureText(p.text.trimEnd()).width;
+      ctx.fillStyle = st.song.accent;
+      ctx.fillRect(x, y + 5, tw, 3);
+    }
+    x += ctx.measureText(p.text).width;
+  }
+  // next line, smaller and dim
+  const next = st.lines[lineNo + 1]?.filter((i) => notes[i].lyric);
+  if (next && next.length && notes[next[0]].t - now < 8 * rate) {
+    const text = next
+      .map((i) => (notes[i].lyric || "").replace(/-$/, "") + (notes[i].joinNext || /-$/.test(notes[i].lyric || "") ? "" : " "))
+      .join("")
+      .trim();
+    ctx.font = `600 ${Math.round(size * 0.62)}px system-ui, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.textAlign = "center";
+    ctx.fillText(text, w / 2, y + size * 0.62 + 14);
+  }
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }

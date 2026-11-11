@@ -9,6 +9,7 @@ import {
   clapNotes,
   clapTimes,
   loadUploadedSongs,
+  lyricLines,
   songDuration,
   starsFor,
   starsLabel,
@@ -339,9 +340,14 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       t: times[i],
       end: times[i] + n.len * spb,
       lyric: n.lyric,
+      joinNext: /-$/.test(n.lyric || ""),
+      line: 0,
       judged: null,
       judgedAt: 0,
     }));
+    const lines = lyricLines(clapNotes(song).map((n, i) => ({ t: times[i], lyric: n.lyric, br: n.br })));
+    lines.forEach((line, li) => line.forEach((i) => (notes[i].line = li)));
+    const hasLyrics = notes.some((n) => n.lyric);
     const firstBeatTime = song.offset ?? 0;
     const countInStart = firstBeatTime - song.beatsPerBar * spb;
     const preRoll = 0.9 * rate; // a little breathing room before the count-in
@@ -439,6 +445,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
         practice: opts.practice,
         paused: false,
         micLevel: 0,
+        lines: hasLyrics ? lines : [],
         inputLabel: e.micOn && opts.input === "mic" ? "🎤 Listening for claps · Space / tap also works" : "⌨️ Space or tap the stage",
       },
     };

@@ -18,7 +18,29 @@ export type SongNote = {
   lyric?: string;
   /** Melody-only note: the synth plays it but there is no clap marker. */
   ghost?: boolean;
+  /** The lyric line ends after this note (karaoke strip). */
+  br?: boolean;
 };
+
+/**
+ * Group clap notes into lyric lines. A line ends after a note with `br`, after a
+ * lyric ending in , . ! ? ; or before a long gap. A lyric ending in "-" joins the next
+ * syllable into one word (e.g. "Jin-" + "gle").
+ */
+export function lyricLines(notes: { t: number; lyric?: string; br?: boolean }[]) {
+  const lines: number[][] = [];
+  let cur: number[] = [];
+  notes.forEach((n, i) => {
+    cur.push(i);
+    const next = notes[i + 1];
+    const end = !next || n.br || /[,.!?;]$/.test(n.lyric || "") || next.t - n.t > 1.6 || cur.length >= 14;
+    if (end) {
+      lines.push(cur);
+      cur = [];
+    }
+  });
+  return lines;
+}
 
 export type ClapSong = {
   id: string;
@@ -67,16 +89,28 @@ export function clapTimes(song: ClapSong) {
  * Auto difficulty (1–5 stars) from the chart: claps per second, the shortest gap
  * between claps, how many claps fall off the beat (syncopation) and the tempo.
  */
-export function autoStars(song: Pick<ClapSong, "notes" | "bpm" | "offset">) {
+export function autoStars(song: Pick<ClapSong, "notes" | "bpm" | "offset"> & { beatTimes?: number[] }) {
   const spb = 60 / song.bpm;
   const notes = song.notes.filter((n) => !n.ghost);
   if (notes.length < 2) return 1;
   const times = notes.map((n) => (song.offset ?? 0) + n.beat * spb);
+  const bt = song.beatTimes;
+  // beat position of each clap: from exact beat times when the song has them
+  const beatPos = (t: number, fallback: number) => {
+    if (!bt || bt.length < 2 || t < bt[0] || t > bt[bt.length - 1]) return fallback;
+    let i = 0;
+    while (i < bt.length - 2 && bt[i + 1] < t) i++;
+    return i + (t - bt[i]) / (bt[i + 1] - bt[i]);
+  };
   const span = Math.max(1, times[times.length - 1] - times[0]);
   const density = notes.length / span;
   let minGap = Infinity;
   for (let i = 1; i < times.length; i++) minGap = Math.min(minGap, times[i] - times[i - 1]);
-  const offBeat = notes.filter((n) => Math.abs(n.beat - Math.round(n.beat)) > 0.12).length / notes.length;
+  const offBeat =
+    notes.filter((n, i) => {
+      const b = beatPos(times[i], n.beat);
+      return Math.abs(b - Math.round(b)) > 0.12;
+    }).length / notes.length;
   const raw =
     density * 0.6 + offBeat * 1.2 + (minGap < 0.25 ? 0.6 : minGap < 0.35 ? 0.3 : 0) + (span > 60 ? 0.25 : 0) + (song.bpm > 140 ? 0.3 : 0);
   if (raw < 1) return 1;
@@ -121,92 +155,92 @@ function melody(steps: Step[], startBeat = 0): { notes: SongNote[]; end: number 
 const G3 = 55, B3 = 59, C4 = 60, D4 = 62, E4 = 64, F4 = 65, G4 = 67, A4 = 69, B4 = 71, C5 = 72, D5 = 74, E5 = 76, F5 = 77, G5 = 79;
 
 const jingle = melody([
-  [E4, 1, "Jin"], [E4, 1, "gle"], [E4, 2, "bells"],
-  [E4, 1, "jin"], [E4, 1, "gle"], [E4, 2, "bells"],
-  [E4, 1, "jin"], [G4, 1, "gle"], [C4, 1.5, "all"], [D4, 0.5, "the"],
+  [E4, 1, "Jin-"], [E4, 1, "gle"], [E4, 2, "bells"],
+  [E4, 1, "jin-"], [E4, 1, "gle"], [E4, 2, "bells"],
+  [E4, 1, "jin-"], [G4, 1, "gle"], [C4, 1.5, "all"], [D4, 0.5, "the"],
   [E4, 4, "way!"],
   [F4, 1, "Oh"], [F4, 1, "what"], [F4, 1.5, "fun"], [F4, 0.5, "it"],
   [F4, 1, "is"], [E4, 1, "to"], [E4, 1, "ride"], [E4, 0.5, "in"], [E4, 0.5, "a"],
-  [E4, 1, "one"], [D4, 1, "horse"], [D4, 1, "o"], [E4, 1, "pen"],
+  [E4, 1, "one"], [D4, 1, "horse"], [D4, 1, "o-"], [E4, 1, "pen"],
   [D4, 2, "sleigh,"], [G4, 2, "hey!"],
-  [E4, 1, "Jin"], [E4, 1, "gle"], [E4, 2, "bells"],
-  [E4, 1, "jin"], [E4, 1, "gle"], [E4, 2, "bells"],
-  [E4, 1, "jin"], [G4, 1, "gle"], [C4, 1.5, "all"], [D4, 0.5, "the"],
+  [E4, 1, "Jin-"], [E4, 1, "gle"], [E4, 2, "bells"],
+  [E4, 1, "jin-"], [E4, 1, "gle"], [E4, 2, "bells"],
+  [E4, 1, "jin-"], [G4, 1, "gle"], [C4, 1.5, "all"], [D4, 0.5, "the"],
   [E4, 4, "way!"],
   [F4, 1, "Oh"], [F4, 1, "what"], [F4, 1.5, "fun"], [F4, 0.5, "it"],
   [F4, 1, "is"], [E4, 1, "to"], [E4, 1, "ride"], [E4, 0.5, "in"], [E4, 0.5, "a"],
-  [G4, 1, "one"], [G4, 1, "horse"], [F4, 1, "o"], [D4, 1, "pen"],
+  [G4, 1, "one"], [G4, 1, "horse"], [F4, 1, "o-"], [D4, 1, "pen"],
   [C4, 4, "sleigh!"],
 ]);
 
 // 3/4 with a one-beat pickup (starts on beat 3 of an empty bar)
 const birthday = melody(
   [
-    [G4, 0.75, "Hap"], [G4, 0.25, "py"],
-    [A4, 1, "birth"], [G4, 1, "day"], [C5, 1, "to"],
-    [B4, 2, "you,"], [G4, 0.75, "hap"], [G4, 0.25, "py"],
-    [A4, 1, "birth"], [G4, 1, "day"], [D5, 1, "to"],
-    [C5, 2, "you,"], [G4, 0.75, "hap"], [G4, 0.25, "py"],
-    [G5, 1, "birth"], [E5, 1, "day"], [C5, 1, "dear"],
-    [B4, 1, "friend"], [A4, 1, "-"], [F5, 0.75, "hap"], [F5, 0.25, "py"],
-    [E5, 1, "birth"], [C5, 1, "day"], [D5, 1, "to"],
+    [G4, 0.75, "Hap-"], [G4, 0.25, "py"],
+    [A4, 1, "birth-"], [G4, 1, "day"], [C5, 1, "to"],
+    [B4, 2, "you,"], [G4, 0.75, "hap-"], [G4, 0.25, "py"],
+    [A4, 1, "birth-"], [G4, 1, "day"], [D5, 1, "to"],
+    [C5, 2, "you,"], [G4, 0.75, "hap-"], [G4, 0.25, "py"],
+    [G5, 1, "birth-"], [E5, 1, "day"], [C5, 1, "dear"],
+    [B4, 1, "friend"], [A4, 1, "-"], [F5, 0.75, "hap-"], [F5, 0.25, "py"],
+    [E5, 1, "birth-"], [C5, 1, "day"], [D5, 1, "to"],
     [C5, 3, "you!"],
   ],
   2,
 );
 
 const twinkle = melody([
-  [C4, 1, "Twin"], [C4, 1, "kle"], [G4, 1, "twin"], [G4, 1, "kle"],
-  [A4, 1, "lit"], [A4, 1, "tle"], [G4, 2, "star,"],
-  [F4, 1, "how"], [F4, 1, "I"], [E4, 1, "won"], [E4, 1, "der"],
+  [C4, 1, "Twin-"], [C4, 1, "kle"], [G4, 1, "twin-"], [G4, 1, "kle"],
+  [A4, 1, "lit-"], [A4, 1, "tle"], [G4, 2, "star,"],
+  [F4, 1, "how"], [F4, 1, "I"], [E4, 1, "won-"], [E4, 1, "der"],
   [D4, 1, "what"], [D4, 1, "you"], [C4, 2, "are."],
-  [G4, 1, "Up"], [G4, 1, "a"], [F4, 1, "bove"], [F4, 1, "the"],
+  [G4, 1, "Up"], [G4, 1, "a-"], [F4, 1, "bove"], [F4, 1, "the"],
   [E4, 1, "world"], [E4, 1, "so"], [D4, 2, "high,"],
-  [G4, 1, "like"], [G4, 1, "a"], [F4, 1, "dia"], [F4, 1, "mond"],
+  [G4, 1, "like"], [G4, 1, "a"], [F4, 1, "dia-"], [F4, 1, "mond"],
   [E4, 1, "in"], [E4, 1, "the"], [D4, 2, "sky."],
-  [C4, 1, "Twin"], [C4, 1, "kle"], [G4, 1, "twin"], [G4, 1, "kle"],
-  [A4, 1, "lit"], [A4, 1, "tle"], [G4, 2, "star,"],
-  [F4, 1, "how"], [F4, 1, "I"], [E4, 1, "won"], [E4, 1, "der"],
+  [C4, 1, "Twin-"], [C4, 1, "kle"], [G4, 1, "twin-"], [G4, 1, "kle"],
+  [A4, 1, "lit-"], [A4, 1, "tle"], [G4, 2, "star,"],
+  [F4, 1, "how"], [F4, 1, "I"], [E4, 1, "won-"], [E4, 1, "der"],
   [D4, 1, "what"], [D4, 1, "you"], [C4, 2, "are!"],
 ]);
 
 const mary = melody([
-  [E4, 1, "Ma"], [D4, 1, "ry"], [C4, 1, "had"], [D4, 1, "a"],
-  [E4, 1, "lit"], [E4, 1, "tle"], [E4, 2, "lamb,"],
-  [D4, 1, "lit"], [D4, 1, "tle"], [D4, 2, "lamb,"],
-  [E4, 1, "lit"], [G4, 1, "tle"], [G4, 2, "lamb."],
-  [E4, 1, "Ma"], [D4, 1, "ry"], [C4, 1, "had"], [D4, 1, "a"],
-  [E4, 1, "lit"], [E4, 1, "tle"], [E4, 1, "lamb,"], [E4, 1, "its"],
+  [E4, 1, "Ma-"], [D4, 1, "ry"], [C4, 1, "had"], [D4, 1, "a"],
+  [E4, 1, "lit-"], [E4, 1, "tle"], [E4, 2, "lamb,"],
+  [D4, 1, "lit-"], [D4, 1, "tle"], [D4, 2, "lamb,"],
+  [E4, 1, "lit-"], [G4, 1, "tle"], [G4, 2, "lamb."],
+  [E4, 1, "Ma-"], [D4, 1, "ry"], [C4, 1, "had"], [D4, 1, "a"],
+  [E4, 1, "lit-"], [E4, 1, "tle"], [E4, 1, "lamb,"], [E4, 1, "its"],
   [D4, 1, "fleece"], [D4, 1, "was"], [E4, 1, "white"], [D4, 1, "as"],
   [C4, 4, "snow!"],
 ]);
 
 const baaBaa = melody([
   [C4, 1, "Baa"], [C4, 1, "baa"], [G4, 1, "black"], [G4, 1, "sheep,"],
-  [A4, 0.5, "have"], [A4, 0.5, "you"], [A4, 0.5, "a"], [A4, 0.5, "ny"], [G4, 2, "wool?"],
+  [A4, 0.5, "have"], [A4, 0.5, "you"], [A4, 0.5, "a-"], [A4, 0.5, "ny"], [G4, 2, "wool?"],
   [F4, 1, "Yes"], [F4, 1, "sir,"], [E4, 1, "yes"], [E4, 1, "sir,"],
   [D4, 1, "three"], [D4, 1, "bags"], [C4, 2, "full."],
-  [G4, 1, "One"], [G4, 0.5, "for"], [G4, 0.5, "the"], [F4, 1, "mas"], [F4, 1, "ter,"],
+  [G4, 1, "One"], [G4, 0.5, "for"], [G4, 0.5, "the"], [F4, 1, "mas-"], [F4, 1, "ter,"],
   [E4, 1, "one"], [E4, 0.5, "for"], [E4, 0.5, "the"], [D4, 2, "dame,"],
-  [G4, 0.5, "and"], [G4, 0.5, "one"], [G4, 0.5, "for"], [G4, 0.5, "the"], [F4, 0.5, "lit"], [F4, 0.5, "tle"], [F4, 1, "boy"],
+  [G4, 0.5, "and"], [G4, 0.5, "one"], [G4, 0.5, "for"], [G4, 0.5, "the"], [F4, 0.5, "lit-"], [F4, 0.5, "tle"], [F4, 1, "boy"],
   [E4, 0.5, "who"], [E4, 0.5, "lives"], [E4, 0.5, "down"], [E4, 0.5, "the"], [D4, 2, "lane."],
   [C4, 1, "Baa"], [C4, 1, "baa"], [G4, 1, "black"], [G4, 1, "sheep,"],
-  [A4, 0.5, "have"], [A4, 0.5, "you"], [A4, 0.5, "a"], [A4, 0.5, "ny"], [G4, 2, "wool?"],
+  [A4, 0.5, "have"], [A4, 0.5, "you"], [A4, 0.5, "a-"], [A4, 0.5, "ny"], [G4, 2, "wool?"],
   [F4, 1, "Yes"], [F4, 1, "sir,"], [E4, 1, "yes"], [E4, 1, "sir,"],
   [D4, 1, "three"], [D4, 1, "bags"], [C4, 2, "full!"],
 ]);
 
 const eieio: Step[] = [[E5, 1, "E"], [E5, 1, "I"], [D5, 1, "E"], [D5, 1, "I"], [C5, 3, "O!"]];
 const oldMac = melody([
-  [C5, 1, "Old"], [C5, 1, "Mac"], [C5, 1, "Don"], [G4, 1, "ald"], [A4, 1, "had"], [A4, 1, "a"], [G4, 2, "farm,"],
+  [C5, 1, "Old"], [C5, 1, "Mac-"], [C5, 1, "Don-"], [G4, 1, "ald"], [A4, 1, "had"], [A4, 1, "a"], [G4, 2, "farm,"],
   ...eieio, [G4, 1, "And"],
   [C5, 1, "on"], [C5, 1, "his"], [C5, 1, "farm"], [G4, 1, "he"], [A4, 1, "had"], [A4, 1, "a"], [G4, 2, "cow,"],
   ...eieio, [null, 1],
   [C5, 0.5, "with"], [C5, 0.5, "a"], [C5, 1, "moo"], [C5, 2, "moo"],
   [C5, 0.5, "and"], [C5, 0.5, "a"], [C5, 1, "moo"], [C5, 2, "moo"],
   [C5, 0.5, "here"], [C5, 0.5, "a"], [C5, 1, "moo,"], [C5, 0.5, "there"], [C5, 0.5, "a"], [C5, 1, "moo,"],
-  [C5, 0.5, "ev"], [C5, 0.5, "ery"], [C5, 0.5, "where"], [C5, 0.5, "a"], [C5, 1, "moo"], [C5, 1, "moo,"],
-  [C5, 1, "Old"], [C5, 1, "Mac"], [C5, 1, "Don"], [G4, 1, "ald"], [A4, 1, "had"], [A4, 1, "a"], [G4, 2, "farm,"],
+  [C5, 0.5, "ev-"], [C5, 0.5, "ery-"], [C5, 0.5, "where"], [C5, 0.5, "a"], [C5, 1, "moo"], [C5, 1, "moo,"],
+  [C5, 1, "Old"], [C5, 1, "Mac-"], [C5, 1, "Don-"], [G4, 1, "ald"], [A4, 1, "had"], [A4, 1, "a"], [G4, 2, "farm,"],
   ...eieio,
 ]);
 
@@ -214,27 +248,27 @@ const oldMac = melody([
 const T = 1 / 3;
 const rowBoat = melody([
   [C4, 1, "Row,"], [C4, 1, "row,"], [C4, 2 * T, "row"], [D4, T, "your"], [E4, 1, "boat"],
-  [E4, 2 * T, "gent"], [D4, T, "ly"], [E4, 2 * T, "down"], [F4, T, "the"], [G4, 2, "stream."],
-  [C5, T, "Mer"], [C5, T, "ri"], [C5, T, "ly,"], [G4, T, "mer"], [G4, T, "ri"], [G4, T, "ly,"],
-  [E4, T, "mer"], [E4, T, "ri"], [E4, T, "ly,"], [C4, T, "mer"], [C4, T, "ri"], [C4, T, "ly,"],
+  [E4, 2 * T, "gent-"], [D4, T, "ly"], [E4, 2 * T, "down"], [F4, T, "the"], [G4, 2, "stream."],
+  [C5, T, "Mer-"], [C5, T, "ri-"], [C5, T, "ly,"], [G4, T, "mer-"], [G4, T, "ri-"], [G4, T, "ly,"],
+  [E4, T, "mer-"], [E4, T, "ri-"], [E4, T, "ly,"], [C4, T, "mer-"], [C4, T, "ri-"], [C4, T, "ly,"],
   [G4, 2 * T, "life"], [F4, T, "is"], [E4, 2 * T, "but"], [D4, T, "a"], [C4, 2, "dream."],
   [C4, 1, "Row,"], [C4, 1, "row,"], [C4, 2 * T, "row"], [D4, T, "your"], [E4, 1, "boat"],
-  [E4, 2 * T, "gent"], [D4, T, "ly"], [E4, 2 * T, "down"], [F4, T, "the"], [G4, 2, "stream."],
-  [C5, T, "Mer"], [C5, T, "ri"], [C5, T, "ly,"], [G4, T, "mer"], [G4, T, "ri"], [G4, T, "ly,"],
-  [E4, T, "mer"], [E4, T, "ri"], [E4, T, "ly,"], [C4, T, "mer"], [C4, T, "ri"], [C4, T, "ly,"],
+  [E4, 2 * T, "gent-"], [D4, T, "ly"], [E4, 2 * T, "down"], [F4, T, "the"], [G4, 2, "stream."],
+  [C5, T, "Mer-"], [C5, T, "ri-"], [C5, T, "ly,"], [G4, T, "mer-"], [G4, T, "ri-"], [G4, T, "ly,"],
+  [E4, T, "mer-"], [E4, T, "ri-"], [E4, T, "ly,"], [C4, T, "mer-"], [C4, T, "ri-"], [C4, T, "ly,"],
   [G4, 2 * T, "life"], [F4, T, "is"], [E4, 2 * T, "but"], [D4, T, "a"], [C4, 2, "dream!"],
 ]);
 
-const londonLine: Step[] = [[G4, 1.5, "Lon"], [A4, 0.5, "don"], [G4, 1, "bridge"], [F4, 1, "is"], [E4, 1, "fall"], [F4, 1, "ing"], [G4, 2, "down,"]];
+const londonLine: Step[] = [[G4, 1.5, "Lon-"], [A4, 0.5, "don"], [G4, 1, "bridge"], [F4, 1, "is"], [E4, 1, "fall-"], [F4, 1, "ing"], [G4, 2, "down,"]];
 const london = melody([
   ...londonLine,
-  [D4, 1, "fall"], [E4, 1, "ing"], [F4, 2, "down,"], [E4, 1, "fall"], [F4, 1, "ing"], [G4, 2, "down."],
+  [D4, 1, "fall-"], [E4, 1, "ing"], [F4, 2, "down,"], [E4, 1, "fall-"], [F4, 1, "ing"], [G4, 2, "down."],
   ...londonLine,
-  [D4, 2, "my"], [G4, 2, "fair"], [E4, 1, "la"], [C4, 3, "dy."],
+  [D4, 2, "my"], [G4, 2, "fair"], [E4, 1, "la-"], [C4, 3, "dy."],
   ...londonLine,
-  [D4, 1, "fall"], [E4, 1, "ing"], [F4, 2, "down,"], [E4, 1, "fall"], [F4, 1, "ing"], [G4, 2, "down."],
+  [D4, 1, "fall-"], [E4, 1, "ing"], [F4, 2, "down,"], [E4, 1, "fall-"], [F4, 1, "ing"], [G4, 2, "down."],
   ...londonLine,
-  [D4, 2, "my"], [G4, 2, "fair"], [E4, 1, "la"], [C4, 3, "dy!"],
+  [D4, 2, "my"], [G4, 2, "fair"], [E4, 1, "la-"], [C4, 3, "dy!"],
 ]);
 
 const wheelsLine = (end: Step[]): Step[] => [
@@ -263,13 +297,13 @@ function happyVerse(start: number): { notes: SongNote[]; end: number } {
     if (end === "claps") steps.push([CLAP, 1, "clap!"], [CLAP, 1, "clap!"]);
     return steps;
   };
-  const words = ["hap", "py", "and", "you", "know", "it", "clap", "your", "hands"];
+  const words = ["hap-", "py", "and", "you", "know", "it", "clap", "your", "hands"];
   const pick = (m: number): Step[] => [[m, 0.5, "If"], [m, 0.5, "you're"]];
   const steps: Step[] = [
     ...pick(G4), ...line([C5, C5, C5, C5, C5, B4, C5, C5, D5], words, "claps"),
     ...pick(G4), ...line([D5, D5, D5, D5, D5, C5, D5, D5, E5], words, "claps"),
     ...pick(E5),
-    ...line([F5, F5, F5, F5, F5, F5, G5, G5, F5, F5, E5, E5, D5], ["hap", "py", "and", "you", "know", "it", "then", "your", "face", "will", "sure", "ly", "show"], "show"),
+    ...line([F5, F5, F5, F5, F5, F5, G5, G5, F5, F5, E5, E5, D5], ["hap-", "py", "and", "you", "know", "it", "then", "your", "face", "will", "sure-", "ly", "show"], "show"),
     [D5, 2, "it,"],
     ...pick(D5), ...line([E5, E5, D5, D5, C5, C5, B4, B4, C5], words, "claps"),
   ];
@@ -288,9 +322,9 @@ const HAPPY_CHORDS = ["C", "C", "G", "G", "G", "C", "F", "F", "C", "C", "G", "G"
 const happyKnow = { notes: [...happy1.notes, ...happy2.notes], end: happy2.end + 1 };
 
 const jacquesLines: Step[][] = [
-  [[C4, 1, "Are"], [D4, 1, "you"], [E4, 1, "sleep"], [C4, 1, "ing,"]],
-  [[E4, 1, "bro"], [F4, 1, "ther"], [G4, 2, "John?"]],
-  [[G4, 0.5, "Morn"], [A4, 0.5, "ing"], [G4, 0.5, "bells"], [F4, 0.5, "are"], [E4, 1, "ring"], [C4, 1, "ing,"]],
+  [[C4, 1, "Are"], [D4, 1, "you"], [E4, 1, "sleep-"], [C4, 1, "ing,"]],
+  [[E4, 1, "bro-"], [F4, 1, "ther"], [G4, 2, "John?"]],
+  [[G4, 0.5, "Morn-"], [A4, 0.5, "ing"], [G4, 0.5, "bells"], [F4, 0.5, "are"], [E4, 1, "ring-"], [C4, 1, "ing,"]],
   [[C4, 1, "ding"], [G3, 1, "dang"], [C4, 2, "dong."]],
 ];
 const jacques = melody(jacquesLines.flatMap((line) => [...line, ...line]));
@@ -298,11 +332,11 @@ const jacques = melody(jacquesLines.flatMap((line) => [...line, ...line]));
 const hotCross = melody([
   [E4, 1, "Hot"], [D4, 1, "cross"], [C4, 2, "buns,"],
   [E4, 1, "hot"], [D4, 1, "cross"], [C4, 2, "buns,"],
-  [C4, 0.5, "one"], [C4, 0.5, "a"], [C4, 0.5, "pen"], [C4, 0.5, "ny,"], [D4, 0.5, "two"], [D4, 0.5, "a"], [D4, 0.5, "pen"], [D4, 0.5, "ny,"],
+  [C4, 0.5, "one"], [C4, 0.5, "a"], [C4, 0.5, "pen-"], [C4, 0.5, "ny,"], [D4, 0.5, "two"], [D4, 0.5, "a"], [D4, 0.5, "pen-"], [D4, 0.5, "ny,"],
   [E4, 1, "hot"], [D4, 1, "cross"], [C4, 2, "buns!"],
   [E4, 1, "Hot"], [D4, 1, "cross"], [C4, 2, "buns,"],
   [E4, 1, "hot"], [D4, 1, "cross"], [C4, 2, "buns,"],
-  [C4, 0.5, "one"], [C4, 0.5, "a"], [C4, 0.5, "pen"], [C4, 0.5, "ny,"], [D4, 0.5, "two"], [D4, 0.5, "a"], [D4, 0.5, "pen"], [D4, 0.5, "ny,"],
+  [C4, 0.5, "one"], [C4, 0.5, "a"], [C4, 0.5, "pen-"], [C4, 0.5, "ny,"], [D4, 0.5, "two"], [D4, 0.5, "a"], [D4, 0.5, "pen-"], [D4, 0.5, "ny,"],
   [E4, 1, "hot"], [D4, 1, "cross"], [C4, 2, "buns!"],
 ]);
 
@@ -514,7 +548,16 @@ export function normalizeSong(raw: SongFile, index: number, base = "/clap-songs/
       .map((s) => ({ beat: (Number(s) - offset) / spb, len: 0.5 }));
   }
   notes.sort((a, b) => a.beat - b.beat);
-  if (Array.isArray(raw.lyrics)) notes.forEach((n, i) => { if (raw.lyrics?.[i]) n.lyric = String(raw.lyrics[i]); });
+  if (Array.isArray(raw.lyrics)) {
+    notes.forEach((n, i) => {
+      const text = raw.lyrics?.[i];
+      if (!text) return;
+      const str = String(text);
+      if (str.endsWith("/")) n.br = true;
+      const clean = str.replace(/\/$/, "");
+      if (clean) n.lyric = clean;
+    });
+  }
   if (!notes.length) return null;
   // Lengths for clap-only charts: up to the next clap
   notes.forEach((n, i) => {
@@ -528,7 +571,7 @@ export function normalizeSong(raw: SongFile, index: number, base = "/clap-songs/
   const beatTimes = Array.isArray(raw.beatTimes)
     ? raw.beatTimes.map(Number).filter((t) => Number.isFinite(t)).sort((a, b) => a - b)
     : undefined;
-  const draft = { notes, bpm, offset };
+  const draft = { notes, bpm, offset, beatTimes };
   return {
     id: String(raw.id || `uploaded-${index + 1}`),
     title: String(raw.title || `Song ${index + 1}`).slice(0, 60),
