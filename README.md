@@ -24,6 +24,9 @@ synth + mic clap detector, `highway.ts` canvas renderer, `ClapTrainer.tsx` UI).
 - **Add songs:** drop an audio file and a song JSON into `public/clap-songs/` and list it in
   `public/clap-songs/songs.json` — see `public/clap-songs/README.md`. The in-game chart maker
   ("For teachers") creates the JSON by tapping along to the audio.
+- **Difficulty stars:** every song shows 1–5 ★. Set `difficulty` in the song data, or it is computed from
+  the chart (clap density, shortest gap, off-beat claps, tempo) by `autoStars()` in `songs.ts`.
+- **Kids & Nursery Rhymes:** public-domain tunes written as melody data in `songs.ts` (`kids: true`).
 
 ## How demo bookings work
 

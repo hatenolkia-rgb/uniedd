@@ -139,24 +139,41 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
   }
   ctx.shadowBlur = 0;
 
-  // Beat and bar lines
-  const firstVisible = Math.ceil((now - st.firstBeatTime) / spb - 0.3 * rate / spb);
-  const lastVisible = Math.floor((now + LOOKAHEAD * rate - st.firstBeatTime) / spb);
-  for (let b = Math.max(firstVisible, -song.beatsPerBar); b <= Math.min(lastVisible, song.lengthBeats); b++) {
-    const t = st.firstBeatTime + b * spb;
-    const p = project(t - now, rate, w, h);
-    const bar = ((b % song.beatsPerBar) + song.beatsPerBar) % song.beatsPerBar === 0;
-    ctx.strokeStyle = bar ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.1)";
-    ctx.lineWidth = bar ? 2 : 1;
+  // Beat and bar lines (exact beat times when the song has them, else from the tempo)
+  const lines: { t: number; bar: boolean; barNo: number }[] = [];
+  const winStart = now - 0.3 * rate;
+  const winEnd = now + LOOKAHEAD * rate;
+  if (song.beatTimes && song.beatTimes.length > 1) {
+    const bt = song.beatTimes;
+    let i0 = 0;
+    for (let i = 1; i < bt.length; i++) if (Math.abs(bt[i] - st.firstBeatTime) < Math.abs(bt[i0] - st.firstBeatTime)) i0 = i;
+    for (let i = 0; i < bt.length; i++) {
+      if (bt[i] < winStart || bt[i] > winEnd) continue;
+      const k = i - i0;
+      const bar = ((k % song.beatsPerBar) + song.beatsPerBar) % song.beatsPerBar === 0;
+      lines.push({ t: bt[i], bar, barNo: k >= 0 && bar ? k / song.beatsPerBar + 1 : 0 });
+    }
+  } else {
+    const firstVisible = Math.ceil((winStart - st.firstBeatTime) / spb);
+    const lastVisible = Math.floor((winEnd - st.firstBeatTime) / spb);
+    for (let b = Math.max(firstVisible, -song.beatsPerBar); b <= Math.min(lastVisible, song.lengthBeats); b++) {
+      const bar = ((b % song.beatsPerBar) + song.beatsPerBar) % song.beatsPerBar === 0;
+      lines.push({ t: st.firstBeatTime + b * spb, bar, barNo: b >= 0 && bar ? b / song.beatsPerBar + 1 : 0 });
+    }
+  }
+  for (const line of lines) {
+    const p = project(line.t - now, rate, w, h);
+    ctx.strokeStyle = line.bar ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.1)";
+    ctx.lineWidth = line.bar ? 2 : 1;
     ctx.beginPath();
     ctx.moveTo(cx - p.half, p.y);
     ctx.lineTo(cx + p.half, p.y);
     ctx.stroke();
-    if (bar && b >= 0 && p.z > 0.02) {
+    if (line.barNo > 0 && p.z > 0.02) {
       ctx.fillStyle = "rgba(255,255,255,0.35)";
       ctx.font = `${Math.round(10 + 4 * p.scale)}px system-ui, sans-serif`;
       ctx.textAlign = "right";
-      ctx.fillText(String(b / song.beatsPerBar + 1), cx - p.half - 8, p.y + 4);
+      ctx.fillText(String(line.barNo), cx - p.half - 8, p.y + 4);
     }
   }
 

@@ -5,10 +5,13 @@ import { ClapEngine, type MicStatus } from "./engine";
 import {
   BUILT_IN_SONGS,
   UPLOAD_SLOTS,
+  autoStars,
+  clapNotes,
   clapTimes,
   loadUploadedSongs,
   songDuration,
   starsFor,
+  starsLabel,
   type ClapSong,
 } from "./songs";
 import { draw, hitPoint, spawnBurst, stepEffects, type DrawState, type Judgement, type RunNote } from "./highway";
@@ -332,7 +335,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     const rate = opts.speed;
     const spb = 60 / song.bpm; // song seconds per beat
     const times = clapTimes(song);
-    const notes: RunNote[] = song.notes.map((n, i) => ({
+    const notes: RunNote[] = clapNotes(song).map((n, i) => ({
       t: times[i],
       end: times[i] + n.len * spb,
       lyric: n.lyric,
@@ -687,8 +690,8 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   }
 
   // ----- Song picker / setup -----
-  const mains = BUILT_IN_SONGS.filter((s) => !s.bonus);
-  const bonus = BUILT_IN_SONGS.filter((s) => s.bonus);
+  const mains = BUILT_IN_SONGS.filter((s) => !s.kids);
+  const kids = BUILT_IN_SONGS.filter((s) => s.kids);
   const emptySlots = Math.max(0, UPLOAD_SLOTS - uploaded.length);
   const offsetMs = opts.input === "mic" ? micOffsetMs : tapOffsetMs;
 
@@ -858,9 +861,12 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
         ))}
       </div>
 
-      <h4 className="mt-6 text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">Bonus warm-ups</h4>
-      <div className="mt-2 grid gap-3 sm:grid-cols-2">
-        {[...bonus, ...(customSong ? [customSong] : [])].map((s) => (
+      <h4 className="mt-7 text-lg font-bold" style={{ fontFamily: "var(--font-playfair), serif" }}>
+        🧸 Kids &amp; Nursery Rhymes
+      </h4>
+      <p className="text-sm text-[var(--muted)]">Short, friendly tunes — perfect first clapping songs.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {[...kids, ...(customSong ? [customSong] : [])].map((s) => (
           <SongCard key={s.id} song={s} selected={s.id === song.id} onPick={() => setSongId(s.id)} />
         ))}
       </div>
@@ -922,18 +928,31 @@ function SongCard({ song, slot, selected, onPick }: { song: ClapSong; slot?: num
         {slot ?? "♪"}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-semibold">{song.title}</span>
+        <span className="flex items-center gap-2">
+          <Stars value={song.stars} />
+          <span className="truncate font-semibold">{song.title}</span>
+        </span>
         <span className="block truncate text-xs text-[var(--muted)]">
-          {song.subtitle} · {song.notes.length} claps · {song.difficulty}
+          {starsLabel(song.stars)} · {clapNotes(song).length} claps{song.subtitle ? ` · ${song.subtitle}` : ""}
         </span>
       </span>
       {best ? (
-        <span className="shrink-0 text-xs text-amber-500" title={`Best ${best.score}`}>
-          {"★".repeat(best.stars)}
-          <span className="text-[var(--border)]">{"★".repeat(5 - best.stars)}</span>
+        <span className="shrink-0 text-right text-[10px] leading-tight text-[var(--muted)]" title={`Best score ${best.score}`}>
+          Best
+          <br />
+          <strong className="text-xs text-[var(--foreground)]">{Math.round(best.accuracy * 100)}%</strong>
         </span>
       ) : null}
     </button>
+  );
+}
+
+function Stars({ value }: { value: number }) {
+  return (
+    <span className="shrink-0 text-sm leading-none tracking-tight" aria-label={`Difficulty ${value} of 5 stars`} title={`Difficulty ${value}/5`}>
+      <span className="text-amber-500">{"★".repeat(value)}</span>
+      <span className="text-[#d4d4d8]">{"★".repeat(5 - value)}</span>
+    </span>
   );
 }
 
@@ -1294,7 +1313,7 @@ function SongMaker({
       id: "custom-chart",
       title: `${title || "My chart"} (test)`,
       subtitle: "Your new chart",
-      difficulty: "Medium",
+      stars: autoStars({ notes, bpm, offset }),
       bpm,
       beatsPerBar,
       lengthBeats: last.beat + last.len + 1,

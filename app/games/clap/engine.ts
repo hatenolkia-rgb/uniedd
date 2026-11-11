@@ -7,7 +7,7 @@
  * - a tiny synth for the melody, chords, bass, metronome and guide claps
  */
 
-import { chordMidis, type ClapSong } from "./songs";
+import { chordMidis, clapNotes, type ClapSong } from "./songs";
 
 export const midiFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -298,7 +298,7 @@ export class ClapEngine {
     if (opts.melody) {
       for (const n of song.notes) if (n.midi !== undefined) this.tone(n.midi, start + n.beat * spb, n.len * spb * 0.92);
     }
-    if (opts.guideClaps) for (const n of song.notes) this.clap(start + n.beat * spb, 0.22);
+    if (opts.guideClaps) for (const n of clapNotes(song)) this.clap(start + n.beat * spb, 0.22);
     const bars = Math.ceil(song.lengthBeats / song.beatsPerBar);
     if (opts.backing && song.chords) {
       for (let bar = 0; bar < bars; bar++) {

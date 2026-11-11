@@ -1,7 +1,7 @@
 # Clap Rhythm songs
 
 Songs for the **Clap Rhythm** game (`/games/clap-rhythm`). Jingle Bells and Happy Birthday
-(plus two warm-ups) are built in. This folder fills the 8 extra song slots.
+(plus a "Kids & Nursery Rhymes" row of synth songs) are built in. This folder fills the 8 extra song slots.
 
 ## Add a song (3 steps)
 
@@ -31,7 +31,9 @@ Reload the game: the song takes the next free slot. No code changes are needed.
 | `notes` | one of these | `[{ "beat": 0, "len": 1, "midi": 64, "lyric": "Jin" }]` — claps plus a synth melody |
 | `lyrics` | no | One syllable per clap, shown beside the markers |
 | `chords` | no | One chord per bar for the synth backing, e.g. `["C", "F", "G7", "C"]` |
-| `difficulty` | no | `"Easy"`, `"Medium"` (default) or `"Hard"` |
+| `difficulty` | no | Difficulty stars shown in the song list: a number `1`–`5` (or `"Easy"` = 2, `"Medium"` = 3, `"Hard"` = 4). If missing, it is worked out from the chart: claps per second, the shortest gap between claps, how many claps fall off the beat, and the tempo |
+| `beatTimes` | no | Exact beat times in seconds, for recordings whose tempo drifts. Only used to draw the beat lines |
+| `durationSeconds` | no | How long the audio clip is (the round ends there at the latest) |
 | `id`, `subtitle` | no | Unique id (for personal bests) and a short line under the title |
 
 Only use audio you have the rights to share on the website.

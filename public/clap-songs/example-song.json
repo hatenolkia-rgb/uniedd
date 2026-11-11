@@ -2,7 +2,7 @@
   "id": "example-song",
   "title": "Example Song",
   "subtitle": "4/4 · 100 BPM",
-  "difficulty": "Easy",
+  "difficulty": 2,
   "bpm": 100,
   "timeSignature": "4/4",
   "audio": "example-song.mp3",
