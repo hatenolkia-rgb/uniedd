@@ -44,6 +44,26 @@ describe("clap rhythm songs", () => {
     });
   });
 
+  it("drum & rhythm-pattern songs have their own row, a set difficulty and claps on their beat grid", () => {
+    const list = JSON.parse(readFileSync(join(dir, "songs.json"), "utf8")) as { songs: string[] };
+    const drums = list.songs
+      .map((f, i) => [JSON.parse(readFileSync(join(dir, f), "utf8")) as SongFile, i] as const)
+      .filter(([raw]) => raw.row === "drums");
+    expect(drums.length).toBeGreaterThanOrEqual(6);
+    for (const [raw, i] of drums) {
+      const song = normalizeSong(raw, i)!;
+      expect(song.drums).toBe(true);
+      expect(raw.difficulty).toBeGreaterThanOrEqual(1);
+      expect(raw.difficulty).toBeLessThanOrEqual(5);
+      // every clap sits on a 1/12-beat subdivision of the generated grid (eighths, sixteenths, triplets)
+      const spb = 60 / song.bpm;
+      for (const t of raw.clapTimes!) {
+        const pos = ((t - raw.beatTimes![0]) / spb) * 12;
+        expect(Math.abs(pos - Math.round(pos))).toBeLessThan(0.01);
+      }
+    }
+  });
+
   it("prints the song table", () => {
     const list = JSON.parse(readFileSync(join(dir, "songs.json"), "utf8")) as { songs: string[] };
     const uploaded = list.songs.map((f, i) => normalizeSong(JSON.parse(readFileSync(join(dir, f), "utf8")) as SongFile, i)!);

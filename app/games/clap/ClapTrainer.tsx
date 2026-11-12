@@ -741,7 +741,9 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   // ----- Song picker / setup -----
   const mains = BUILT_IN_SONGS.filter((s) => !s.kids);
   const kids = BUILT_IN_SONGS.filter((s) => s.kids);
-  const emptySlots = Math.max(0, UPLOAD_SLOTS - uploaded.length);
+  const slotSongs = uploaded.filter((s) => !s.drums);
+  const drumSongs = uploaded.filter((s) => s.drums);
+  const emptySlots = Math.max(0, UPLOAD_SLOTS - slotSongs.length);
   const offsetMs = opts.input === "mic" ? micOffsetMs : tapOffsetMs;
 
   return (
@@ -919,7 +921,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       </h4>
       <p className="text-sm text-[var(--muted)]">10 song slots — more songs are on the way.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {[...mains, ...uploaded].map((s, i) => (
+        {[...mains, ...slotSongs].map((s, i) => (
           <SongCard key={s.id} song={s} slot={i + 1} selected={s.id === song.id} onPick={() => setSongId(s.id)} />
         ))}
         {Array.from({ length: emptySlots }, (_, i) => (
@@ -928,15 +930,31 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
             className="flex items-center gap-3 rounded-2xl border border-dashed border-[var(--border)] p-4 text-[var(--muted)]"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f4f4f5] text-sm font-bold">
-              {mains.length + uploaded.length + i + 1}
+              {mains.length + slotSongs.length + i + 1}
             </span>
             <div>
-              <p className="text-sm font-semibold">Song slot {mains.length + uploaded.length + i + 1}</p>
+              <p className="text-sm font-semibold">Song slot {mains.length + slotSongs.length + i + 1}</p>
               <p className="text-xs">Coming soon</p>
             </div>
           </div>
         ))}
       </div>
+
+      {drumSongs.length ? (
+        <>
+          <h4 className="mt-7 text-lg font-bold" style={{ fontFamily: "var(--font-playfair), serif" }}>
+            🥁 Drum &amp; Rhythm Patterns
+          </h4>
+          <p className="text-sm text-[var(--muted)]">
+            The claps follow the drums, not the words: grooves, rhythm drills, rhymes, clave and taal.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {drumSongs.map((s) => (
+              <SongCard key={s.id} song={s} selected={s.id === song.id} onPick={() => setSongId(s.id)} />
+            ))}
+          </div>
+        </>
+      ) : null}
 
       <h4 className="mt-7 text-lg font-bold" style={{ fontFamily: "var(--font-playfair), serif" }}>
         🧸 Kids &amp; Nursery Rhymes
