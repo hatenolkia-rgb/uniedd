@@ -22,7 +22,8 @@ export type ManifestLevel = {
   min: number;
   max: number;
   count: number;
-  chunks: { f: string; n: number; min: number; max: number }[];
+  /** t = puzzles per theme index in that chunk (lets a theme search skip chunks without it). */
+  chunks: { f: string; n: number; min: number; max: number; t?: Record<string, number> }[];
   themes: Record<string, number>;
 };
 
@@ -144,40 +145,87 @@ export function markSeen(id: string) {
 
 type PickOpts = { level?: LevelId; rating?: number; window?: number; theme?: string; rnd?: () => number };
 
-/** Pick a random unseen puzzle by level and/or near a rating, optionally with a theme. */
-export async function pickPuzzle(m: Manifest, opts: PickOpts): Promise<Puzzle> {
-  const rnd = opts.rnd ?? Math.random;
-  const level = opts.level ? m.levels.find((l) => l.id === opts.level)! : levelForRating(m.levels, opts.rating ?? 1200);
-  const themeIdx = opts.theme ? m.themes.indexOf(opts.theme) : -1;
-  const seen = seenSet();
-  let chunks = level.chunks;
-  if (opts.rating !== undefined) {
-    const r = opts.rating;
-    const w = opts.window ?? 150;
-    const near = level.chunks.filter((c) => c.max >= r - w && c.min <= r + w);
-    if (near.length) chunks = near;
-  }
-  const order = [...chunks].sort(() => rnd() - 0.5);
+/** How well a pick matched the request: exact, or which constraint had to be relaxed. */
+export type PickNote = "exact" | "wider-rating" | "other-level" | "no-theme";
+export type Pick = { puzzle: Puzzle; note: PickNote };
+
+/** Puzzles of a theme in one level (from the manifest). */
+export function themeCount(level: ManifestLevel, themeIdx: number) {
+  return themeIdx < 0 ? level.count : level.themes[themeIdx] ?? 0;
+}
+
+const chunkHas = (c: ManifestLevel["chunks"][number], themeIdx: number) => themeIdx < 0 || !c.t || (c.t[themeIdx] ?? 0) > 0;
+
+async function pickIn(
+  m: Manifest,
+  level: ManifestLevel,
+  themeIdx: number,
+  rating: number | undefined,
+  window: number,
+  seen: Set<string>,
+  rnd: () => number,
+): Promise<Puzzle | null> {
+  let chunks = level.chunks.filter((c) => chunkHas(c, themeIdx));
+  if (rating !== undefined && Number.isFinite(window)) chunks = chunks.filter((c) => c.max >= rating - window && c.min <= rating + window);
+  if (!chunks.length) return null;
+  // chunks that know their theme counts are reliable; otherwise try a few
+  const order = [...chunks].sort(() => rnd() - 0.5).slice(0, chunks[0].t ? chunks.length : 6);
   let fallback: RawPuzzle | null = null;
-  for (const c of order.slice(0, 6)) {
+  for (const c of order) {
     const list = await loadChunk(c.f);
     const ok = list.filter(
-      (p) =>
-        (themeIdx < 0 || p[4].includes(themeIdx)) &&
-        (opts.rating === undefined || Math.abs(p[3] - opts.rating) <= (opts.window ?? 150)),
+      (p) => (themeIdx < 0 || p[4].includes(themeIdx)) && (rating === undefined || !Number.isFinite(window) || Math.abs(p[3] - rating) <= window),
     );
+    if (!ok.length) continue;
     const fresh = ok.filter((p) => !seen.has(p[0]));
-    const pool = fresh.length ? fresh : ok;
-    if (pool.length) {
-      const raw = pool[Math.floor(rnd() * pool.length)];
-      if (fresh.length) return decode(raw, m.themes, level.id);
-      fallback ??= raw;
+    if (fresh.length) return decode(fresh[Math.floor(rnd() * fresh.length)], m.themes, level.id);
+    fallback ??= ok[Math.floor(rnd() * ok.length)];
+    if (order.length > 3) break;
+  }
+  return fallback ? decode(fallback, m.themes, level.id) : null;
+}
+
+/**
+ * Pick a random unseen puzzle by level and/or near a rating, optionally with a theme.
+ * A theme is never silently dropped: if it has no puzzles in range the search widens the
+ * rating window, then tries the nearest other levels, and says so in `note`.
+ */
+export async function pickPuzzleWithNote(m: Manifest, opts: PickOpts): Promise<Pick> {
+  const rnd = opts.rnd ?? Math.random;
+  const level = opts.level ? m.levels.find((l) => l.id === opts.level) ?? m.levels[0] : levelForRating(m.levels, opts.rating ?? 1200);
+  const themeIdx = opts.theme ? m.themes.indexOf(opts.theme) : -1;
+  const seen = seenSet();
+  const r = opts.rating;
+  const w = opts.window ?? 150;
+
+  let p = await pickIn(m, level, themeIdx, r, w, seen, rnd);
+  if (p) return { puzzle: p, note: "exact" };
+  if (r !== undefined) {
+    for (const wider of [w * 2, w * 4]) {
+      p = await pickIn(m, level, themeIdx, r, wider, seen, rnd);
+      if (p) return { puzzle: p, note: "wider-rating" };
+    }
+    p = await pickIn(m, level, themeIdx, undefined, Infinity, seen, rnd);
+    if (p) return { puzzle: p, note: "wider-rating" };
+  }
+  if (themeIdx >= 0) {
+    const i = m.levels.indexOf(level);
+    const others = m.levels
+      .map((l, j) => ({ l, d: Math.abs(j - i) }))
+      .filter((x) => x.l !== level && themeCount(x.l, themeIdx) > 0)
+      .sort((a, b) => a.d - b.d);
+    for (const { l } of others) {
+      p = await pickIn(m, l, themeIdx, undefined, Infinity, seen, rnd);
+      if (p) return { puzzle: p, note: "other-level" };
     }
   }
-  if (fallback) return decode(fallback, m.themes, level.id);
-  // nothing matched the filter: any puzzle from the level
+  // the theme doesn't exist at all: any puzzle from the level
   const list = await loadChunk(level.chunks[Math.floor(rnd() * level.chunks.length)].f);
-  return decode(list[Math.floor(rnd() * list.length)], m.themes, level.id);
+  return { puzzle: decode(list[Math.floor(rnd() * list.length)], m.themes, level.id), note: themeIdx >= 0 ? "no-theme" : "exact" };
+}
+
+export async function pickPuzzle(m: Manifest, opts: PickOpts): Promise<Puzzle> {
+  return (await pickPuzzleWithNote(m, opts)).puzzle;
 }
 
 /** A specific puzzle from a share link (?p=<chunk>:<id>, e.g. ?p=easy-003:abc12). */

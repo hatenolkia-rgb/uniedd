@@ -88,3 +88,41 @@ describe("chess puzzle rating", () => {
     expect(GAMES.find((g) => g.slug === "chess")?.kind).toBe("chess-play");
   });
 });
+
+describe("chess puzzle theme filter", () => {
+  // serve /chess-puzzles/* from the repo's public folder
+  const realFetch = globalThis.fetch;
+  const fsFetch = (async (url: string) => {
+    const body = readFileSync(join(dir, String(url).replace("/chess-puzzles/", "")), "utf8");
+    return new Response(body, { status: 200 });
+  }) as typeof fetch;
+
+  it("manifest chunk theme counts add up to the level theme counts", () => {
+    for (const l of manifest.levels)
+      for (const [i, n] of Object.entries(l.themes)) expect(l.chunks.reduce((s, c) => s + (c.t?.[i] ?? 0), 0)).toBe(n);
+  });
+
+  it("returns a puzzle with the chosen theme for every listed theme, level and rating", async () => {
+    globalThis.fetch = fsFetch;
+    try {
+      const { pickPuzzleWithNote, THEME_LABELS, themeCount } = await import("../app/games/chess/puzzles");
+      const r = rng(7);
+      const themes = Object.keys(THEME_LABELS).filter((t) => manifest.themes.includes(t));
+      for (const theme of themes) {
+        const idx = manifest.themes.indexOf(theme);
+        for (const l of manifest.levels) {
+          const { puzzle, note } = await pickPuzzleWithNote(manifest, { level: l.id, theme, rnd: r });
+          expect(puzzle.themes, `${theme} @ ${l.id}`).toContain(theme);
+          expect(note).toBe(themeCount(l, idx) > 0 ? "exact" : "other-level");
+          if (note === "exact") expect(puzzle.level).toBe(l.id);
+        }
+        for (const rating of [700, 1500, 2600]) {
+          const { puzzle } = await pickPuzzleWithNote(manifest, { rating, window: 120, theme, rnd: r });
+          expect(puzzle.themes, `${theme} near ${rating}`).toContain(theme);
+        }
+      }
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  }, 120000);
+});

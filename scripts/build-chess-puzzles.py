@@ -31,7 +31,7 @@ theme_count=collections.Counter(t for k in out for p in out[k] for t in p[5].spl
 THEMES=[t for t,_ in theme_count.most_common()]
 TI={t:i for i,t in enumerate(THEMES)}
 dst=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','public','chess-puzzles'); __import__('shutil').rmtree(dst, ignore_errors=True); os.makedirs(dst)
-manifest={"version":1,"themes":THEMES,"levels":[]}
+manifest={"version":2,"themes":THEMES,"levels":[]}
 bad=0; total=0
 for key,name,lo,hi in LEVELS:
     sel=sorted(out[key],key=lambda p:(p[4],p[1]))
@@ -49,7 +49,8 @@ for key,name,lo,hi in LEVELS:
             lt.update(themes.split())
         fn=f"{key}-{ci//CHUNK:03d}.json"
         with open(f"{dst}/{fn}","w") as fh: json.dump(arr,fh,separators=(',',':'))
-        chunks.append({"f":fn,"n":len(arr),"min":part[0][4],"max":part[-1][4]})
+        tc=collections.Counter(i for a in arr for i in a[4])
+        chunks.append({"f":fn,"n":len(arr),"min":part[0][4],"max":part[-1][4],"t":{str(k):v for k,v in sorted(tc.items())}})
     total+=len(sel)
     manifest["levels"].append({"id":key,"name":name,"stars":len(manifest["levels"])+1,"min":lo,"max":hi,"count":len(sel),"chunks":chunks,"themes":{TI[t]:c for t,c in lt.items()}})
 with open(f"{dst}/manifest.json","w") as fh: json.dump(manifest,fh,separators=(',',':'))
