@@ -55,7 +55,10 @@ const PRACTICE_PERFECT_S = 0.075;
 const PRACTICE_GOOD_S = 0.17;
 const SPEEDS = [0.5, 0.75, 0.9, 1, 1.15];
 
-const OFFSET_KEY = (m: InputMode) => `uniedd-clap-offset:${m}`;
+// v2: offsets are now the residual after the engine's own latency compensation
+// (old values included the whole output+input latency and would double-correct).
+const OFFSET_KEY = (m: InputMode) => `uniedd-clap-offset-v2:${m}`;
+const INPUT_LIMIT_MS = 250;
 const BEST_KEY = (id: string) => `uniedd-clap-best:${id}`;
 const OPTS_KEY = "uniedd-clap-options";
 const SYNC_KEY = "uniedd-clap-audio-sync";
@@ -189,6 +192,22 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     if (run) run.syncSec = v / 1000; // live while playing
   }, []);
 
+  const setInputOffset = useCallback((mode: InputMode, ms: number) => {
+    const v = Math.max(-INPUT_LIMIT_MS, Math.min(INPUT_LIMIT_MS, Math.round(ms)));
+    if (mode === "mic") setMicOffsetMs(v);
+    else setTapOffsetMs(v);
+    try {
+      localStorage.setItem(OFFSET_KEY(mode), String(v));
+    } catch {
+      /* ignore */
+    }
+    const run = runRef.current;
+    if (run) {
+      if (mode === "mic") run.micOffset = v;
+      else run.tapOffset = v;
+    }
+  }, []);
+
   const allSongs = [...BUILT_IN_SONGS, ...uploaded, ...(customSong ? [customSong] : [])];
   const song = allSongs.find((s) => s.id === songId) || BUILT_IN_SONGS[0];
 
@@ -257,8 +276,10 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   const judge = useCallback((ctxT: number, source: InputMode) => {
     const run = runRef.current;
     if (!run || run.paused || run.finished) return;
+    // ctxT is in the heard clock (mic onsets are converted at the sample frame, taps from
+    // event.timeStamp). Use the same Audio-sync shift as the visuals, then the input delay.
     const offset = (source === "mic" ? run.micOffset : run.tapOffset) / 1000;
-    const s = songTimeAt(run, ctxT - offset);
+    const s = songTimeAt(run, ctxT - run.syncSec - offset);
     const perfectW = (run.practice ? PRACTICE_PERFECT_S : PERFECT_S) * run.rate;
     const goodW = (run.practice ? PRACTICE_GOOD_S : GOOD_S) * run.rate;
     let best = -1;
@@ -653,15 +674,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
         input={opts.input}
         onEnableMic={enableMic}
         onDone={(mode, ms) => {
-          if (ms !== null) {
-            try {
-              localStorage.setItem(OFFSET_KEY(mode), String(ms));
-            } catch {
-              /* ignore */
-            }
-            if (mode === "mic") setMicOffsetMs(ms);
-            else setTapOffsetMs(ms);
-          }
+          if (ms !== null) setInputOffset(mode, ms);
           setView("pick");
         }}
       />
@@ -911,6 +924,42 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
                 Markers reach the ring before you hear the beat? Slide right. After it? Slide left. (Turn on Guide clap to
                 check — the click should land exactly on the ring.)
               </p>
+            </div>
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs text-white/70">
+                <label htmlFor="clap-input-delay">Input delay ({opts.input === "mic" ? "claps" : "taps"})</label>
+                <span className="font-mono">
+                  {offsetMs > 0 ? "+" : ""}
+                  {offsetMs} ms
+                  {offsetMs !== 0 ? (
+                    <button type="button" onClick={() => setInputOffset(opts.input, 0)} className="ml-2 text-amber-300 hover:underline">
+                      reset
+                    </button>
+                  ) : null}
+                </span>
+              </div>
+              <input
+                id="clap-input-delay"
+                type="range"
+                min={-INPUT_LIMIT_MS}
+                max={INPUT_LIMIT_MS}
+                step={5}
+                value={offsetMs}
+                onChange={(ev) => setInputOffset(opts.input, Number(ev.target.value))}
+                className="mt-1 w-full accent-amber-400"
+              />
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-[11px] text-white/55">
+                  Hits judged late when you clap on time? Slide right. Early? Slide left.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setView("calibrate")}
+                  className="shrink-0 rounded-full bg-amber-400 px-3 py-1 text-[11px] font-bold text-[#1b1446]"
+                >
+                  Auto-calibrate
+                </button>
+              </div>
             </div>
           </div>
         </div>

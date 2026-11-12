@@ -12,14 +12,21 @@ import { beatToTime, chordMidis, type ClapSong } from "./songs";
 export const midiFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 
 const WORKLET = `
+// Sample-level clap onset detector. A fast peak envelope (instant attack, ~4 ms release)
+// is compared with a slow noise floor; the onset is the FIRST SAMPLE where the envelope
+// crosses the threshold, i.e. the rising edge of the clap, reported as an absolute
+// sample frame (currentFrame + index) so the main thread gets an exact context time.
 class ClapDetector extends AudioWorkletProcessor {
   constructor() {
     super();
-    this.floor = 0.002;
-    this.recent = 0.002;
-    this.last = -1;
+    this.floor = 0.004;      // slow average of block peaks (noise floor, peak units)
+    this.fast = 0;           // fast peak envelope
+    this.rel = Math.exp(-1 / (0.004 * sampleRate));
+    this.lastFrame = -1e12;
+    this.slow = 0;           // lagging (~10 ms) copy of the envelope: a clap is a sudden RISE
+    this.slowK = 1 - Math.exp(-1 / (0.01 * sampleRate));
     this.sens = 0.6;
-    this.debounce = 0.08;
+    this.debounce = 0.06;
     this.n = 0;
     this.peak = 0;
     this.port.onmessage = (e) => {
@@ -30,26 +37,39 @@ class ClapDetector extends AudioWorkletProcessor {
   process(inputs) {
     const ch = inputs[0] && inputs[0][0];
     if (!ch) return true;
-    let sum = 0;
-    for (let i = 0; i < ch.length; i++) sum += ch[i] * ch[i];
-    const rms = Math.sqrt(sum / ch.length);
     const s = this.sens;
-    const ratio = 2.2 + (1 - s) * 9;
-    const absMin = 0.006 + (1 - s) * 0.05;
+    const ratio = 3 + (1 - s) * 10;
+    const absMin = 0.012 + (1 - s) * 0.08;
     const thr = Math.max(this.floor * ratio, absMin);
-    const t = currentTime;
-    if (rms > thr && rms > this.recent * 2.2 && t - this.last > this.debounce) {
-      let idx = 0;
-      const lim = thr * 1.5;
-      for (let i = 0; i < ch.length; i++) { if (Math.abs(ch[i]) > lim) { idx = i; break; } }
-      this.last = t;
-      this.port.postMessage({ type: "onset", t: t + idx / sampleRate, level: rms });
+    const deb = this.debounce * sampleRate;
+    let blockPeak = 0;
+    let fast = this.fast;
+    let slow = this.slow;
+    const slowK = this.slowK;
+    for (let i = 0; i < ch.length; i++) {
+      const a = ch[i] < 0 ? -ch[i] : ch[i];
+      if (a > blockPeak) blockPeak = a;
+      fast = a > fast ? a : fast * this.rel;
+      // Rising edge: above the threshold AND well above the lagging envelope, so a
+      // decaying clap tail / room reverb never re-triggers but a quick next clap does.
+      if (fast > thr && fast > slow * 2.5) {
+        const f = currentFrame + i;
+        if (f - this.lastFrame > deb) {
+          this.lastFrame = f;
+          this.port.postMessage({ type: "onset", frame: f, level: fast });
+        }
+      }
+      slow += (fast - slow) * slowK;
     }
-    // Adaptive noise floor: falls quickly, rises slowly so claps barely move it
-    const a = rms > this.floor ? 0.0015 : 0.03;
-    this.floor = Math.max(0.0005, this.floor + (rms - this.floor) * a);
-    this.recent += (rms - this.recent) * 0.35;
-    this.peak = Math.max(this.peak, rms);
+    this.fast = fast;
+    this.slow = slow;
+    // Noise floor: only learn from blocks well away from a clap, so claps never raise it
+    const quiet = currentFrame - this.lastFrame > 0.25 * sampleRate;
+    if (quiet || blockPeak < this.floor) {
+      const k = blockPeak > this.floor ? 0.01 : 0.05;
+      this.floor = Math.max(0.0008, this.floor + (blockPeak - this.floor) * k);
+    }
+    this.peak = Math.max(this.peak, blockPeak / 3);
     if (++this.n >= 8) {
       this.port.postMessage({ type: "level", rms: this.peak, floor: this.floor, thr });
       this.n = 0;
@@ -58,7 +78,7 @@ class ClapDetector extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor("uniedd-clap-detector", ClapDetector);
+registerProcessor("uniedd-clap-detector-v2", ClapDetector);
 `;
 
 export type MicStatus = "off" | "asking" | "on" | "denied" | "unsupported";
@@ -70,7 +90,10 @@ export class ClapEngine {
   private stream: MediaStream | null = null;
   private node: AudioWorkletNode | null = null;
   private workletReady = false;
-  onClap: ((ctxTime: number, level: number) => void) | null = null;
+  /** Called with the clap's onset in the HEARD clock (same timeline as heardAt / visuals). */
+  onClap: ((heardTime: number, level: number) => void) | null = null;
+  /** Mic input latency in seconds (from the track settings when the browser reports it). */
+  inputLatency = 0;
   onLevel: ((rms: number, thr: number) => void) | null = null;
   private scheduled: AudioScheduledSourceNode[] = [];
   private noise: AudioBuffer;
@@ -160,6 +183,23 @@ export class ClapEngine {
     return this.est - (nowPerf - perfT) / 1000;
   }
 
+  /**
+   * How far the render clock (ctx.currentTime, what the worklet sees) runs ahead of the
+   * heard clock. A mic sample processed at render time T was captured when the heard
+   * clock read T - renderLead - inputLatency.
+   */
+  get renderLead() {
+    const nowPerf = performance.now();
+    const heard = this.heardAt(nowPerf);
+    const lead = this.ctx.currentTime - this.step / 2 - heard;
+    return Number.isFinite(lead) ? Math.max(0, Math.min(0.5, lead)) : 0;
+  }
+
+  /** Render-clock frame time of a mic sample -> heard-clock time of the real clap. */
+  micFrameToHeard(renderTime: number) {
+    return renderTime - this.renderLead - this.inputLatency;
+  }
+
   /** Back-compat alias. */
   heardNow(perfNow = performance.now()) {
     return this.heardAt(perfNow);
@@ -244,8 +284,15 @@ export class ClapEngine {
     if (this.stream) return "on";
     if (!navigator.mediaDevices?.getUserMedia || !this.ctx.audioWorklet) return "unsupported";
     try {
+      // Raw mic: no echo cancellation / noise suppression / AGC (they add delay and eat
+      // transients) and ask for the lowest capture latency the device offers.
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          latency: 0,
+        } as MediaTrackConstraints,
       });
     } catch {
       return "denied";
@@ -257,6 +304,9 @@ export class ClapEngine {
       URL.revokeObjectURL(url);
       this.workletReady = true;
     }
+    const settings = this.stream.getAudioTracks()[0]?.getSettings() as MediaTrackSettings & { latency?: number };
+    const lat = Number(settings?.latency);
+    this.inputLatency = Number.isFinite(lat) && lat > 0 && lat < 0.5 ? lat : 0;
     const src = this.ctx.createMediaStreamSource(this.stream);
     // Claps are bright, broadband bursts — keep the highs, drop voice and hum
     const hp = this.ctx.createBiquadFilter();
@@ -267,18 +317,29 @@ export class ClapEngine {
     hp2.type = "highpass";
     hp2.frequency.value = 1800;
     hp2.Q.value = 0.7;
-    this.node = new AudioWorkletNode(this.ctx, "uniedd-clap-detector", { numberOfInputs: 1, numberOfOutputs: 1 });
+    this.attachDetector(src, hp, hp2);
+    return "on";
+  }
+
+  /** Wire a source through the high-pass filters into the clap detector. */
+  private attachDetector(src: AudioNode, hp: BiquadFilterNode, hp2: BiquadFilterNode) {
+    this.node = new AudioWorkletNode(this.ctx, "uniedd-clap-detector-v2", { numberOfInputs: 1, numberOfOutputs: 1 });
     this.node.port.onmessage = (e: MessageEvent) => {
-      const msg = e.data as { type: string; t: number; level: number; rms: number; thr: number };
-      if (msg.type === "onset") this.onClap?.(msg.t, msg.level);
-      else if (msg.type === "level") this.onLevel?.(msg.rms, msg.thr);
+      const msg = e.data as { type: string; frame: number; level: number; rms: number; thr: number };
+      if (msg.type === "onset") {
+        const renderT = msg.frame / this.ctx.sampleRate;
+        this.lastOnsetRender = renderT;
+        this.onClap?.(this.micFrameToHeard(renderT), msg.level);
+      } else if (msg.type === "level") this.onLevel?.(msg.rms, msg.thr);
     };
     // keep the worklet pulled by the graph without making any sound
     const mute = this.ctx.createGain();
     mute.gain.value = 0;
     src.connect(hp).connect(hp2).connect(this.node).connect(mute).connect(this.ctx.destination);
-    return "on";
   }
+
+  /** Render-clock time of the last detected onset (for diagnostics/tests). */
+  lastOnsetRender = -1;
 
   setSensitivity(sens: number) {
     this.node?.port.postMessage({ sens });
