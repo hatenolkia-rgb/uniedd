@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClapEngine, type MicStatus } from "./engine";
 import {
@@ -54,7 +55,10 @@ const PRACTICE_PERFECT_S = 0.075;
 const PRACTICE_GOOD_S = 0.17;
 const SPEEDS = [0.5, 0.75, 0.9, 1, 1.15];
 
-const OFFSET_KEY = (m: InputMode) => `uniedd-clap-offset:${m}`;
+// v2: offsets are now the residual after the engine's own latency compensation
+// (old values included the whole output+input latency and would double-correct).
+const OFFSET_KEY = (m: InputMode) => `uniedd-clap-offset-v2:${m}`;
+const INPUT_LIMIT_MS = 250;
 const BEST_KEY = (id: string) => `uniedd-clap-best:${id}`;
 const OPTS_KEY = "uniedd-clap-options";
 const SYNC_KEY = "uniedd-clap-audio-sync";
@@ -162,6 +166,8 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   );
   const [result, setResult] = useState<Result | null>(null);
   const [paused, setPaused] = useState(false);
+  const [isFull, setIsFull] = useState(false);
+  const [canFull, setCanFull] = useState(false);
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [error, setError] = useState("");
   const [clapFlash, setClapFlash] = useState(0);
@@ -184,6 +190,22 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     }
     const run = runRef.current;
     if (run) run.syncSec = v / 1000; // live while playing
+  }, []);
+
+  const setInputOffset = useCallback((mode: InputMode, ms: number) => {
+    const v = Math.max(-INPUT_LIMIT_MS, Math.min(INPUT_LIMIT_MS, Math.round(ms)));
+    if (mode === "mic") setMicOffsetMs(v);
+    else setTapOffsetMs(v);
+    try {
+      localStorage.setItem(OFFSET_KEY(mode), String(v));
+    } catch {
+      /* ignore */
+    }
+    const run = runRef.current;
+    if (run) {
+      if (mode === "mic") run.micOffset = v;
+      else run.tapOffset = v;
+    }
   }, []);
 
   const allSongs = [...BUILT_IN_SONGS, ...uploaded, ...(customSong ? [customSong] : [])];
@@ -254,8 +276,10 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   const judge = useCallback((ctxT: number, source: InputMode) => {
     const run = runRef.current;
     if (!run || run.paused || run.finished) return;
+    // ctxT is in the heard clock (mic onsets are converted at the sample frame, taps from
+    // event.timeStamp). Use the same Audio-sync shift as the visuals, then the input delay.
     const offset = (source === "mic" ? run.micOffset : run.tapOffset) / 1000;
-    const s = songTimeAt(run, ctxT - offset);
+    const s = songTimeAt(run, ctxT - run.syncSec - offset);
     const perfectW = (run.practice ? PRACTICE_PERFECT_S : PERFECT_S) * run.rate;
     const goodW = (run.practice ? PRACTICE_GOOD_S : GOOD_S) * run.rate;
     let best = -1;
@@ -271,7 +295,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       }
     }
     const st = run.draw;
-    const hp = canvasRef.current ? hitPoint(canvasRef.current.clientWidth, canvasRef.current.clientHeight) : { x: 0, y: 0 };
+    const hp = canvasRef.current ? hitPoint(canvasRef.current.clientWidth, canvasRef.current.clientHeight) : { x: 0, y: 0, u: 1 };
     const perfNow = performance.now();
     st.pulse = 1;
     if (best < 0 || bestD > goodW) {
@@ -299,11 +323,11 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       color,
       born: perfNow,
       x: hp.x,
-      y: hp.y - 46,
+      y: hp.y - 46 * hp.u,
     });
-    if (!run.practice) st.popups.push({ text: `+${gained}`, color: "#ffffff", born: perfNow, x: hp.x + 90, y: hp.y - 10 });
+    if (!run.practice) st.popups.push({ text: `+${gained}`, color: "#ffffff", born: perfNow, x: hp.x + 90 * hp.u, y: hp.y - 10 * hp.u });
     if (run.combo > 0 && run.combo % 10 === 0) {
-      st.popups.push({ text: `${run.combo} STREAK!`, color: "#f472b6", born: perfNow, x: hp.x, y: hp.y - 120, big: true });
+      st.popups.push({ text: `${run.combo} STREAK!`, color: "#f472b6", born: perfNow, x: hp.x, y: hp.y - 120 * hp.u, big: true });
       spawnBurst(st.particles, hp.x, hp.y, "#f472b6", 40);
     }
     spawnBurst(st.particles, hp.x, hp.y, color, kind === "perfect" ? 28 : 14);
@@ -503,7 +527,6 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
-    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
     const ro = new ResizeObserver(resize);
     ro.observe(wrap);
 
@@ -545,7 +568,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
             run.combo = 0;
             run.miss += 1;
             const hp = hitPoint(wrap.clientWidth, wrap.clientHeight);
-            st.popups.push({ text: "MISS", color: "#f43f5e", born: perfNow, x: hp.x, y: hp.y - 46 });
+            st.popups.push({ text: "MISS", color: "#f43f5e", born: perfNow, x: hp.x, y: hp.y - 46 * hp.u });
           }
         }
         while (run.nextIdx < run.notes.length && run.notes[run.nextIdx].judged) run.nextIdx++;
@@ -601,6 +624,28 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
     setView("pick");
   }, []);
 
+  // The play stage covers the screen: lock page scrolling, track browser fullscreen.
+  useEffect(() => {
+    if (view !== "play") return;
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    setCanFull(Boolean(document.fullscreenEnabled && wrapRef.current?.requestFullscreen));
+    const onFs = () => setIsFull(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onFs);
+    return () => {
+      document.documentElement.style.overflow = prev;
+      document.removeEventListener("fullscreenchange", onFs);
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    };
+  }, [view]);
+
+  const toggleFullscreen = useCallback(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    else void wrap.requestFullscreen?.().catch(() => undefined);
+  }, []);
+
   // keyboard: Space/Enter/J/F = clap, P/Escape = pause
   useEffect(() => {
     if (view !== "play") return;
@@ -629,15 +674,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
         input={opts.input}
         onEnableMic={enableMic}
         onDone={(mode, ms) => {
-          if (ms !== null) {
-            try {
-              localStorage.setItem(OFFSET_KEY(mode), String(ms));
-            } catch {
-              /* ignore */
-            }
-            if (mode === "mic") setMicOffsetMs(ms);
-            else setTapOffsetMs(ms);
-          }
+          if (ms !== null) setInputOffset(mode, ms);
           setView("pick");
         }}
       />
@@ -660,18 +697,20 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   }
 
   if (view === "play") {
-    return (
-      <div className="-mx-5 sm:mx-0">
+    const btn =
+      "rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/25 sm:px-5 sm:py-2.5 sm:text-sm";
+    // Portal to <body> so no transformed/blurred ancestor can shrink the fixed stage.
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[9999] bg-[#05040f]/95 sm:p-3 lg:p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Playing ${song.title}`}
+      >
         <div
           ref={wrapRef}
-          className="relative w-full select-none overflow-hidden sm:rounded-3xl"
-          style={{
-            height: "min(calc(100svh - 180px), 620px)",
-            minHeight: 360,
-            touchAction: "none",
-            background: "#0b0820",
-            scrollMarginTop: 84,
-          }}
+          className="relative h-full w-full select-none overflow-hidden sm:rounded-3xl sm:shadow-2xl"
+          style={{ touchAction: "none", background: "#0b0820" }}
           onPointerDown={(ev) => {
             if ((ev.target as HTMLElement).closest("button")) return;
             const e = engineRef.current;
@@ -679,28 +718,25 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
           }}
         >
           <canvas ref={canvasRef} className="block" aria-label={`Clap rhythm highway for ${song.title}`} />
-          <div className="absolute right-3 bottom-3 flex gap-2">
-            <button
-              type="button"
-              onClick={() => void togglePause()}
-              className="rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/25"
-            >
+          <div className="absolute right-3 bottom-3 flex gap-2 sm:right-5 sm:bottom-5">
+            {canFull ? (
+              <button type="button" onClick={toggleFullscreen} className={btn} aria-pressed={isFull}>
+                {isFull ? "Exit full screen" : "Full screen"}
+              </button>
+            ) : null}
+            <button type="button" onClick={() => void togglePause()} className={btn}>
               {paused ? "Resume" : "Pause"}
             </button>
-            <button
-              type="button"
-              onClick={quit}
-              className="rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/25"
-            >
+            <button type="button" onClick={quit} className={btn}>
               Quit
             </button>
           </div>
+          {error ? (
+            <p className="absolute inset-x-0 top-24 px-5 text-center text-sm text-rose-300">{error}</p>
+          ) : null}
         </div>
-        {error ? <p className="mt-2 px-5 text-sm text-rose-600 sm:px-0">{error}</p> : null}
-        <p className="mt-3 px-5 text-center text-xs text-[var(--muted)] sm:px-0">
-          Clap when a 👏 marker reaches the glowing ring. Space, Enter or a tap on the stage also counts.
-        </p>
-      </div>
+      </div>,
+      document.body,
     );
   }
 
@@ -718,7 +754,9 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   // ----- Song picker / setup -----
   const mains = BUILT_IN_SONGS.filter((s) => !s.kids);
   const kids = BUILT_IN_SONGS.filter((s) => s.kids);
-  const emptySlots = Math.max(0, UPLOAD_SLOTS - uploaded.length);
+  const slotSongs = uploaded.filter((s) => !s.drums);
+  const drumSongs = uploaded.filter((s) => s.drums);
+  const emptySlots = Math.max(0, UPLOAD_SLOTS - slotSongs.length);
   const offsetMs = opts.input === "mic" ? micOffsetMs : tapOffsetMs;
 
   return (
@@ -887,6 +925,42 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
                 check — the click should land exactly on the ring.)
               </p>
             </div>
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs text-white/70">
+                <label htmlFor="clap-input-delay">Input delay ({opts.input === "mic" ? "claps" : "taps"})</label>
+                <span className="font-mono">
+                  {offsetMs > 0 ? "+" : ""}
+                  {offsetMs} ms
+                  {offsetMs !== 0 ? (
+                    <button type="button" onClick={() => setInputOffset(opts.input, 0)} className="ml-2 text-amber-300 hover:underline">
+                      reset
+                    </button>
+                  ) : null}
+                </span>
+              </div>
+              <input
+                id="clap-input-delay"
+                type="range"
+                min={-INPUT_LIMIT_MS}
+                max={INPUT_LIMIT_MS}
+                step={5}
+                value={offsetMs}
+                onChange={(ev) => setInputOffset(opts.input, Number(ev.target.value))}
+                className="mt-1 w-full accent-amber-400"
+              />
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <p className="text-[11px] text-white/55">
+                  Hits judged late when you clap on time? Slide right. Early? Slide left.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setView("calibrate")}
+                  className="shrink-0 rounded-full bg-amber-400 px-3 py-1 text-[11px] font-bold text-[#1b1446]"
+                >
+                  Auto-calibrate
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -896,7 +970,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       </h4>
       <p className="text-sm text-[var(--muted)]">10 song slots — more songs are on the way.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {[...mains, ...uploaded].map((s, i) => (
+        {[...mains, ...slotSongs].map((s, i) => (
           <SongCard key={s.id} song={s} slot={i + 1} selected={s.id === song.id} onPick={() => setSongId(s.id)} />
         ))}
         {Array.from({ length: emptySlots }, (_, i) => (
@@ -905,15 +979,31 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
             className="flex items-center gap-3 rounded-2xl border border-dashed border-[var(--border)] p-4 text-[var(--muted)]"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f4f4f5] text-sm font-bold">
-              {mains.length + uploaded.length + i + 1}
+              {mains.length + slotSongs.length + i + 1}
             </span>
             <div>
-              <p className="text-sm font-semibold">Song slot {mains.length + uploaded.length + i + 1}</p>
+              <p className="text-sm font-semibold">Song slot {mains.length + slotSongs.length + i + 1}</p>
               <p className="text-xs">Coming soon</p>
             </div>
           </div>
         ))}
       </div>
+
+      {drumSongs.length ? (
+        <>
+          <h4 className="mt-7 text-lg font-bold" style={{ fontFamily: "var(--font-playfair), serif" }}>
+            🥁 Drum &amp; Rhythm Patterns
+          </h4>
+          <p className="text-sm text-[var(--muted)]">
+            The claps follow the drums, not the words: grooves, rhythm drills, rhymes, clave and taal.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {drumSongs.map((s) => (
+              <SongCard key={s.id} song={s} selected={s.id === song.id} onPick={() => setSongId(s.id)} />
+            ))}
+          </div>
+        </>
+      ) : null}
 
       <h4 className="mt-7 text-lg font-bold" style={{ fontFamily: "var(--font-playfair), serif" }}>
         🧸 Kids &amp; Nursery Rhymes

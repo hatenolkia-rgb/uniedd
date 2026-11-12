@@ -66,6 +66,8 @@ export type ClapSong = {
   kids?: boolean;
   /** Uploaded songs come from /public/clap-songs. */
   uploaded?: boolean;
+  /** Drum & rhythm-pattern songs (claps follow a percussion pattern) get their own row. */
+  drums?: boolean;
   accent: string;
 };
 
@@ -522,6 +524,8 @@ export type SongFile = {
   durationSeconds?: number;
   /** Optional beat times in seconds (for the beat lines when the tempo drifts). */
   beatTimes?: number[];
+  /** Picker row: "drums" puts the song in the Drum & Rhythm Patterns row. */
+  row?: string;
 };
 
 /** Validate and convert a song JSON file into a playable song. Returns null if unusable. */
@@ -586,6 +590,7 @@ export function normalizeSong(raw: SongFile, index: number, base = "/clap-songs/
     audio,
     offset,
     uploaded: true,
+    drums: raw.row === "drums" || undefined,
     accent: ACCENTS[index % ACCENTS.length],
   };
 }

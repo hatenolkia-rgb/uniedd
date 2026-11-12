@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { PROGRAMS, programPath } from "./lib/programs";
 import { SITE_URL } from "./lib/site";
 import { publishedPosts, postPath } from "./lib/blog";
+import { GAMES } from "./games/catalog";
 
 // Rebuilt daily so blog posts are listed once they go live.
 export const revalidate = 86400;
@@ -28,6 +29,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     })),
     { url: `${SITE_URL}/games`, lastModified, changeFrequency: "weekly", priority: 0.7 },
+    ...GAMES.map((game) => ({
+      url: `${SITE_URL}/games/${game.slug}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: game.slug === "clap-rhythm" || game.slug === "chess-puzzles" ? 0.7 : 0.5,
+    })),
+    { url: `${SITE_URL}/jam`, lastModified, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/pricing`, lastModified, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/privacy`, lastModified, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE_URL}/terms`, lastModified, changeFrequency: "yearly", priority: 0.3 },

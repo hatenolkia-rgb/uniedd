@@ -5,11 +5,12 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import JsonLd from "../components/JsonLd";
 import { SITE_NAME, SITE_URL } from "../lib/site";
 import GamesHub from "./GamesHub";
-import { GAMES } from "./catalog";
+import Link from "next/link";
+import { CATEGORIES, GAMES } from "./catalog";
+import { GAMES_HUB_SEO } from "./seo";
 
-const title = "Games | Fun music quizzes & ear training | UniEDD";
-const description =
-  "Kid-friendly music games for guitar, piano, vocals, theory and more — timed quizzes, ear training, fretboard practice and weekly leaderboards. Free on UniEDD.";
+const title = GAMES_HUB_SEO.title;
+const description = GAMES_HUB_SEO.description;
 
 export const metadata: Metadata = {
   title,
@@ -22,7 +23,6 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     locale: "en_IN",
     type: "website",
-    images: ["/logo.png"],
   },
   twitter: { card: "summary_large_image", title, description },
 };
@@ -38,7 +38,17 @@ export default function GamesPage() {
           name: title,
           description,
           url: `${SITE_URL}/games`,
-          numberOfItems: GAMES.length,
+          image: `${SITE_URL}/games/opengraph-image`,
+          mainEntity: {
+            "@type": "ItemList",
+            numberOfItems: GAMES.length,
+            itemListElement: GAMES.map((g, i) => ({
+              "@type": "ListItem",
+              position: i + 1,
+              name: g.title,
+              url: `${SITE_URL}/games/${g.slug}`,
+            })),
+          },
         }}
       />
 
@@ -53,13 +63,13 @@ export default function GamesPage() {
             className="max-w-3xl text-4xl sm:text-5xl font-bold leading-[1.1] tracking-tight"
             style={{ fontFamily: "var(--font-playfair), serif" }}
           >
-            Games &{" "}
+            Free online music games &{" "}
             <span className="bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-orange)] bg-clip-text text-transparent">
               fun stuff
             </span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-[var(--muted)] leading-relaxed">
-            Quick, colorful practice games for guitar, piano, vocals, music theory and more.
+            Quick, colorful practice games for guitar, piano, vocals, music theory and more — plus thousands of chess puzzles.
             Race the clock, keep a streak, and climb this week’s leaderboard — no downloads,
             original sounds only.
           </p>
@@ -69,6 +79,53 @@ export default function GamesPage() {
       <section className="px-4 sm:px-6 pb-24 bg-white">
         <div className="mx-auto max-w-7xl">
           <GamesHub />
+        </div>
+      </section>
+
+      <section className="px-6 pb-24 bg-white" aria-labelledby="all-games">
+        <div className="mx-auto max-w-7xl border-t border-[var(--border)] pt-10">
+          <h2 id="all-games" className="text-2xl font-bold" style={{ fontFamily: "var(--font-playfair), serif" }}>
+            All music games by topic
+          </h2>
+          <p className="mt-3 max-w-3xl text-[var(--muted)] leading-relaxed">
+            Every game is free and plays in your web browser on a phone, tablet or computer. Try the{" "}
+            <Link href="/games/clap-rhythm" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              Clap Rhythm game
+            </Link>{" "}
+            to clap along to songs and nursery rhymes, sharpen your ear with music theory and ear training games, or
+            practise the guitar fretboard, piano keys and singing. Chess fans can solve{" "}
+            <Link href="/games/chess-puzzles" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              free chess puzzles by difficulty
+            </Link>{" "}
+            or{" "}
+            <Link href="/games/chess" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              play chess against the computer
+            </Link>
+            .
+          </p>
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {CATEGORIES.filter((c) => c.id !== "all").map((c) => {
+              const list = GAMES.filter((g) => g.category === c.id);
+              if (!list.length) return null;
+              return (
+                <div key={c.id}>
+                  <h3 className="font-semibold">
+                    {c.label} games
+                  </h3>
+                  <p className="text-sm text-[var(--muted)]">{c.hint}</p>
+                  <ul className="mt-2 space-y-1 text-sm">
+                    {list.map((g) => (
+                      <li key={g.slug}>
+                        <Link href={`/games/${g.slug}`} className="text-[var(--brand-blue)] hover:underline">
+                          {g.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
