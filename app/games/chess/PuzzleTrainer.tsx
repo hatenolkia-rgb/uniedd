@@ -16,6 +16,9 @@ import {
   markSeen,
   parseUci,
   pickPuzzle,
+  pickPuzzleWithNote,
+  themeCount,
+  type PickNote,
   puzzleFromLink,
   saveProgress,
   updateRating,
@@ -46,6 +49,8 @@ export default function PuzzleTrainer() {
   const [mode, setMode] = useState<Mode>("rated");
   const [level, setLevel] = useState<LevelId>("easy");
   const [theme, setTheme] = useState("");
+  /** Theme the current puzzle was picked for, and whether the search had to widen. */
+  const [picked, setPicked] = useState<{ theme: string; note: PickNote } | null>(null);
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
   const [fen, setFen] = useState("8/8/8/8/8/8/8/8 w - - 0 1");
   const [idx, setIdx] = useState(0);
@@ -108,20 +113,35 @@ export default function PuzzleTrainer() {
   );
 
   const manifestRef = useRef<Manifest | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  /** On phones the board can be scrolled away from the controls: bring it back into view. */
+  const revealBoard = () => {
+    const el = boardRef.current;
+    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const loadNext = useCallback(
-    async (m: Mode = mode, opts: { rushN?: number; level?: LevelId } = {}) => {
+    async (m: Mode = mode, opts: { rushN?: number; level?: LevelId; theme?: string } = {}) => {
       const manifest = manifestRef.current;
       if (!manifest) return;
       token.current++;
       setStatus("loading");
       try {
         let p: Puzzle;
+        const th = (opts.theme ?? theme) || undefined;
+        let note: PickNote = "exact";
         if (m === "daily") p = await dailyPuzzle(manifest);
         else if (m === "rush") {
           const target = 500 + 70 * (opts.rushN ?? 0);
           p = await pickPuzzle(manifest, { rating: target, window: 120 });
-        } else if (m === "level") p = await pickPuzzle(manifest, { level: opts.level ?? level, theme: theme || undefined });
-        else p = await pickPuzzle(manifest, { rating: progressRef.current.rating, window: 120, theme: theme || undefined });
+        } else {
+          const r = await pickPuzzleWithNote(
+            manifest,
+            m === "level" ? { level: opts.level ?? level, theme: th } : { rating: progressRef.current.rating, window: 120, theme: th },
+          );
+          p = r.puzzle;
+          note = r.note;
+        }
+        setPicked(th && (m === "level" || m === "rated") ? { theme: th, note } : null);
         startPuzzle(p);
       } catch {
         setStatus("error");
@@ -353,16 +373,30 @@ export default function PuzzleTrainer() {
   }
   const levelInfo = manifest ? (mode === "level" ? manifest.levels.find((l) => l.id === level) : puzzle ? manifest.levels.find((l) => l.id === puzzle.level) : levelForRating(manifest.levels, progress.rating)) : undefined;
   const done = status === "solved" || status === "shown";
-  const themeOptions = manifest
-    ? Object.keys(THEME_LABELS)
-        .map((t) => {
-          const i = manifest.themes.indexOf(t);
-          const lv = mode === "level" ? manifest.levels.find((l) => l.id === level) : null;
-          const count = i < 0 ? 0 : lv ? lv.themes[i] ?? 0 : manifest.levels.reduce((s, l) => s + (l.themes[i] ?? 0), 0);
-          return { t, count };
-        })
-        .filter((x) => x.count >= 20)
-    : [];
+  // Every theme with puzzles anywhere stays in the list (so a choice never silently resets);
+  // the count is for the level you're playing — 0 means puzzles come from the nearest level.
+  const scopeLevel = manifest ? (mode === "level" ? manifest.levels.find((l) => l.id === level) : levelForRating(manifest.levels, progress.rating)) : undefined;
+  const themeOptions =
+    manifest && scopeLevel
+      ? Object.keys(THEME_LABELS)
+          .map((t) => {
+            const i = manifest.themes.indexOf(t);
+            const total = i < 0 ? 0 : manifest.levels.reduce((s, l) => s + themeCount(l, i), 0);
+            return { t, count: i < 0 ? 0 : themeCount(scopeLevel, i), total };
+          })
+          .filter((x) => x.total > 0)
+      : [];
+  const pickedLabel = picked ? THEME_LABELS[picked.theme] ?? picked.theme : "";
+  const puzzleLevelName = puzzle ? manifest?.levels.find((l) => l.id === puzzle.level)?.name : "";
+  const themeNote = !picked
+    ? ""
+    : picked.note === "other-level"
+      ? `No ${pickedLabel} puzzles in ${scopeLevel?.name ?? "this level"} — here is one from ${puzzleLevelName}.`
+      : picked.note === "wider-rating"
+        ? `Few ${pickedLabel} puzzles near your rating — this one is a little further away.`
+        : picked.note === "no-theme"
+          ? `No ${pickedLabel} puzzles yet — showing a random puzzle.`
+          : "";
   const total = manifest?.levels.reduce((s, l) => s + l.count, 0) ?? 0;
   const todayDone = progress.daily[dayKey()];
 
@@ -409,7 +443,7 @@ export default function PuzzleTrainer() {
       </div>
 
       <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="mx-auto w-full max-w-[min(640px,calc(100vh-220px))] min-w-[280px]">
+        <div ref={boardRef} className="mx-auto w-full max-w-[min(640px,calc(100vh-220px))] min-w-[280px] scroll-mt-24">
           <Board
             fen={fen}
             orientation={orientation}
@@ -488,6 +522,16 @@ export default function PuzzleTrainer() {
               <p className="mt-1 text-[var(--muted)]">
                 Puzzle rating {done || status === "wrong" ? puzzle.rating : "hidden until you finish"}
               </p>
+              {picked ? (
+                <p className="mt-2" data-theme-chip={picked.theme}>
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-[var(--brand-blue)]">🎯 {pickedLabel}</span>
+                </p>
+              ) : null}
+              {themeNote ? (
+                <p className="mt-2 text-xs text-amber-800" data-theme-note>
+                  {themeNote}
+                </p>
+              ) : null}
               {done ? (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {puzzle.themes
@@ -502,6 +546,33 @@ export default function PuzzleTrainer() {
             </div>
           ) : null}
 
+          {(mode === "level" || mode === "rated") && manifest ? (
+            <label className="block text-sm">
+              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Theme</span>
+              <select
+                value={theme}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setTheme(v);
+                  // load a puzzle of the chosen theme right away
+                  void loadNext(mode, { theme: v });
+                  revealBoard();
+                }}
+                className="mt-1 w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2"
+              >
+                <option value="">All themes</option>
+                {themeOptions.map(({ t, count }) => (
+                  <option key={t} value={t}>
+                    {THEME_LABELS[t]} ({count ? count.toLocaleString("en-US") : "0 here — other levels"})
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-[var(--muted)]">
+                Choosing a theme loads a new puzzle with it. Counts are for {scopeLevel?.name ?? "this level"}.
+              </span>
+            </label>
+          ) : null}
+
           {mode === "level" && manifest ? (
             <div className="space-y-1.5">
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Difficulty</p>
@@ -512,6 +583,7 @@ export default function PuzzleTrainer() {
                   onClick={() => {
                     setLevel(l.id);
                     void loadNext("level", { level: l.id });
+                    revealBoard();
                   }}
                   className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${
                     level === l.id ? "bg-[var(--brand-blue)] text-white" : "bg-slate-50 hover:bg-slate-100"
@@ -529,24 +601,6 @@ export default function PuzzleTrainer() {
             </div>
           ) : null}
 
-          {(mode === "level" || mode === "rated") && manifest ? (
-            <label className="block text-sm">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Theme</span>
-              <select
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2"
-              >
-                <option value="">All themes</option>
-                {themeOptions.map(({ t, count }) => (
-                  <option key={t} value={t}>
-                    {THEME_LABELS[t]} ({count.toLocaleString("en-US")})
-                  </option>
-                ))}
-              </select>
-              <span className="mt-1 block text-xs text-[var(--muted)]">Applies from the next puzzle.</span>
-            </label>
-          ) : null}
 
           {mode === "rated" ? (
             <p className="text-xs text-[var(--muted)]">
