@@ -11,6 +11,31 @@ npm run lint
 npm run build
 ```
 
+## Clap Rhythm game
+
+`/games/clap-rhythm` is a rhythm trainer: clap markers scroll down a highway in time with a song and the
+student claps on the hit ring. Code lives in `app/games/clap/` (`songs.ts` song data, `engine.ts` Web Audio
+synth + mic clap detector, `highway.ts` canvas renderer, `ClapTrainer.tsx` UI).
+
+- **Mic claps:** the mic signal is high-passed (claps are bright, voices and hum are not) and an AudioWorklet
+  flags sudden energy spikes above an adaptive noise floor (80 ms debounce). Space / tap is the fallback.
+- **Calibration:** the student claps along to 12 clicks; the median offset is saved per device and
+  subtracted from every clap.
+- **Add songs:** drop an audio file and a song JSON into `public/clap-songs/` and list it in
+  `public/clap-songs/songs.json` — see `public/clap-songs/README.md`. The in-game chart maker
+  ("For teachers") creates the JSON by tapping along to the audio.
+- **Difficulty stars:** every song shows 1–5 ★. Set `difficulty` in the song data, or it is computed from
+  the chart (clap density, shortest gap, off-beat claps, tempo) by `autoStars()` in `songs.ts`.
+- **Kids & Nursery Rhymes:** public-domain tunes written as melody data in `songs.ts` (`kids: true`).
+- **Sync (one clock):** audio files are decoded to an `AudioBuffer` and started with
+  `AudioBufferSourceNode.start(when, offset)`; synth notes, metronome, count-in and guide clicks are queued by a
+  25 ms / 500 ms lookahead scheduler on `AudioContext` time. All of them, and the markers, use
+  `songTime = anchorSong + (ctxTime - anchorCtx) * speed`. Slower speeds use `playbackRate` (the pitch drops).
+  Visuals use the *heard* time `ctx.currentTime - outputLatency` (fallback `baseLatency`), smoothed every frame.
+  The mic/tap calibration only shifts how claps are judged, never visuals or audio. Players can fine-tune
+  ±150 ms with the **Audio sync** slider (`localStorage["uniedd-clap-audio-sync"]`), checking with **Guide clap**.
+  Add `?clapdebug=1` to the URL to log every marker crossing in `window.__clapSync`.
+
 ## How demo bookings work
 
 1. A visitor submits the "Book a Demo" form (`app/components/CTA.tsx`). Demos are free.
