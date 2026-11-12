@@ -16,6 +16,7 @@ import {
   markSeen,
   parseUci,
   pickPuzzle,
+  puzzleFromLink,
   saveProgress,
   updateRating,
   type LevelId,
@@ -131,12 +132,15 @@ export default function PuzzleTrainer() {
 
   // load the puzzle index, then the first puzzle
   const firstLoad = useRef(loadNext);
+  const firstStart = useRef(startPuzzle);
   useEffect(() => {
     loadManifest()
       .then((m) => {
         manifestRef.current = m;
         setManifest(m);
-        void firstLoad.current("rated");
+        const link = new URLSearchParams(window.location.search).get("p");
+        const linked = link ? puzzleFromLink(m, link).catch(() => null) : Promise.resolve(null);
+        void linked.then((p) => (p ? firstStart.current(p) : firstLoad.current("rated")));
       })
       .catch(() => setStatus("error"));
   }, []);

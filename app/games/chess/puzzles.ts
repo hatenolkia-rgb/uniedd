@@ -180,6 +180,17 @@ export async function pickPuzzle(m: Manifest, opts: PickOpts): Promise<Puzzle> {
   return decode(list[Math.floor(rnd() * list.length)], m.themes, level.id);
 }
 
+/** A specific puzzle from a share link (?p=<chunk>:<id>, e.g. ?p=easy-003:abc12). */
+export async function puzzleFromLink(m: Manifest, link: string): Promise<Puzzle | null> {
+  const [chunkName, id] = link.split(":");
+  if (!chunkName || !id || !/^[a-z]+-\d{3}$/.test(chunkName)) return null;
+  const level = m.levels.find((l) => l.chunks.some((c) => c.f === `${chunkName}.json`));
+  if (!level) return null;
+  const list = await loadChunk(`${chunkName}.json`);
+  const raw = list.find((p) => p[0] === id);
+  return raw ? decode(raw, m.themes, level.id) : null;
+}
+
 /** Same puzzle for everyone on a given day (local date), from the Medium level. */
 export async function dailyPuzzle(m: Manifest, date = new Date()): Promise<Puzzle> {
   const key = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
