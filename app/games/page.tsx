@@ -69,7 +69,7 @@ export default function GamesPage() {
             </span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-[var(--muted)] leading-relaxed">
-            Quick, colorful practice games for guitar, piano, vocals, music theory and more.
+            Quick, colorful practice games for guitar, piano, vocals, music theory and more — plus thousands of chess puzzles.
             Race the clock, keep a streak, and climb this week’s leaderboard — no downloads,
             original sounds only.
           </p>
@@ -93,7 +93,15 @@ export default function GamesPage() {
               Clap Rhythm game
             </Link>{" "}
             to clap along to songs and nursery rhymes, sharpen your ear with music theory and ear training games, or
-            practise the guitar fretboard, piano keys and singing.
+            practise the guitar fretboard, piano keys and singing. Chess fans can solve{" "}
+            <Link href="/games/chess-puzzles" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              free chess puzzles by difficulty
+            </Link>{" "}
+            or{" "}
+            <Link href="/games/chess" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              play chess against the computer
+            </Link>
+            .
           </p>
           <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {CATEGORIES.filter((c) => c.id !== "all").map((c) => {

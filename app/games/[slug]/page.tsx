@@ -9,6 +9,7 @@ import { SITE_NAME, SITE_URL } from "../../lib/site";
 import { GAMES, getGame } from "../catalog";
 import { GameScreen } from "../components/GameScreen";
 import { categoryLabel, gameSeo } from "../seo";
+import ChessGame from "../chess/ChessGame";
 
 export const dynamicParams = false;
 
@@ -45,7 +46,8 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
   const seo = gameSeo(game);
   const url = `${SITE_URL}/games/${game.slug}`;
   const related = GAMES.filter((g) => g.category === game.category && g.slug !== game.slug).slice(0, 6);
-  const isClap = game.kind === "clap-trainer";
+  const isChess = game.category === "chess";
+  const isClap = game.kind === "clap-trainer" || isChess;
 
   return (
     <main>
@@ -80,7 +82,7 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
       </section>
       <section className="px-4 sm:px-6 pb-16 bg-white">
         <div className={`mx-auto ${isClap ? "max-w-6xl" : "max-w-4xl"}`}>
-          <GameScreen game={game} />
+          {isChess ? <ChessGame kind={game.kind} /> : <GameScreen game={game} />}
         </div>
       </section>
       <section className="px-6 pb-24 bg-white" aria-labelledby="about-game">
@@ -125,7 +127,13 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
             </>
           ) : null}
           <p className="mt-8 text-sm text-[var(--muted)]">
-            Explore all <Link href="/games" className="font-semibold text-[var(--brand-blue)] hover:underline">free music games</Link>{" "}
+            {isChess ? (
+              <>
+                Want a coach? See UniEDD&apos;s{" "}
+                <Link href="/programs/chess" className="font-semibold text-[var(--brand-blue)] hover:underline">online chess classes for kids and adults</Link>.{" "}
+              </>
+            ) : null}
+            Explore all <Link href="/games" className="font-semibold text-[var(--brand-blue)] hover:underline">free games</Link>{" "}
             or practise with the free{" "}
             <Link href="/jam" className="font-semibold text-[var(--brand-blue)] hover:underline">metronome, tuner and backing tracks</Link>.
           </p>

@@ -1,4 +1,4 @@
-export type CategoryId = "guitar" | "piano" | "vocals" | "theory" | "rhythm" | "other";
+export type CategoryId = "guitar" | "piano" | "vocals" | "theory" | "rhythm" | "chess" | "other";
 
 export type GameKind =
   | "quiz"
@@ -22,7 +22,9 @@ export type GameKind =
   | "tempo"
   | "circle"
   | "symbols"
-  | "clap-trainer";
+  | "clap-trainer"
+  | "chess-puzzles"
+  | "chess-play";
 
 export type GameDef = {
   slug: string;
@@ -47,6 +49,7 @@ export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; 
     emoji: "🎼",
   },
   { id: "rhythm", label: "Rhythm", hint: "Clap along to songs — the mic scores every clap", emoji: "👏" },
+  { id: "chess", label: "Chess", hint: "Chess puzzles by difficulty and games against the computer", emoji: "♟️" },
   { id: "other", label: "Other", hint: "Art, public speaking, AI and music quizzes", emoji: "🌟" },
 ];
 
@@ -279,6 +282,24 @@ export const GAMES: GameDef[] = [
     kind: "clap-trainer",
     minutes: "3 min",
     accent: "#7c3aed",
+  },
+  {
+    slug: "chess-puzzles",
+    title: "Chess Puzzles",
+    blurb: "400,000 chess puzzles in five difficulty levels — mate in 1, 2 and 3, forks, pins and endgames. Rated mode, daily puzzle and a 3-minute Puzzle Rush.",
+    category: "chess",
+    kind: "chess-puzzles",
+    minutes: "1–3 min",
+    accent: "#2563eb",
+  },
+  {
+    slug: "chess",
+    title: "Play Chess vs Computer",
+    blurb: "Play a full game of chess against the computer, from a friendly Beginner to a tough Expert level.",
+    category: "chess",
+    kind: "chess-play",
+    minutes: "10+ min",
+    accent: "#475569",
   },
   {
     slug: "music-quiz",

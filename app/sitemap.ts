@@ -33,7 +33,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${SITE_URL}/games/${game.slug}`,
       lastModified,
       changeFrequency: "monthly" as const,
-      priority: game.slug === "clap-rhythm" ? 0.7 : 0.5,
+      priority: game.slug === "clap-rhythm" || game.slug === "chess-puzzles" ? 0.7 : 0.5,
     })),
     { url: `${SITE_URL}/jam`, lastModified, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/pricing`, lastModified, changeFrequency: "monthly", priority: 0.6 },

@@ -4,7 +4,7 @@ import { CATEGORY_SEO } from "../seo";
 
 export const size = OG_SIZE;
 export const contentType = "image/png";
-export const alt = "UniEDD music game";
+export const alt = "UniEDD game";
 
 export function generateStaticParams() {
   return GAMES.map((game) => ({ slug: game.slug }));

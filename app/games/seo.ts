@@ -66,6 +66,17 @@ export const CATEGORY_SEO: Record<CategoryId, CategorySeo> = {
     ],
     goodFor: "Kids and beginners learning to keep a steady beat and clap rhythms in time with music.",
   },
+  chess: {
+    noun: "Chess Game",
+    genre: ["Board game", "Puzzle", "Educational"],
+    intro:
+      "A free online chess game from UniEDD. It runs in your web browser on a phone, tablet or computer, with nothing to download or sign up for.",
+    howTo: [
+      "Drag a piece or tap it and then tap the square you want to move to.",
+      "Your progress is saved in this browser on this device.",
+    ],
+    goodFor: "Kids and adults learning chess, and club players who want quick daily tactics practice.",
+  },
   other: {
     noun: "Quiz Game",
     genre: ["Educational", "Quiz"],
@@ -122,6 +133,54 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
       },
     ],
   },
+  "chess-puzzles": {
+    title: "Free Chess Puzzles Online – Thousands of Puzzles by Difficulty | UniEDD",
+    description:
+      "Free chess puzzles online: 400,000 tactics puzzles in five difficulty levels from Beginner to Expert. Mate in 1, 2 and 3, forks, pins, skewers and endgames, with hints, a puzzle rating, a daily puzzle and a 3-minute Puzzle Rush.",
+    h1: "Free chess puzzles online – thousands of puzzles by difficulty",
+    intro:
+      "Chess Puzzles is a free chess tactics trainer with 400,000 puzzles taken from real games. Each puzzle starts with your opponent's move; then you find the best reply. Puzzles are grouped into five difficulty levels, so beginners and strong players both get puzzles that fit. It runs in your web browser, with nothing to download.",
+    howTo: [
+      "Pick a mode: Rated (puzzles near your puzzle rating), By level, Daily puzzle or Puzzle Rush.",
+      "Watch the opponent's first move, then find the best move for your side. The board turns so your side is at the bottom.",
+      "Drag a piece, or tap it and tap the target square. Pawns that reach the last rank let you choose the piece to promote to.",
+      "A right move is answered by the opponent until the puzzle is solved. A wrong move can be retried.",
+      "Stuck? Use Hint to see which piece to move, Show move for the full move, or Solution to watch the answer.",
+    ],
+    goodFor:
+      "Children learning chess tactics, adults returning to the game, and club players who want daily tactics training at the right level.",
+    extra: [
+      {
+        heading: "Difficulty levels",
+        body: [
+          "Beginner ★ (puzzle rating under 1000), Easy ★★ (1000–1399), Medium ★★★ (1400–1799), Hard ★★★★ (1800–2199) and Expert ★★★★★ (2200 and up). Each level has 80,000 puzzles.",
+          "The theme filter finds puzzles by idea: mate in 1, mate in 2, mate in 3, back-rank mate, smothered mate, fork, pin, skewer, discovered attack, sacrifice, deflection, promotion, zugzwang, and opening, middlegame or endgame positions.",
+        ],
+      },
+      {
+        heading: "Puzzle rating, streaks, daily puzzle and Puzzle Rush",
+        body: [
+          "Your puzzle rating starts at 1000 and goes up when you solve a puzzle on the first try and down after a wrong move, hint or solution, like a chess rating. Your current and best streak of puzzles solved in a row are kept too.",
+          "Everyone gets the same Daily puzzle each day. Puzzle Rush gives you 3 minutes to solve as many puzzles as you can; they get harder as you go, and three mistakes end the run.",
+        ],
+      },
+    ],
+  },
+  chess: {
+    title: "Play Chess vs Computer – Free Online, 5 Levels | UniEDD",
+    description:
+      "Play chess against the computer for free in your browser. Five levels from Beginner to Expert, take back moves, flip the board and play as White or Black. No sign-up.",
+    h1: "Play chess against the computer",
+    intro:
+      "Play a full game of chess against the computer, free in your web browser. Choose a level from 1 star (Beginner, a friendly opponent that makes mistakes) to 5 stars (Expert, a strong chess engine).",
+    howTo: [
+      "Choose a computer level and start a new game as White, as Black or a random colour.",
+      "Drag a piece, or tap it and then tap the square to move to. Legal moves are shown as dots.",
+      "Use Take back to undo your last move and Flip board to look from the other side.",
+      "The game ends with checkmate, stalemate or a draw, shown above the move list.",
+    ],
+    goodFor: "Beginners practising full games, kids learning how the pieces move, and players who want a quick game at their level.",
+  },
   "rhythm-tap": {
     title: "Rhythm Tap – Free Online Rhythm & Ear Training Game | UniEDD",
   },
@@ -156,7 +215,7 @@ export function gameSeo(game: GameDef): GameSeo {
 }
 
 export const GAMES_HUB_SEO = {
-  title: "Free Online Music Games for Kids – Rhythm, Ear Training, Guitar & Piano | UniEDD",
+  title: "Free Online Music Games & Chess Puzzles for Kids – Rhythm, Ear Training, Guitar, Piano | UniEDD",
   description:
-    "Play free online music games in your browser: a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, and singing games. Weekly leaderboards, no downloads.",
+    "Play free online games in your browser: a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer. No downloads.",
 };
