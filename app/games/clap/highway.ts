@@ -46,12 +46,21 @@ export type DrawState = {
 const LOOKAHEAD = 2.3; // real seconds of notes visible above the hit line
 const PERSP = 2.6;
 
+/**
+ * UI scale for the stage: 1 at the old 900×620 stage, bigger on large screens,
+ * a little smaller on phones. Everything (lane, markers, ring, lyrics, HUD) uses it.
+ */
+export function uiScale(w: number, h: number) {
+  return Math.max(0.72, Math.min(2.1, Math.min(w / 900, h / 620)));
+}
+
 export function layout(w: number, h: number) {
-  const horizonY = h * 0.1;
+  const u = uiScale(w, h);
+  const horizonY = h * 0.08;
   const hitY = h * 0.8;
-  const hitW = Math.min(w * 0.62, 380);
+  const hitW = Math.min(w * 0.66, 400 * u);
   const cx = w / 2;
-  return { horizonY, hitY, hitW, cx };
+  return { horizonY, hitY, hitW, cx, u };
 }
 
 /** Screen position for a time offset (song seconds) ahead of now. */
@@ -65,8 +74,8 @@ function project(dt: number, rate: number, w: number, h: number) {
 }
 
 export function hitPoint(w: number, h: number) {
-  const { hitY, cx } = layout(w, h);
-  return { x: cx, y: hitY };
+  const { hitY, cx, u } = layout(w, h);
+  return { x: cx, y: hitY, u };
 }
 
 export function spawnBurst(ps: Particle[], x: number, y: number, color: string, count: number) {
@@ -81,7 +90,7 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
   const { song, rate, now } = st;
   const accent = song.accent;
   const spb = 60 / song.bpm;
-  const { hitY, hitW, cx } = layout(w, h);
+  const { hitY, hitW, cx, u } = layout(w, h);
 
   // Background
   const bg = ctx.createLinearGradient(0, 0, 0, h);
@@ -108,7 +117,7 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     const x = (seed / 233280) * w;
     const y = ((i * 37 + now * 40 * (1 + (i % 3))) % h + h) % h;
     ctx.globalAlpha = 0.15 + (i % 5) * 0.08;
-    ctx.fillRect(x, y, 1.5, 1.5);
+    ctx.fillRect(x, y, 1.5 * u, 1.5 * u);
   }
   ctx.globalAlpha = 1;
 
@@ -135,9 +144,9 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     g.addColorStop(0.7, "#1a9fd4");
     g.addColorStop(1, "#e8962e");
     ctx.strokeStyle = g;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3 * u;
     ctx.shadowColor = "#1a9fd4";
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 12 * u;
     ctx.beginPath();
     ctx.moveTo(cx + side * top.half, top.y);
     ctx.lineTo(cx + side * bottomHalf, bottomY);
@@ -170,32 +179,32 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
   for (const line of lines) {
     const p = project(line.t - now, rate, w, h);
     ctx.strokeStyle = line.bar ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.1)";
-    ctx.lineWidth = line.bar ? 2 : 1;
+    ctx.lineWidth = (line.bar ? 2 : 1) * u;
     ctx.beginPath();
     ctx.moveTo(cx - p.half, p.y);
     ctx.lineTo(cx + p.half, p.y);
     ctx.stroke();
     if (line.barNo > 0 && p.z > 0.02) {
       ctx.fillStyle = "rgba(255,255,255,0.35)";
-      ctx.font = `${Math.round(10 + 4 * p.scale)}px system-ui, sans-serif`;
+      ctx.font = `${Math.round((10 + 4 * p.scale) * u)}px system-ui, sans-serif`;
       ctx.textAlign = "right";
-      ctx.fillText(String(line.barNo), cx - p.half - 8, p.y + 4);
+      ctx.fillText(String(line.barNo), cx - p.half - 8 * u, p.y + 4 * u);
     }
   }
 
   // Hit line
   const pulse = st.pulse;
   ctx.shadowColor = st.pulseColor;
-  ctx.shadowBlur = 18 + pulse * 30;
+  ctx.shadowBlur = (18 + pulse * 30) * u;
   ctx.strokeStyle = pulse > 0.05 ? st.pulseColor : "rgba(255,255,255,0.85)";
-  ctx.lineWidth = 4 + pulse * 4;
+  ctx.lineWidth = (4 + pulse * 4) * u;
   ctx.beginPath();
-  ctx.moveTo(cx - hitW / 2 - 6, hitY);
-  ctx.lineTo(cx + hitW / 2 + 6, hitY);
+  ctx.moveTo(cx - hitW / 2 - 6 * u, hitY);
+  ctx.lineTo(cx + hitW / 2 + 6 * u, hitY);
   ctx.stroke();
   // target ring
-  const ringR = Math.min(34, hitW * 0.11);
-  ctx.lineWidth = 3;
+  const ringR = Math.min(38 * u, hitW * 0.12);
+  ctx.lineWidth = 3 * u;
   ctx.strokeStyle = "rgba(255,255,255,0.9)";
   ctx.beginPath();
   ctx.arc(cx, hitY, ringR * (1 + pulse * 0.35), 0, Math.PI * 2);
@@ -203,7 +212,7 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
   ctx.shadowBlur = 0;
   if (pulse > 0.05) {
     ctx.strokeStyle = hexA(st.pulseColor, pulse * 0.6);
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * u;
     ctx.beginPath();
     ctx.arc(cx, hitY, ringR * (1.4 + (1 - pulse) * 1.6), 0, Math.PI * 2);
     ctx.stroke();
@@ -217,7 +226,7 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     const done = n.judged === "perfect" || n.judged === "good";
     if (done && perfNow - n.judgedAt > 160) continue;
     const p = project(n.t - now, rate, w, h);
-    if (p.y > h + 40) continue;
+    if (p.y > h + 40 * u) continue;
     const r = ringR * p.scale;
     // tail shows how long the note rings
     if (!n.judged && n.end - n.t > 0.12) {
@@ -247,7 +256,7 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     g.addColorStop(0.35, col);
     g.addColorStop(1, hexA(col, 0.6));
     ctx.shadowColor = col;
-    ctx.shadowBlur = n.judged ? 0 : 18 * p.scale;
+    ctx.shadowBlur = n.judged ? 0 : 18 * p.scale * u;
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(cx, p.y, r, 0, Math.PI * 2);
@@ -260,9 +269,9 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     ctx.textBaseline = "alphabetic";
     if (n.lyric && !n.judged) {
       ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.font = `600 ${Math.round(11 + 7 * p.scale)}px system-ui, sans-serif`;
+      ctx.font = `600 ${Math.round((11 + 7 * p.scale) * u)}px system-ui, sans-serif`;
       ctx.textAlign = "left";
-      ctx.fillText(n.lyric.replace(/-$/, ""), cx + p.half + 10, p.y + 5);
+      ctx.fillText(n.lyric.replace(/-$/, ""), cx + p.half + 10 * u, p.y + 5 * u);
     }
     ctx.globalAlpha = 1;
   }
@@ -272,7 +281,7 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     ctx.globalAlpha = Math.max(0, pt.life);
     ctx.fillStyle = pt.color;
     ctx.beginPath();
-    ctx.arc(pt.x, pt.y, pt.size * pt.life, 0, Math.PI * 2);
+    ctx.arc(pt.x, pt.y, pt.size * pt.life * u, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
@@ -284,58 +293,65 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     ctx.globalAlpha = 1 - age;
     ctx.fillStyle = pop.color;
     ctx.shadowColor = pop.color;
-    ctx.shadowBlur = 14;
-    ctx.font = `800 ${pop.big ? 30 : 16}px system-ui, sans-serif`;
+    ctx.shadowBlur = 14 * u;
+    ctx.font = `800 ${Math.round((pop.big ? 30 : 16) * u)}px system-ui, sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText(pop.text, pop.x, pop.y - age * 40);
+    ctx.fillText(pop.text, pop.x, pop.y - age * 40 * u);
     ctx.shadowBlur = 0;
   }
   ctx.globalAlpha = 1;
 
   // HUD: score + accuracy (left), combo (right), progress (top)
+  const bar = Math.max(4, Math.round(4 * u));
   ctx.fillStyle = "rgba(255,255,255,0.12)";
-  ctx.fillRect(0, 0, w, 4);
+  ctx.fillRect(0, 0, w, bar);
   const pg = ctx.createLinearGradient(0, 0, w, 0);
   pg.addColorStop(0, "#1a9fd4");
   pg.addColorStop(1, "#e8962e");
   ctx.fillStyle = pg;
-  ctx.fillRect(0, 0, w * Math.min(1, Math.max(0, st.progress)), 4);
+  ctx.fillRect(0, 0, w * Math.min(1, Math.max(0, st.progress)), bar);
 
+  // HUD sizes: phone sizes below 520 px, otherwise the desktop sizes times the stage scale
   const small = w < 520;
+  const k = small ? 1 : u;
+  const pad = Math.round(14 * k);
+  const px = (n: number) => Math.round(n * k);
   ctx.textAlign = "left";
   ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.font = `600 ${small ? 10 : 12}px system-ui, sans-serif`;
-  ctx.fillText(st.practice ? "PRACTICE" : "SCORE", 14, 26);
+  ctx.font = `600 ${px(small ? 10 : 12)}px system-ui, sans-serif`;
+  ctx.fillText(st.practice ? "PRACTICE" : "SCORE", pad, px(26));
   ctx.fillStyle = "#fff";
-  ctx.font = `800 ${small ? 20 : 28}px system-ui, sans-serif`;
-  ctx.fillText(st.practice ? song.title : st.score.toLocaleString(), 14, small ? 48 : 56);
+  ctx.font = `800 ${px(small ? 20 : 28)}px system-ui, sans-serif`;
+  ctx.fillText(st.practice ? song.title : st.score.toLocaleString(), pad, px(small ? 48 : 56));
   ctx.fillStyle = "rgba(255,255,255,0.7)";
-  ctx.font = `600 ${small ? 11 : 13}px system-ui, sans-serif`;
-  ctx.fillText(st.accuracy === null ? "Accuracy —" : `Accuracy ${Math.round(st.accuracy * 100)}%`, 14, small ? 66 : 78);
+  ctx.font = `600 ${px(small ? 11 : 13)}px system-ui, sans-serif`;
+  ctx.fillText(st.accuracy === null ? "Accuracy —" : `Accuracy ${Math.round(st.accuracy * 100)}%`, pad, px(small ? 66 : 78));
 
   ctx.textAlign = "right";
   if (st.combo >= 2) {
     ctx.fillStyle = st.combo >= 20 ? "#facc15" : "#fff";
     ctx.shadowColor = st.combo >= 20 ? "#f59e0b" : "#1a9fd4";
-    ctx.shadowBlur = 16;
-    ctx.font = `900 ${small ? 26 : 38}px system-ui, sans-serif`;
-    ctx.fillText(String(st.combo), w - 14, small ? 46 : 58);
+    ctx.shadowBlur = 16 * k;
+    ctx.font = `900 ${px(small ? 26 : 38)}px system-ui, sans-serif`;
+    ctx.fillText(String(st.combo), w - pad, px(small ? 46 : 58));
     ctx.shadowBlur = 0;
     ctx.fillStyle = "rgba(255,255,255,0.7)";
-    ctx.font = `700 ${small ? 10 : 12}px system-ui, sans-serif`;
-    ctx.fillText(st.multiplier > 1 ? `COMBO · x${st.multiplier}` : "COMBO", w - 14, small ? 62 : 78);
+    ctx.font = `700 ${px(small ? 10 : 12)}px system-ui, sans-serif`;
+    ctx.fillText(st.multiplier > 1 ? `COMBO · x${st.multiplier}` : "COMBO", w - pad, px(small ? 62 : 78));
   }
 
   // Mic level / input badge (bottom-left)
   ctx.textAlign = "left";
   ctx.fillStyle = "rgba(255,255,255,0.55)";
-  ctx.font = "600 11px system-ui, sans-serif";
-  ctx.fillText(st.inputLabel, 14, h - 14);
+  ctx.font = `600 ${px(11)}px system-ui, sans-serif`;
+  // on phones the Pause/Quit buttons fill the bottom row, so sit above them
+  const lift = small ? 52 : 0;
+  ctx.fillText(st.inputLabel, pad, h - pad - lift);
   if (st.micLevel > 0) {
     ctx.fillStyle = "rgba(255,255,255,0.15)";
-    ctx.fillRect(14, h - 34, 80, 6);
+    ctx.fillRect(pad, h - px(34) - lift, px(80), px(6));
     ctx.fillStyle = st.micLevel > 0.8 ? "#f43f5e" : "#22c55e";
-    ctx.fillRect(14, h - 34, 80 * Math.min(1, st.micLevel), 6);
+    ctx.fillRect(pad, h - px(34) - lift, px(80) * Math.min(1, st.micLevel), px(6));
   }
 
   drawKaraoke(ctx, w, h, st);
@@ -348,15 +364,15 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
       ctx.globalAlpha = Math.max(0, 1 - frac * 0.9);
       ctx.fillStyle = "#fff";
       ctx.shadowColor = accent;
-      ctx.shadowBlur = 30;
-      ctx.font = `900 ${Math.round(90 * (1 + frac * 0.3))}px system-ui, sans-serif`;
+      ctx.shadowBlur = 30 * u;
+      ctx.font = `900 ${Math.round(90 * u * (1 + frac * 0.3))}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText(String(beatsLeft), cx, h * 0.45);
       ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
     } else if (now < st.countInStart) {
       ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.font = "700 20px system-ui, sans-serif";
+      ctx.font = `700 ${Math.round(20 * u)}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText("Get ready…", cx, h * 0.45);
     }
@@ -366,11 +382,11 @@ export function draw(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     ctx.fillStyle = "rgba(5,5,20,0.65)";
     ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = "#fff";
-    ctx.font = "800 34px system-ui, sans-serif";
+    ctx.font = `800 ${Math.round(34 * u)}px system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.fillText("Paused", cx, h * 0.45);
-    ctx.font = "500 14px system-ui, sans-serif";
-    ctx.fillText("Press P or tap Resume", cx, h * 0.45 + 30);
+    ctx.font = `500 ${Math.round(14 * u)}px system-ui, sans-serif`;
+    ctx.fillText("Press P or tap Resume", cx, h * 0.45 + 30 * u);
   }
 }
 
@@ -405,7 +421,8 @@ function drawKaraoke(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
   if (notes[line[0]].t - now > 4 * rate) return;
   if (!notes[idx].lyric) idx = line.find((i) => notes[i].t + 0.2 * rate > now) ?? idx;
   const small = w < 520;
-  let size = small ? 18 : 24;
+  const u = small ? 1 : uiScale(w, h);
+  let size = Math.round((small ? 18 : 24) * u);
   const pieces = line.map((i) => {
     const n = notes[i];
     const text = (n.lyric || "").replace(/-$/, "") + (n.joinNext || /-$/.test(n.lyric || "") ? "" : " ");
@@ -420,10 +437,10 @@ function drawKaraoke(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     size -= 1;
     total = measure();
   }
-  const y = small ? 96 : 116;
+  const y = Math.round((small ? 96 : 116) * u);
   ctx.fillStyle = "rgba(5,5,25,0.55)";
-  const padX = 16;
-  roundRect(ctx, (w - total) / 2 - padX, y - size - 8, total + padX * 2, size + 20, 14);
+  const padX = 16 * u;
+  roundRect(ctx, (w - total) / 2 - padX, y - size - 8 * u, total + padX * 2, size + 20 * u, 14 * u);
   ctx.fill();
   let x = (w - total) / 2;
   ctx.textAlign = "left";
@@ -438,7 +455,7 @@ function drawKaraoke(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     ctx.fillStyle = color;
     if (active) {
       ctx.shadowColor = st.song.accent;
-      ctx.shadowBlur = 14;
+      ctx.shadowBlur = 14 * u;
     }
     ctx.font = `800 ${size}px system-ui, sans-serif`;
     ctx.fillText(p.text, x, y);
@@ -446,7 +463,7 @@ function drawKaraoke(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     if (active) {
       const tw = ctx.measureText(p.text.trimEnd()).width;
       ctx.fillStyle = st.song.accent;
-      ctx.fillRect(x, y + 5, tw, 3);
+      ctx.fillRect(x, y + 5 * u, tw, 3 * u);
     }
     x += ctx.measureText(p.text).width;
   }
@@ -460,7 +477,7 @@ function drawKaraoke(ctx: CanvasRenderingContext2D, w: number, h: number, st: Dr
     ctx.font = `600 ${Math.round(size * 0.62)}px system-ui, sans-serif`;
     ctx.fillStyle = "rgba(255,255,255,0.4)";
     ctx.textAlign = "center";
-    ctx.fillText(text, w / 2, y + size * 0.62 + 14);
+    ctx.fillText(text, w / 2, y + size * 0.62 + 14 * u);
   }
 }
 

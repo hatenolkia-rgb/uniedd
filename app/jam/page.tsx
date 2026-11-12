@@ -10,7 +10,7 @@ import JamStudio from "./JamStudio";
 
 const title = "Jam | Free metronome, guitar tuner & backing tracks | UniEDD";
 const description =
-  "Jam online with UniEDD: metronome with voice counting, live guitar tuner, synthesized backing tracks, and a friendly voice-type finder — free, kid-friendly, no downloads.";
+  "Jam online with UniEDD: metronome with voice counting, live guitar tuner, synthesized backing tracks, a friendly voice-type finder and a clap rhythm game — free, kid-friendly, no downloads.";
 
 export const metadata: Metadata = {
   title,
@@ -23,7 +23,6 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     locale: "en_IN",
     type: "website",
-    images: ["/logo.png"],
   },
   twitter: { card: "summary_large_image", title, description },
 };
@@ -57,6 +56,7 @@ export default function JamPage() {
           name: title,
           description,
           url: `${SITE_URL}/jam`,
+          image: `${SITE_URL}/jam/opengraph-image`,
           about: {
             "@type": "SoftwareApplication",
             name: "UniEDD Jam",

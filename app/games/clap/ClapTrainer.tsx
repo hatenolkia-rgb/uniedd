@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClapEngine, type MicStatus } from "./engine";
 import {
@@ -162,6 +163,8 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   );
   const [result, setResult] = useState<Result | null>(null);
   const [paused, setPaused] = useState(false);
+  const [isFull, setIsFull] = useState(false);
+  const [canFull, setCanFull] = useState(false);
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [error, setError] = useState("");
   const [clapFlash, setClapFlash] = useState(0);
@@ -271,7 +274,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       }
     }
     const st = run.draw;
-    const hp = canvasRef.current ? hitPoint(canvasRef.current.clientWidth, canvasRef.current.clientHeight) : { x: 0, y: 0 };
+    const hp = canvasRef.current ? hitPoint(canvasRef.current.clientWidth, canvasRef.current.clientHeight) : { x: 0, y: 0, u: 1 };
     const perfNow = performance.now();
     st.pulse = 1;
     if (best < 0 || bestD > goodW) {
@@ -299,11 +302,11 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       color,
       born: perfNow,
       x: hp.x,
-      y: hp.y - 46,
+      y: hp.y - 46 * hp.u,
     });
-    if (!run.practice) st.popups.push({ text: `+${gained}`, color: "#ffffff", born: perfNow, x: hp.x + 90, y: hp.y - 10 });
+    if (!run.practice) st.popups.push({ text: `+${gained}`, color: "#ffffff", born: perfNow, x: hp.x + 90 * hp.u, y: hp.y - 10 * hp.u });
     if (run.combo > 0 && run.combo % 10 === 0) {
-      st.popups.push({ text: `${run.combo} STREAK!`, color: "#f472b6", born: perfNow, x: hp.x, y: hp.y - 120, big: true });
+      st.popups.push({ text: `${run.combo} STREAK!`, color: "#f472b6", born: perfNow, x: hp.x, y: hp.y - 120 * hp.u, big: true });
       spawnBurst(st.particles, hp.x, hp.y, "#f472b6", 40);
     }
     spawnBurst(st.particles, hp.x, hp.y, color, kind === "perfect" ? 28 : 14);
@@ -503,7 +506,6 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     resize();
-    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
     const ro = new ResizeObserver(resize);
     ro.observe(wrap);
 
@@ -545,7 +547,7 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
             run.combo = 0;
             run.miss += 1;
             const hp = hitPoint(wrap.clientWidth, wrap.clientHeight);
-            st.popups.push({ text: "MISS", color: "#f43f5e", born: perfNow, x: hp.x, y: hp.y - 46 });
+            st.popups.push({ text: "MISS", color: "#f43f5e", born: perfNow, x: hp.x, y: hp.y - 46 * hp.u });
           }
         }
         while (run.nextIdx < run.notes.length && run.notes[run.nextIdx].judged) run.nextIdx++;
@@ -599,6 +601,28 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
       if (e.ctx.state === "suspended") void e.ctx.resume();
     }
     setView("pick");
+  }, []);
+
+  // The play stage covers the screen: lock page scrolling, track browser fullscreen.
+  useEffect(() => {
+    if (view !== "play") return;
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    setCanFull(Boolean(document.fullscreenEnabled && wrapRef.current?.requestFullscreen));
+    const onFs = () => setIsFull(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onFs);
+    return () => {
+      document.documentElement.style.overflow = prev;
+      document.removeEventListener("fullscreenchange", onFs);
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    };
+  }, [view]);
+
+  const toggleFullscreen = useCallback(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    else void wrap.requestFullscreen?.().catch(() => undefined);
   }, []);
 
   // keyboard: Space/Enter/J/F = clap, P/Escape = pause
@@ -660,18 +684,20 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
   }
 
   if (view === "play") {
-    return (
-      <div className="-mx-5 sm:mx-0">
+    const btn =
+      "rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/25 sm:px-5 sm:py-2.5 sm:text-sm";
+    // Portal to <body> so no transformed/blurred ancestor can shrink the fixed stage.
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[9999] bg-[#05040f]/95 sm:p-3 lg:p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Playing ${song.title}`}
+      >
         <div
           ref={wrapRef}
-          className="relative w-full select-none overflow-hidden sm:rounded-3xl"
-          style={{
-            height: "min(calc(100svh - 180px), 620px)",
-            minHeight: 360,
-            touchAction: "none",
-            background: "#0b0820",
-            scrollMarginTop: 84,
-          }}
+          className="relative h-full w-full select-none overflow-hidden sm:rounded-3xl sm:shadow-2xl"
+          style={{ touchAction: "none", background: "#0b0820" }}
           onPointerDown={(ev) => {
             if ((ev.target as HTMLElement).closest("button")) return;
             const e = engineRef.current;
@@ -679,28 +705,25 @@ export function ClapTrainer({ onFinish }: { onFinish: (score: number) => void })
           }}
         >
           <canvas ref={canvasRef} className="block" aria-label={`Clap rhythm highway for ${song.title}`} />
-          <div className="absolute right-3 bottom-3 flex gap-2">
-            <button
-              type="button"
-              onClick={() => void togglePause()}
-              className="rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/25"
-            >
+          <div className="absolute right-3 bottom-3 flex gap-2 sm:right-5 sm:bottom-5">
+            {canFull ? (
+              <button type="button" onClick={toggleFullscreen} className={btn} aria-pressed={isFull}>
+                {isFull ? "Exit full screen" : "Full screen"}
+              </button>
+            ) : null}
+            <button type="button" onClick={() => void togglePause()} className={btn}>
               {paused ? "Resume" : "Pause"}
             </button>
-            <button
-              type="button"
-              onClick={quit}
-              className="rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/25"
-            >
+            <button type="button" onClick={quit} className={btn}>
               Quit
             </button>
           </div>
+          {error ? (
+            <p className="absolute inset-x-0 top-24 px-5 text-center text-sm text-rose-300">{error}</p>
+          ) : null}
         </div>
-        {error ? <p className="mt-2 px-5 text-sm text-rose-600 sm:px-0">{error}</p> : null}
-        <p className="mt-3 px-5 text-center text-xs text-[var(--muted)] sm:px-0">
-          Clap when a 👏 marker reaches the glowing ring. Space, Enter or a tap on the stage also counts.
-        </p>
-      </div>
+      </div>,
+      document.body,
     );
   }
 
