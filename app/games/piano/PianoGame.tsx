@@ -486,6 +486,8 @@ export function PianoGame({ onFinish }: { onFinish: (score: number, board?: stri
           state: "pending",
           hitAt: 0,
           len: n.len,
+          // Treble / Bass Clef: only the chosen hand falls; Beast Mode shows both
+          hidden: !handOk,
         };
       });
       const spb = 60 / song.bpm;
@@ -502,7 +504,9 @@ export function PianoGame({ onFinish }: { onFinish: (score: number, board?: stri
       const anchorCtx = e.ctx.currentTime + 0.2;
       const toCtx = (st: number) => anchorCtx + (st - startSong) / rate;
       const lastEnd = Math.max(...song.notes.map((n) => n.t + n.dur));
-      const [lo, hi] = keyboardRange(song.minMidi, song.maxMidi);
+      // single-clef modes zoom the keyboard onto that hand's notes
+      const shownMidis = notes.filter((n) => !n.hidden).map((n) => n.midi);
+      const [lo, hi] = keyboardRange(Math.min(...shownMidis), Math.max(...shownMidis));
       const labels = o.labels === "auto" ? (song.labels === "sargam" ? "sargam" : "letters") : o.labels;
       const scoredMidis = notes.filter((n) => n.scored || mode === "listen").map((n) => n.midi);
       const kbBase = bestKbBase(scoredMidis);
@@ -548,7 +552,7 @@ export function PianoGame({ onFinish }: { onFinish: (score: number, board?: stri
         popups: [],
         sparks: [],
         staff: (() => {
-          const ds = song.notes.map((n) => diatonic(n.midi).d);
+          const ds = shownMidis.map((m) => diatonic(m).d);
           const barTimes: number[] = [];
           for (let bt = pickupSec; bt <= lastEnd + 1e-6; bt += barSec) barTimes.push(bt);
           return { show: o.staff, clef, barTimes, minD: Math.min(...ds), maxD: Math.max(...ds) };
@@ -731,7 +735,7 @@ export function PianoGame({ onFinish }: { onFinish: (score: number, board?: stri
       for (const n of run.notes) {
         if (n.t > run.songT + 0.5) break;
         const sounding = n.t <= run.songT && run.songT < n.t + n.dur;
-        if (sounding && (!n.scored || run.mode === "listen")) pressed.set(n.midi, { color: n.hand === "R" ? "#7dd3fc" : "#fdba74", until: -1 });
+        if (sounding && !n.hidden && (!n.scored || run.mode === "listen")) pressed.set(n.midi, { color: n.hand === "R" ? "#7dd3fc" : "#fdba74", until: -1 });
         if (n.scored && !n.judged && Math.abs(n.t - run.songT) / run.rate < 0.2) guide.add(n.midi);
       }
       for (const [m, k] of run.userKeys) pressed.set(m, k);

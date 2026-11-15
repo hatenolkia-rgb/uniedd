@@ -12,6 +12,8 @@ export type StageNote = {
   hitAt: number;
   /** length in quarter beats (for hollow half-note heads on the staff) */
   len: number;
+  /** the other hand in Treble/Bass Clef mode: not drawn at all (one clean lane of notes) */
+  hidden?: boolean;
 };
 
 export type Popup = { text: string; color: string; x: number; born: number };
@@ -185,6 +187,7 @@ export function draw(g: CanvasRenderingContext2D, s: StageState) {
   // falling notes
   const pxPerSec = (l.hitY - l.topPad) / s.lookahead;
   for (const n of s.notes) {
+    if (n.hidden) continue;
     const dtReal = (n.t - s.songT) / s.rate;
     const durReal = n.dur / s.rate;
     const yBottom = l.hitY - dtReal * pxPerSec;
@@ -323,7 +326,13 @@ export function draw(g: CanvasRenderingContext2D, s: StageState) {
   g.textAlign = "left";
   g.fillStyle = "#fff";
   g.font = `800 ${W < 600 ? 18 : 24}px system-ui, sans-serif`;
-  g.fillText(hud.score.toLocaleString() + (hud.accuracy !== null ? `  ·  ${Math.round(hud.accuracy * 100)}%` : ""), 14, 12);
+  const scoreText = hud.score.toLocaleString() + (hud.accuracy !== null ? `  ·  ${Math.round(hud.accuracy * 100)}%` : "");
+  g.fillText(scoreText, 14, 12);
+  // the title and combo sit between the score and the buttons (top right, about 290px wide on wide screens)
+  const roomL = 14 + g.measureText(scoreText).width + 20;
+  const roomR = W - (W < 640 ? 150 : 300);
+  const midX = Math.max(roomL + 40, Math.min(W / 2, (roomL + roomR) / 2));
+  const roomW = Math.max(60, Math.min(W * 0.4, 2 * Math.min(midX - roomL, roomR - midX)));
   g.font = `600 ${W < 600 ? 11 : 13}px system-ui, sans-serif`;
   g.fillStyle = "rgba(255,255,255,0.65)";
   g.fillText(hud.sub + (hud.hearing !== null ? `  ·  🎤 ${hud.hearing}` : ""), 14, W < 600 ? 32 : 38);
@@ -331,11 +340,16 @@ export function draw(g: CanvasRenderingContext2D, s: StageState) {
   g.fillStyle = "rgba(255,255,255,0.8)";
   g.font = `700 ${W < 600 ? 12 : 15}px system-ui, sans-serif`;
   // narrow portrait phones: the buttons need the space, so the title is left out
-  if (W >= 500) g.fillText(hud.title, W < 700 ? W * 0.42 : W / 2, 12, W < 700 ? W * 0.3 : W * 0.4);
+  if (W >= 500) {
+    let title = hud.title;
+    while (title.length > 4 && g.measureText(title).width > roomW) title = title.slice(0, -2).trimEnd() + "…";
+    if (title !== hud.title) title = title.replace(/…+$/, "…");
+    g.fillText(title, midX, 12);
+  }
   if (hud.combo >= 2) {
     g.fillStyle = "#f472b6";
     g.font = `800 ${W < 600 ? 14 : 18}px system-ui, sans-serif`;
-    g.fillText(`${hud.combo} combo`, W < 500 ? W * 0.44 : W < 700 ? W * 0.42 : W / 2, W < 500 ? 14 : W < 600 ? 28 : 32);
+    g.fillText(`${hud.combo} combo`, W < 500 ? W * 0.44 : midX, W < 500 ? 14 : W < 600 ? 28 : 32);
   }
   drawStaff(g, s, l);
   if (hud.countIn !== null) {
@@ -438,6 +452,7 @@ function drawStaff(g: CanvasRenderingContext2D, s: StageState, l: Layout) {
   const rx = sg.sp * 1.25;
   const ry = sg.sp * 0.95;
   for (const n of s.notes) {
+    if (n.hidden) continue;
     const x = xAt(n.t);
     if (x > x1 + rx) break;
     if (x < nowX - sg.sp * 3 || (n.state !== "pending" && x < nowX - 2)) continue;
