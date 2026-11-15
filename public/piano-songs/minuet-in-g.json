@@ -1,0 +1,23 @@
+{
+  "id": "minuet-in-g",
+  "title": "Minuet in G (opening)",
+  "level": 3,
+  "bpm": 104,
+  "timeSig": [
+    3,
+    4
+  ],
+  "key": "G",
+  "credit": "Minuet in G, BWV Anh. 114 (C. Petzold, c. 1725), public domain; simplified left hand by UniEDD",
+  "blurb": "The famous minuet from the Notebook for Anna Magdalena Bach, with an easy left hand.",
+  "tracks": [
+    {
+      "hand": "R",
+      "notes": "D5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 | D5 G4 G4 | E5 C5:0.5 D5:0.5 E5:0.5 F#5:0.5 | G5 G4 G4 | C5 D5:0.5 C5:0.5 B4:0.5 A4:0.5 | B4 C5:0.5 B4:0.5 A4:0.5 G4:0.5 | F#4 G4:0.5 A4:0.5 B4:0.5 G4:0.5 | A4:3 | D5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 | D5 G4 G4 | E5 C5:0.5 D5:0.5 E5:0.5 F#5:0.5 | G5 G4 G4 | C5 D5:0.5 C5:0.5 B4:0.5 A4:0.5 | B4 C5:0.5 B4:0.5 A4:0.5 G4:0.5 | A4 B4:0.5 A4:0.5 G4:0.5 F#4:0.5 | G4:3"
+    },
+    {
+      "hand": "L",
+      "notes": "G3:2 A3 | B3:3 | C4:3 | B3:3 | A3:3 | G3:3 | D4 B3 G3 | D3:3 | G3:2 A3 | B3:3 | C4:3 | B3:3 | A3:3 | G3:3 | D3:3 | G2:3"
+    }
+  ]
+}

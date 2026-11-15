@@ -1,0 +1,19 @@
+{
+  "id": "c-major-scale",
+  "title": "C Major Scale",
+  "level": 1,
+  "bpm": 80,
+  "timeSig": [
+    4,
+    4
+  ],
+  "key": "C",
+  "credit": "Scale exercise",
+  "blurb": "Up and down the white keys from middle C — the first thing every pianist learns.",
+  "tracks": [
+    {
+      "hand": "R",
+      "notes": "C4 D4 E4 F4 | G4 A4 B4 C5 | B4 A4 G4 F4 | E4 D4 C4:2"
+    }
+  ]
+}

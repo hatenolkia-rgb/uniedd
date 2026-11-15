@@ -92,7 +92,11 @@ export default function GamesPage() {
             <Link href="/games/clap-rhythm" className="font-semibold text-[var(--brand-blue)] hover:underline">
               Clap Rhythm game
             </Link>{" "}
-            to clap along to songs and nursery rhymes, sharpen your ear with music theory and ear training games, or
+            to clap along to songs and nursery rhymes, play songs on a real or on-screen keyboard in the{" "}
+            <Link href="/games/piano-falling-notes" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              falling-notes piano game
+            </Link>
+            , sharpen your ear with music theory and ear training games, or
             practise the guitar fretboard, piano keys and singing. Chess fans can solve{" "}
             <Link href="/games/chess-puzzles" className="font-semibold text-[var(--brand-blue)] hover:underline">
               free chess puzzles by difficulty

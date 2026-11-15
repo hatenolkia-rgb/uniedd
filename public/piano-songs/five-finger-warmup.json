@@ -1,0 +1,19 @@
+{
+  "id": "five-finger-warmup",
+  "title": "Five-Finger Warm-up",
+  "level": 1,
+  "bpm": 88,
+  "timeSig": [
+    4,
+    4
+  ],
+  "key": "C",
+  "credit": "Finger exercise",
+  "blurb": "Right hand in C position (thumb on middle C): one finger per key, C to G and back.",
+  "tracks": [
+    {
+      "hand": "R",
+      "notes": "C4 D4 E4 F4 | G4 F4 E4 D4 | C4 D4 E4 F4 | G4 F4 E4 D4 | C4 E4 G4 E4 | C4:4"
+    }
+  ]
+}

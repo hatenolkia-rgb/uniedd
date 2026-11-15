@@ -1,0 +1,20 @@
+{
+  "id": "sargam-alankar",
+  "title": "Sa Re Ga Ma – Alankar Drill",
+  "level": 1,
+  "bpm": 84,
+  "timeSig": [
+    3,
+    4
+  ],
+  "key": "C",
+  "labels": "sargam",
+  "credit": "Traditional Indian sargam exercise",
+  "blurb": "The classic three-note alankar: Sa Re Ga, Re Ga Ma… up to Sa' and back down. Sa is C.",
+  "tracks": [
+    {
+      "hand": "R",
+      "notes": "C4 D4 E4 | D4 E4 F4 | E4 F4 G4 | F4 G4 A4 | G4 A4 B4 | A4 B4 C5 | C5:3 | C5 B4 A4 | B4 A4 G4 | A4 G4 F4 | G4 F4 E4 | F4 E4 D4 | E4 D4 C4 | C4:3"
+    }
+  ]
+}

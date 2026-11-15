@@ -1,0 +1,23 @@
+{
+  "id": "scale-sprint",
+  "title": "Scale Sprint – C Major, Two Octaves, Both Hands",
+  "level": 4,
+  "bpm": 92,
+  "timeSig": [
+    4,
+    4
+  ],
+  "key": "C",
+  "credit": "Scale exercise",
+  "blurb": "Eighth notes up two octaves and back with both hands an octave apart.",
+  "tracks": [
+    {
+      "hand": "R",
+      "notes": "C4:0.5 D4:0.5 E4:0.5 F4:0.5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 | D5:0.5 E5:0.5 F5:0.5 G5:0.5 A5:0.5 B5:0.5 C6:0.5 B5:0.5 | A5:0.5 G5:0.5 F5:0.5 E5:0.5 D5:0.5 C5:0.5 B4:0.5 A4:0.5 | G4:0.5 F4:0.5 E4:0.5 D4:0.5 C4:2"
+    },
+    {
+      "hand": "L",
+      "notes": "C3:0.5 D3:0.5 E3:0.5 F3:0.5 G3:0.5 A3:0.5 B3:0.5 C4:0.5 | D4:0.5 E4:0.5 F4:0.5 G4:0.5 A4:0.5 B4:0.5 C5:0.5 B4:0.5 | A4:0.5 G4:0.5 F4:0.5 E4:0.5 D4:0.5 C4:0.5 B3:0.5 A3:0.5 | G3:0.5 F3:0.5 E3:0.5 D3:0.5 C3:2"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "happy-birthday",
+  "title": "Happy Birthday",
+  "level": 2,
+  "bpm": 100,
+  "timeSig": [
+    3,
+    4
+  ],
+  "pickup": 1,
+  "key": "C",
+  "credit": "P. & M. Hill (1893), public domain",
+  "blurb": "A 3/4 waltz with a pickup and a jump up an octave for “dear …”.",
+  "tracks": [
+    {
+      "hand": "R",
+      "notes": "G4:0.75 G4:0.25 | A4 G4 C5 | B4:2 G4:0.75 G4:0.25 | A4 G4 D5 | C5:2 G4:0.75 G4:0.25 | G5 E5 C5 | B4 A4 F5:0.75 F5:0.25 | E5 C5 D5 | C5:2"
+    }
+  ]
+}

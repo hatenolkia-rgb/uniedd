@@ -133,6 +133,40 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
       },
     ],
   },
+  "piano-falling-notes": {
+    title: "Online Piano Game – Falling Notes Piano Practice with MIDI Keyboard or Microphone | UniEDD",
+    description:
+      "Free online piano game with falling notes. Connect a MIDI keyboard, or let your microphone listen to a real piano, and play 16 songs from Beginner to Advanced — Twinkle Twinkle, Ode to Joy, Für Elise, Canon in D and more. Wait mode, slow speeds and a listen mode.",
+    h1: "Online Piano Game – Falling Notes Piano Practice with MIDI Keyboard or Microphone",
+    intro:
+      "Piano Falling Notes is a free piano practice game in the style of falling-notes piano apps. Coloured notes fall towards an on-screen piano keyboard in time with the song, and you play each key as its note reaches the glowing line. Every note is scored Perfect, Good or Miss, with a combo, accuracy and up to five stars. It runs in your web browser, with nothing to download.",
+    howTo: [
+      "Connect your digital piano or keyboard to the computer, tablet or phone with a USB cable (or a USB-MIDI adapter) and press Connect MIDI keyboard. Keyboards are found automatically, even when you plug one in later.",
+      "No cable, or playing an acoustic piano? Choose Use your microphone and put the device near the piano. The game listens for the pitch of each note you play.",
+      "No piano at all? Tap the on-screen keys, or use the computer keyboard: A S D F G H J K for the white keys, W E T Y U for the black keys, and Z / X to move an octave down or up.",
+      "Pick a song by level, then choose Play, Wait mode (the song waits for the right key) or Listen (the song plays itself so you can hear it first). Slow it down to 50% or 75% while you learn.",
+      "Play each key as its note touches the line. Run Auto-calibrate once so your keyboard or microphone is judged exactly on time.",
+    ],
+    goodFor:
+      "Piano and keyboard students of any age, children starting with their first songs, and teachers who want a fun note-reading and timing warm-up for class.",
+    extra: [
+      {
+        heading: "Songs and difficulty levels",
+        body: [
+          "Beginner: C Major Scale, Sa Re Ga Ma alankar drill (with sargam note names), Five-Finger Warm-up, Mary Had a Little Lamb, Hot Cross Buns and Twinkle Twinkle Little Star.",
+          "Easy: Row, Row, Row Your Boat, London Bridge, Jingle Bells, Ode to Joy and Happy Birthday. Intermediate: Twinkle Twinkle with both hands, Minuet in G and a simplified Canon in D. Advanced: the opening of Für Elise and a two-octave C major scale sprint with both hands.",
+          "All songs are traditional or classical melodies in the public domain, arranged for the game by UniEDD. Two-hand songs can be played with both hands, the right hand only or the left hand only, while the game plays the other hand.",
+        ],
+      },
+      {
+        heading: "MIDI keyboard or microphone?",
+        body: [
+          "A MIDI keyboard is the most accurate way to play: every key, chord and how hard you press is read exactly. It works in browsers with Web MIDI, such as Chrome and Edge on computers and Android.",
+          "The microphone is there for students who can't connect their piano. It hears one note at a time, so it works best with single-note melodies; in two-hand songs only the right-hand tune is checked, and a note heard an octave off still counts. Wear headphones if the game is playing music, so the microphone hears only your piano.",
+        ],
+      },
+    ],
+  },
   "chess-puzzles": {
     title: "Free Chess Puzzles Online – Thousands of Puzzles by Difficulty | UniEDD",
     description:
@@ -215,7 +249,7 @@ export function gameSeo(game: GameDef): GameSeo {
 }
 
 export const GAMES_HUB_SEO = {
-  title: "Free Online Music Games & Chess Puzzles for Kids – Rhythm, Ear Training, Guitar, Piano | UniEDD",
+  title: "Free Online Music Games & Chess Puzzles for Kids – Piano, Rhythm, Ear Training, Guitar | UniEDD",
   description:
-    "Play free online games in your browser: a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer. No downloads.",
+    "Play free online games in your browser: a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer. No downloads.",
 };

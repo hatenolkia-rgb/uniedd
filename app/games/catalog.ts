@@ -23,6 +23,7 @@ export type GameKind =
   | "circle"
   | "symbols"
   | "clap-trainer"
+  | "piano-fall"
   | "chess-puzzles"
   | "chess-play";
 
@@ -40,7 +41,7 @@ export type GameDef = {
 export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; emoji: string }[] = [
   { id: "all", label: "All games", hint: "Everything in one colorful arcade", emoji: "🎮" },
   { id: "guitar", label: "Guitar", hint: "Fretboard, chords, tabs and strumming", emoji: "🎸" },
-  { id: "piano", label: "Piano", hint: "Keys, staff reading and keyboard chords", emoji: "🎹" },
+  { id: "piano", label: "Piano", hint: "Falling-notes songs, keys, staff reading and chords", emoji: "🎹" },
   { id: "vocals", label: "Vocals", hint: "Pitch, solfege and breath challenges", emoji: "🎤" },
   {
     id: "theory",
@@ -99,6 +100,15 @@ export const GAMES: GameDef[] = [
     kind: "tab",
     minutes: "2 min",
     accent: "#b45309",
+  },
+  {
+    slug: "piano-falling-notes",
+    title: "Piano Falling Notes",
+    blurb: "Notes fall onto a piano keyboard — play each key as it reaches the line. Use a MIDI keyboard, or your microphone with a real piano. 16 songs from Beginner to Advanced.",
+    category: "piano",
+    kind: "piano-fall",
+    minutes: "1–3 min",
+    accent: "#0ea5e9",
   },
   {
     slug: "piano-keys",
