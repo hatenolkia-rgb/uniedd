@@ -36,6 +36,8 @@ export type GameDef = {
   minutes: string;
   accent: string;
   quizBank?: string;
+  /** Separate leaderboards inside one game (e.g. the piano game's clef modes). */
+  boards?: { id: string; label: string }[];
 };
 
 export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; emoji: string }[] = [
@@ -104,11 +106,16 @@ export const GAMES: GameDef[] = [
   {
     slug: "piano-falling-notes",
     title: "Piano Falling Notes",
-    blurb: "Notes fall onto a piano keyboard — play each key as it reaches the line. Use a MIDI keyboard, or your microphone with a real piano. 16 songs from Beginner to Advanced.",
+    blurb: "Notes fall onto a piano keyboard — play each key as it reaches the line. Treble Clef, Bass Clef or Beast Mode (both hands), on a MIDI keyboard or a real piano through the mic. 16 songs, Beginner to Advanced.",
     category: "piano",
     kind: "piano-fall",
     minutes: "1–3 min",
     accent: "#0ea5e9",
+    boards: [
+      { id: "treble", label: "Treble Clef" },
+      { id: "bass", label: "Bass Clef" },
+      { id: "beast", label: "Beast Mode" },
+    ],
   },
   {
     slug: "piano-keys",
@@ -358,6 +365,14 @@ export const MIN_DURATION_MS = 8000;
 
 export function getGame(slug: string) {
   return GAMES.find((game) => game.slug === slug);
+}
+
+/** Storage key for a game's leaderboard (`slug` or `slug:board`); null if the board is unknown. */
+export function boardKey(slug: string, board?: string | null) {
+  const game = getGame(slug);
+  if (!game) return null;
+  if (!board) return game.boards?.length ? null : game.slug;
+  return game.boards?.some((b) => b.id === board) ? `${game.slug}:${board}` : null;
 }
 
 export function gamesByCategory(id: CategoryId | "all") {

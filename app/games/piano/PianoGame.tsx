@@ -9,7 +9,7 @@ import { MidiKeyboard, midiSupported, type MidiDevice, type MidiStatus } from ".
 import { clickBeat, keyboardRange, LEVELS, loadPianoSongs, midiToName, noteToMidi, type PianoSong } from "./charts";
 import { accuracyOf, boardScoreOf, expiredNotes, matchPress, pointsFor, WINDOWS, type Windows } from "./judge";
 import { pitchMatches } from "./pitch";
-import { burst, draw, keyAt, layout, stepEffects, type KeyLight, type StageNote, type StageState } from "./stage";
+import { burst, diatonic, draw, keyAt, layout, stepEffects, type Clef, type KeyLight, type StageNote, type StageState } from "./stage";
 
 type View = "pick" | "calibrate" | "play" | "results";
 type Input = "midi" | "mic" | "keys";
@@ -19,7 +19,8 @@ type Mode = "play" | "wait" | "listen";
 type Options = {
   speed: number;
   mode: Mode;
-  hands: "both" | "R" | "L";
+  clef: Clef;
+  staff: boolean;
   labels: "letters" | "sargam" | "off" | "auto";
   guide: boolean;
   accomp: boolean;
@@ -31,7 +32,8 @@ type Options = {
 const DEFAULT_OPTS: Options = {
   speed: 1,
   mode: "play",
-  hands: "both",
+  clef: "treble",
+  staff: true,
   labels: "auto",
   guide: false,
   accomp: true,
@@ -44,7 +46,15 @@ const SPEEDS = [0.5, 0.75, 1];
 const OPTS_KEY = "uniedd-piano-options";
 const INPUT_KEY = "uniedd-piano-input";
 const OFFSET_KEY = (s: Source) => `uniedd-piano-offset:${s}`;
-const BEST_KEY = (id: string) => `uniedd-piano-best:${id}`;
+const BEST_KEY = (id: string, clef: Clef) => `uniedd-piano-best:${clef}:${id}`;
+
+/** The three game modes: which hand is played and which clef it reads. */
+export const CLEF_MODES: { id: Clef; name: string; icon: string; hand: string; blurb: string }[] = [
+  { id: "treble", name: "Treble Clef", icon: "\u{1D11E}", hand: "Right hand", blurb: "Play the melody with your right hand, read from the treble clef." },
+  { id: "bass", name: "Bass Clef", icon: "\u{1D122}", hand: "Left hand", blurb: "Play the bass line with your left hand, read from the bass clef." },
+  { id: "beast", name: "Beast Mode", icon: "🔥", hand: "Both hands", blurb: "Both hands together from the grand staff: blue notes = right hand, orange = left hand." },
+];
+const clefName = (c: Clef) => CLEF_MODES.find((m) => m.id === c)?.name ?? "";
 const INPUT_LIMIT_MS = 250;
 const LOOKAHEAD = 2.6;
 
@@ -83,10 +93,10 @@ function save(key: string, v: unknown) {
   }
 }
 type Best = { score: number; stars: number; accuracy: number };
-function readBest(id: string): Best | null {
+function readBest(id: string, clef: Clef): Best | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(BEST_KEY(id));
+    const raw = localStorage.getItem(BEST_KEY(id, clef));
     return raw ? (JSON.parse(raw) as Best) : null;
   } catch {
     return null;
@@ -97,6 +107,7 @@ type RunNote = StageNote & { id: number; judged: boolean };
 
 type Run = {
   song: PianoSong;
+  clef: Clef;
   mode: Mode;
   input: Input;
   rate: number;
@@ -131,6 +142,7 @@ type Run = {
 
 type Result = {
   song: PianoSong;
+  clef: Clef;
   mode: Mode;
   input: Input;
   speed: number;
@@ -167,7 +179,7 @@ function windowsFor(source: Source): Windows {
   return source === "mic" ? WINDOWS.mic : WINDOWS.normal;
 }
 
-export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
+export function PianoGame({ onFinish }: { onFinish: (score: number, board?: string) => void }) {
   const [view, setView] = useState<View>("pick");
   const [songs, setSongs] = useState<PianoSong[]>([]);
   const [loadError, setLoadError] = useState("");
@@ -355,12 +367,13 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
     const stars = starsFor(accuracy);
     const ranked = run.mode === "play";
     const boardScore = ranked ? boardScoreOf(accuracy, run.maxCombo, total, run.rate) : 0;
-    const prev = readBest(run.song.id);
+    const prev = readBest(run.song.id, run.clef);
     const newBest = ranked && total > 0 && (!prev || boardScore > prev.score);
-    if (newBest) save(BEST_KEY(run.song.id), { score: boardScore, stars, accuracy });
+    if (newBest) save(BEST_KEY(run.song.id, run.clef), { score: boardScore, stars, accuracy });
     const avg = run.offsets.length ? run.offsets.reduce((a, b) => a + b, 0) / run.offsets.length : null;
     setResult({
       song: run.song,
+      clef: run.clef,
       mode: run.mode,
       input: run.input,
       speed: run.rate,
@@ -456,8 +469,8 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
       const o = optsRef.current;
       const mode = modeOverride ?? o.mode;
       const inp = inputRef.current;
-      const hasL = song.tracks.some((t) => t.hand === "L");
-      const hands = !hasL && o.hands === "L" ? "both" : o.hands;
+      const clef: Clef = o.clef ?? "treble";
+      const hands = clef === "treble" ? "R" : clef === "bass" ? "L" : "both";
       const rate = o.speed;
       const notes: RunNote[] = song.notes.map((n) => {
         const handOk = hands === "both" || n.hand === hands;
@@ -472,6 +485,7 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
           judged: false,
           state: "pending",
           hitAt: 0,
+          len: n.len,
         };
       });
       const spb = 60 / song.bpm;
@@ -533,10 +547,17 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
         keyHints: new Map(),
         popups: [],
         sparks: [],
+        staff: (() => {
+          const ds = song.notes.map((n) => diatonic(n.midi).d);
+          const barTimes: number[] = [];
+          for (let bt = pickupSec; bt <= lastEnd + 1e-6; bt += barSec) barTimes.push(bt);
+          return { show: o.staff, clef, barTimes, minD: Math.min(...ds), maxD: Math.max(...ds) };
+        })(),
         hud: { title: song.title, score: 0, combo: 0, accuracy: null, progress: 0, countIn: null, banner: null, hearing: null, sub: "" },
       };
       runRef.current = {
         song,
+        clef,
         mode,
         input: inp,
         rate,
@@ -727,7 +748,7 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
       const judged = run.perfect + run.good + run.miss;
       const firstT = run.notes.length ? run.notes[0].t : 0;
       st.hud = {
-        title: `${run.song.title}${run.mode === "wait" ? " · Wait mode" : run.mode === "listen" ? " · Listen" : ""}`,
+        title: `${run.song.title} · ${clefName(run.clef)}${run.mode === "wait" ? " · Wait" : run.mode === "listen" ? " · Listen" : ""}`,
         score: run.score,
         combo: run.combo,
         accuracy: judged && run.mode === "play" ? accuracyOf(run.perfect, run.good, judged) : null,
@@ -742,7 +763,7 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
               ? "Get ready…"
               : null,
         hearing: run.input === "mic" ? (hearingRef.current ?? "…") : null,
-        sub: `${Math.round(run.rate * 100)}% · ${run.input === "midi" ? "MIDI" : run.input === "mic" ? "Mic" : "Keys"}${
+        sub: `${Math.round(run.rate * 100)}% · ${run.input === "midi" ? "MIDI" : run.input === "mic" ? (run.clef === "beast" ? "Mic: right hand only" : "Mic") : "Keys"}${
           run.wrong ? ` · ${run.wrong} wrong` : ""
         }`,
       };
@@ -824,6 +845,16 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
     };
   }, [view, engine, noteOn, noteOff, togglePause]);
 
+  // ?pianodebug=1: a hook that plays a note as if it came from a MIDI keyboard (automated tests)
+  useEffect(() => {
+    if (view !== "play" || !new URLSearchParams(window.location.search).has("pianodebug")) return;
+    const w = window as unknown as { __pianoPress?: (midi: number, on: boolean) => void };
+    w.__pianoPress = (midi, on) => (on ? noteOn(midi, engine().eventToCtx(performance.now()), "midi", 0.8) : noteOff(midi));
+    return () => {
+      delete w.__pianoPress;
+    };
+  }, [view, engine, noteOn, noteOff]);
+
   // on the setup screen, played notes just light the "last note" read-out
   useEffect(() => {
     if (view !== "pick") return;
@@ -848,7 +879,7 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
 
   if (view === "play" && song) {
     const btn =
-      "rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur hover:bg-white/25 sm:px-5 sm:py-2.5 sm:text-sm";
+      "rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur hover:bg-white/25 sm:px-4";
     const pointers = pointersRef.current;
     return createPortal(
       <div className="fixed inset-0 z-[9999] bg-[#05040f]/95 sm:p-3 lg:p-4" role="dialog" aria-modal="true" aria-label={`Playing ${song.title}`}>
@@ -885,10 +916,11 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
           >
             <canvas ref={canvasRef} className="block" aria-label={`Falling notes for ${song.title}`} />
           </div>
-          <div className="absolute right-3 top-14 flex gap-2 sm:right-5 sm:top-16">
+          <div className="absolute right-2 top-2 flex gap-1.5 sm:right-3 sm:top-2.5 sm:gap-2">
             {canFull ? (
               <button type="button" onClick={toggleFullscreen} className={btn} aria-pressed={isFull}>
-                {isFull ? "Exit full screen" : "Full screen"}
+                <span className="sm:hidden" aria-hidden="true">⛶</span>
+                <span className="sr-only sm:not-sr-only">{isFull ? "Exit full screen" : "Full screen"}</span>
               </button>
             ) : null}
             <button type="button" onClick={() => void togglePause()} className={btn}>
@@ -899,11 +931,11 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
             </button>
           </div>
           {portrait ? (
-            <p className="absolute inset-x-3 top-24 rounded-xl bg-amber-400/90 px-3 py-2 text-center text-xs font-semibold text-[#1b1446]">
+            <p className="absolute inset-x-3 top-[42%] rounded-xl bg-amber-400/90 px-3 py-2 text-center text-xs font-semibold text-[#1b1446]">
               Turn your phone sideways for a bigger keyboard 🔄
             </p>
           ) : null}
-          {error ? <p className="absolute inset-x-0 top-24 px-5 text-center text-sm text-rose-300">{error}</p> : null}
+          {error ? <p className="absolute inset-x-0 top-[50%] px-5 text-center text-sm text-rose-300">{error}</p> : null}
         </div>
       </div>,
       document.body,
@@ -916,7 +948,7 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
         result={result}
         onReplay={() => void start(result.mode)}
         onPick={() => setView("pick")}
-        onPost={() => onFinish(result.boardScore)}
+        onPost={() => onFinish(result.boardScore, result.clef)}
       />
     );
   }
@@ -924,7 +956,6 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
   // ----- setup / song picker -----
   const offsetMs = offsets[input];
   const byLevel = [1, 2, 3, 4].map((lv) => ({ lv, list: songs.filter((s) => s.level === lv) }));
-  const hasL = !!song?.tracks.some((t) => t.hand === "L");
 
   return (
     <div>
@@ -1094,7 +1125,54 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
           </div>
         </div>
 
-        <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-white/60">Step 2 · How to play</p>
+        <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-white/60">Step 2 · Game mode</p>
+        <div className="mt-2 grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label="Game mode">
+          {CLEF_MODES.map((m) => {
+            const on = opts.clef === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setOpts({ clef: m.id })}
+                className={`rounded-2xl p-4 text-left transition ${
+                  on
+                    ? m.id === "beast"
+                      ? "bg-gradient-to-br from-rose-500/40 to-amber-500/30 ring-2 ring-amber-400"
+                      : "bg-white/20 ring-2 ring-amber-400"
+                    : "bg-white/10 hover:bg-white/15"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/25 text-2xl"
+                    style={{ fontFamily: "'Noto Music','Segoe UI Symbol','Apple Symbols',serif", color: m.id === "bass" ? "#fb923c" : "#facc15" }}
+                    aria-hidden="true"
+                  >
+                    {m.icon}
+                  </span>
+                  <span>
+                    <span className="block font-bold">{m.name}</span>
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-white/60">{m.hand}</span>
+                  </span>
+                </span>
+                <span className="mt-2 block text-xs text-white/75">{m.blurb}</span>
+              </button>
+            );
+          })}
+        </div>
+        {opts.clef === "beast" && input === "mic" ? (
+          <p className="mt-2 rounded-xl bg-amber-400/15 px-3 py-2 text-xs text-amber-200" role="note">
+            🎹 Beast Mode works best with a MIDI keyboard. The microphone can only hear one note at a time, so in Beast Mode
+            it checks your <strong>right hand only</strong> — the left hand is shown but not scored. Connect a MIDI keyboard
+            above to be judged on both hands.
+          </p>
+        ) : opts.clef === "beast" && input === "keys" ? (
+          <p className="mt-2 text-xs text-white/60">Beast Mode is made for a real keyboard — on a computer keyboard, Z / X switch octaves.</p>
+        ) : null}
+
+        <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-white/60">Step 3 · How to play</p>
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl bg-white/10 p-4">
             <div className="flex gap-2">
@@ -1137,30 +1215,6 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
                 </button>
               ))}
             </div>
-            {hasL ? (
-              <>
-                <p className="mt-3 text-xs text-white/70">Hands (this song has a left-hand part)</p>
-                <div className="mt-1 flex gap-1.5">
-                  {(
-                    [
-                      ["both", "Both hands"],
-                      ["R", "Right only"],
-                      ["L", "Left only"],
-                    ] as const
-                  ).map(([h, label]) => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => setOpts({ hands: h })}
-                      className={`rounded-lg px-3 py-1 text-xs font-semibold ${opts.hands === h ? "bg-amber-400 text-[#1b1446]" : "bg-white/10 hover:bg-white/20"}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1 text-[11px] text-white/55">The hand you don&apos;t play is shown faded and can play along by itself.</p>
-              </>
-            ) : null}
           </div>
           <div className="rounded-2xl bg-white/10 p-4">
             <p className="text-xs text-white/70">Note names on the falling notes</p>
@@ -1187,7 +1241,10 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
               <Toggle label="Metronome tick" checked={opts.metronome} onChange={(v) => setOpts({ metronome: v })} />
               <Toggle label="Sound for my keys (turn off if your piano has its own speakers)" checked={opts.keySound} onChange={(v) => setOpts({ keySound: v })} />
               <Toggle label="Hear the melody while I play" checked={opts.guide} onChange={(v) => setOpts({ guide: v })} />
-              {hasL ? <Toggle label="Play the other hand for me" checked={opts.accomp} onChange={(v) => setOpts({ accomp: v })} /> : null}
+              {opts.clef !== "beast" ? (
+                <Toggle label="Play the other hand for me" checked={opts.accomp} onChange={(v) => setOpts({ accomp: v })} />
+              ) : null}
+              <Toggle label="Show the music staff (treble and bass clef)" checked={opts.staff} onChange={(v) => setOpts({ staff: v })} />
             </div>
             {input === "mic" && (opts.guide || opts.accomp) ? (
               <p className="mt-2 text-[11px] text-amber-200">With the microphone, wear headphones so it hears your piano and not the game.</p>
@@ -1227,7 +1284,7 @@ export function PianoGame({ onFinish }: { onFinish: (score: number) => void }) {
             </p>
             <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {list.map((s) => (
-                <SongCard key={s.id} song={s} selected={s.id === song?.id} onPick={() => setSongId(s.id)} />
+                <SongCard key={`${s.id}:${opts.clef}`} song={s} clef={opts.clef} selected={s.id === song?.id} onPick={() => setSongId(s.id)} />
               ))}
             </div>
           </div>
@@ -1248,10 +1305,9 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
 
 const LEVEL_COLORS = ["", "#16a34a", "#0ea5e9", "#7c3aed", "#e11d48"];
 
-function SongCard({ song, selected, onPick }: { song: PianoSong; selected: boolean; onPick: () => void }) {
-  const [best] = useState(() => readBest(song.id));
+function SongCard({ song, clef, selected, onPick }: { song: PianoSong; clef: Clef; selected: boolean; onPick: () => void }) {
+  const [best] = useState(() => readBest(song.id, clef));
   const accent = LEVEL_COLORS[song.level];
-  const twoHands = song.tracks.some((t) => t.hand === "L");
   return (
     <button
       type="button"
@@ -1267,12 +1323,12 @@ function SongCard({ song, selected, onPick }: { song: PianoSong; selected: boole
       <span className="min-w-0">
         <span className="block font-semibold leading-snug">{song.title}</span>
         <span className="mt-0.5 block text-xs text-[var(--muted)]">
-          {LEVELS[song.level]} · {twoHands ? "both hands" : "right hand"} · {song.timeSig.join("/")} · {song.bpm} bpm
+          {LEVELS[song.level]} · {song.timeSig.join("/")} · {song.bpm} bpm
         </span>
         {song.blurb ? <span className="mt-1 block text-xs text-[var(--muted)]">{song.blurb}</span> : null}
         {best ? (
           <span className="mt-1 block text-xs font-semibold text-amber-600">
-            Best {"★".repeat(best.stars)} · {Math.round(best.accuracy * 100)}%
+            {clefName(clef)} best {"★".repeat(best.stars)} · {Math.round(best.accuracy * 100)}%
           </span>
         ) : null}
       </span>
@@ -1299,7 +1355,7 @@ function Results({ result: r, onReplay, onPick, onPost }: { result: Result; onRe
   return (
     <div className="rounded-3xl bg-gradient-to-br from-[#0b0820] via-[#14204a] to-[#1b1446] p-6 text-center text-white sm:p-10">
       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">
-        {r.song.title} · {Math.round(r.speed * 100)}% speed · {r.mode === "play" ? "Play" : r.mode === "wait" ? "Wait mode" : "Listen"}
+        {r.song.title} · {clefName(r.clef)} · {Math.round(r.speed * 100)}% speed · {r.mode === "play" ? "Play" : r.mode === "wait" ? "Wait mode" : "Listen"}
       </p>
       {r.mode !== "listen" ? (
         <>
@@ -1340,7 +1396,7 @@ function Results({ result: r, onReplay, onPick, onPost }: { result: Result; onRe
         </button>
         {ranked && r.total > 0 ? (
           <button type="button" onClick={onPost} className="rounded-full bg-gradient-to-r from-[#1a9fd4] to-[#e8962e] px-6 py-2.5 text-sm font-bold">
-            Post to leaderboard
+            Post to the {clefName(r.clef)} leaderboard
           </button>
         ) : null}
       </div>

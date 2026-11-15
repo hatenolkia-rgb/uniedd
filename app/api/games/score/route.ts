@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { boardKey } from "../../../games/catalog";
 import { clientKey, isRateLimited } from "../../rate-limit";
 import { nicknameError, normalizeNickname } from "../../../lib/games/nickname";
 import { readSession, validateScore } from "../../../lib/games/session";
@@ -9,7 +10,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many score submissions. Try again in a few minutes." }, { status: 429 });
   }
 
-  let body: { token?: string; nickname?: string; score?: number } = {};
+  let body: { token?: string; nickname?: string; score?: number; board?: string } = {};
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
   const scoreError = validateScore(session.g, Number(body.score), session.t);
   if (scoreError) return NextResponse.json({ error: scoreError }, { status: 400 });
 
+  const key = boardKey(session.g, body.board);
+  if (!key) return NextResponse.json({ error: "Unknown leaderboard." }, { status: 400 });
+
   const fresh = await consumeNonce(session.n);
   if (!fresh) return NextResponse.json({ error: "This result was already saved." }, { status: 409 });
 
@@ -33,7 +37,7 @@ export async function POST(request: Request) {
     score: Math.round(Number(body.score)),
     at: Date.now(),
   };
-  const storage = await addScore(session.g, entry);
+  const storage = await addScore(key, entry);
   const kind = storage === "memory" ? await detectStorage() : storage;
   return NextResponse.json({
     ok: true,

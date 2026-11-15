@@ -9,7 +9,7 @@
   ],
   "key": "C",
   "credit": "Traditional melody, public domain, left hand arranged by UniEDD",
-  "blurb": "The melody in the right hand with simple bass notes in the left hand.",
+  "blurb": "The melody in the right hand with a walking root-and-fifth bass in the left hand.",
   "tracks": [
     {
       "hand": "R",
@@ -17,7 +17,7 @@
     },
     {
       "hand": "L",
-      "notes": "C3:4 | F3:2 C3:2 | F3:2 C3:2 | G3:2 C3:2 | C3:2 F3:2 | C3:2 G3:2 | C3:2 F3:2 | C3:2 G3:2 | C3:4 | F3:2 C3:2 | F3:2 C3:2 | G3:2 C3:2"
+      "notes": "C3 G3 C3 G3 | F2 C3 C3 G3 | F2 C3 C3 G3 | G2 D3 C3 G3 | C3 G3 F2 C3 | C3 G3 G2 D3 | C3 G3 F2 C3 | C3 G3 G2 D3 | C3 G3 C3 G3 | F2 C3 C3 G3 | F2 C3 C3 G3 | G2 D3 C3:2"
     }
   ]
 }

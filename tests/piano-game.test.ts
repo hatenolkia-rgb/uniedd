@@ -15,7 +15,8 @@ import {
 import { accuracyOf, boardScoreOf, expiredNotes, gradeFor, matchPress, WINDOWS, type JudgeNote } from "../app/games/piano/judge";
 import { freqToMidi, midiToFreq, pitchMatches, yin } from "../app/games/piano/pitch";
 import { decodeMidi } from "../app/games/piano/midi";
-import { keyAt, layout } from "../app/games/piano/stage";
+import { diatonic, keyAt, layout, staffGeom } from "../app/games/piano/stage";
+import { boardKey } from "../app/games/catalog";
 
 const dir = join(__dirname, "..", "public", "piano-songs");
 const list = JSON.parse(readFileSync(join(dir, "songs.json"), "utf8")) as { songs: string[] };
@@ -235,6 +236,51 @@ describe("piano song charts", () => {
     });
   }
 
+  it("every song has a right-hand (treble) and a left-hand (bass) part for all three modes", () => {
+    for (const f of files) {
+      expect(f.tracks.map((t) => t.hand).sort(), f.title).toEqual(["L", "R"]);
+      const s = buildSong(f);
+      const r = s.notes.filter((n) => n.hand === "R");
+      const l = s.notes.filter((n) => n.hand === "L");
+      expect(l.length, f.title).toBeGreaterThanOrEqual(4);
+      // the left hand sits lower: its average pitch is below the right hand's, and mostly in the bass clef
+      const avg = (ns: { midi: number }[]) => ns.reduce((a, n) => a + n.midi, 0) / ns.length;
+      expect(avg(l), f.title).toBeLessThan(avg(r) - 7);
+      expect(l.filter((n) => n.midi <= 62).length / l.length, f.title).toBeGreaterThanOrEqual(0.6);
+      // the two hands never need the same key at the same time
+      for (const a of r)
+        for (const b of l)
+          if (a.midi === b.midi) expect(a.beat + a.len <= b.beat + 1e-9 || b.beat + b.len <= a.beat + 1e-9, `${f.title} ${midiToName(a.midi)}`).toBe(true);
+    }
+  });
+
+  it("left-hand bass fits the melody on strong beats (consonant: unison/octave, 3rd, 5th, 6th)", () => {
+    const CONSONANT = new Set([0, 3, 4, 7, 8, 9]);
+    for (const f of files) {
+      const s = buildSong(f);
+      const pickup = f.pickup ?? 0;
+      const bpb = s.beatsPerBar;
+      // strong beats: every downbeat, plus the middle of 4/4 and 6/8 bars where the bass moves
+      const half = f.timeSig[0] === 4 || (f.timeSig[0] === 6 && f.timeSig[1] === 8) ? bpb / 2 : null;
+      const sounding = (hand: "R" | "L", t: number) => s.notes.filter((n) => n.hand === hand && n.beat <= t + 1e-9 && t < n.beat + n.len - 1e-9);
+      const checks: number[] = [];
+      for (let bar = pickup; bar < s.lengthBeats - 1e-9; bar += bpb) {
+        checks.push(bar);
+        if (half !== null && s.notes.some((n) => n.hand === "L" && Math.abs(n.beat - (bar + half)) < 1e-9)) checks.push(bar + half);
+      }
+      let checked = 0;
+      for (const t of checks) {
+        for (const r of sounding("R", t))
+          for (const l of sounding("L", t)) {
+            checked++;
+            const iv = (((r.midi - l.midi) % 12) + 12) % 12;
+            expect(CONSONANT.has(iv), `${f.title} beat ${t}: ${midiToName(r.midi)} over ${midiToName(l.midi)}`).toBe(true);
+          }
+      }
+      expect(checked, f.title).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   // Independent checks against the well-known melodies (letter names + rhythm of the opening).
   it("Twinkle Twinkle: C C G G A A G, F F E E D D C", () => {
     expect(names("twinkle-twinkle", 14)).toEqual(["C4", "C4", "G4", "G4", "A4", "A4", "G4", "F4", "F4", "E4", "E4", "D4", "D4", "C4"]);
@@ -310,5 +356,40 @@ describe("on-screen keyboard", () => {
     expect(keyAt(l, 48, 71, 100, l.kbTop + 5)).toBe(49); // C#3 sits between C and D
     expect(keyAt(l, 48, 71, 100, y)).toBe(50); // below the black key = white key
     expect(keyAt(l, 48, 71, 100, l.kbTop - 20)).toBeNull();
+  });
+});
+
+describe("grand staff and modes", () => {
+  it("places notes on the right staff line or space", () => {
+    expect(diatonic(60)).toEqual({ d: 28, sharp: false }); // middle C, ledger line between the staves
+    expect(diatonic(64).d).toBe(30); // E4: treble bottom line
+    expect(diatonic(77).d).toBe(38); // F5: treble top line
+    expect(diatonic(57).d).toBe(26); // A3: bass top line
+    expect(diatonic(43).d).toBe(18); // G2: bass bottom line
+    expect(diatonic(66)).toEqual({ d: 31, sharp: true }); // F#4 sits on the F space with a sharp
+    expect(diatonic(73)).toEqual({ d: 35, sharp: true }); // C#5
+  });
+
+  it("the staff fits above the falling notes on a phone and a desktop", () => {
+    for (const [W, H] of [
+      [844, 390],
+      [1440, 860],
+    ]) {
+      const l = layout(W, H, 36, 83);
+      const sg = staffGeom(W, H, l.kbH, { show: true, clef: "beast", barTimes: [], minD: 16, maxD: 40 })!;
+      expect(sg.bottom).toBeLessThan(l.hitY - 100);
+      const withStaff = layout(W, H, 36, 83, { show: true, clef: "beast", barTimes: [], minD: 16, maxD: 40 });
+      expect(withStaff.topPad).toBeGreaterThan(sg.bottom);
+    }
+  });
+
+  it("each mode has its own leaderboard", () => {
+    expect(boardKey("piano-falling-notes", "treble")).toBe("piano-falling-notes:treble");
+    expect(boardKey("piano-falling-notes", "bass")).toBe("piano-falling-notes:bass");
+    expect(boardKey("piano-falling-notes", "beast")).toBe("piano-falling-notes:beast");
+    expect(boardKey("piano-falling-notes", "nope")).toBeNull();
+    expect(boardKey("piano-falling-notes", null)).toBeNull();
+    expect(boardKey("clap-rhythm", null)).toBe("clap-rhythm");
+    expect(boardKey("clap-rhythm", "treble")).toBeNull();
   });
 });

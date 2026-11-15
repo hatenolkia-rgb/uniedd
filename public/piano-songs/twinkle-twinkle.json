@@ -9,11 +9,15 @@
   ],
   "key": "C",
   "credit": "Traditional melody, public domain",
-  "blurb": "The favourite first song: right hand from C up to A and back.",
+  "blurb": "The favourite first song, with easy C, F and G bass notes for the left hand.",
   "tracks": [
     {
       "hand": "R",
       "notes": "C4 C4 G4 G4 | A4 A4 G4:2 | F4 F4 E4 E4 | D4 D4 C4:2 | G4 G4 F4 F4 | E4 E4 D4:2 | G4 G4 F4 F4 | E4 E4 D4:2 | C4 C4 G4 G4 | A4 A4 G4:2 | F4 F4 E4 E4 | D4 D4 C4:2"
+    },
+    {
+      "hand": "L",
+      "notes": "C3:4 | F3:2 C3:2 | F3:2 C3:2 | G3:2 C3:2 | C3:2 F3:2 | C3:2 G3:2 | C3:2 F3:2 | C3:2 G3:2 | C3:4 | F3:2 C3:2 | F3:2 C3:2 | G3:2 C3:2"
     }
   ]
 }
