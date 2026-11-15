@@ -1,0 +1,23 @@
+{
+  "id": "hot-cross-buns",
+  "title": "Hot Cross Buns",
+  "level": 1,
+  "bpm": 92,
+  "timeSig": [
+    4,
+    4
+  ],
+  "key": "C",
+  "credit": "Traditional melody, public domain",
+  "blurb": "Three notes and a quick eighth-note bar: one a-penny, two a-penny.",
+  "tracks": [
+    {
+      "hand": "R",
+      "notes": "E4 D4 C4:2 | E4 D4 C4:2 | C4:0.5 C4:0.5 C4:0.5 C4:0.5 D4:0.5 D4:0.5 D4:0.5 D4:0.5 | E4 D4 C4:2"
+    },
+    {
+      "hand": "L",
+      "notes": "C3:4 | C3:4 | C3:2 G2:2 | C3:4"
+    }
+  ]
+}

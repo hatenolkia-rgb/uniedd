@@ -352,7 +352,7 @@ export class ClapEngine {
     this.node = null;
   }
 
-  private track<T extends AudioScheduledSourceNode>(n: T) {
+  protected track<T extends AudioScheduledSourceNode>(n: T) {
     this.scheduled.push(n);
     n.onended = () => {
       this.scheduled = this.scheduled.filter((x) => x !== n);

@@ -25,6 +25,7 @@ export function GameScreen({ game }: { game: GameDef }) {
   const [score, setScore] = useState(0);
   const [token, setToken] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [board, setBoard] = useState<string | undefined>(undefined);
 
   async function start() {
     setError("");
@@ -80,12 +81,12 @@ export function GameScreen({ game }: { game: GameDef }) {
           game.kind === "quiz" ? (
             <QuizPlay bank={game.quizBank || "music"} onFinish={(value) => { setScore(value); setPhase("done"); }} />
           ) : (
-            <PlayGame game={game} onFinish={(value) => { setScore(value); setPhase("done"); }} />
+            <PlayGame game={game} onFinish={(value, b) => { setScore(value); setBoard(b); setPhase("done"); }} />
           )
         ) : null}
 
         {phase === "done" ? (
-          <EndScreen game={game} score={score} token={token} onReplay={start} />
+          <EndScreen game={game} score={score} token={token} board={board} onReplay={start} />
         ) : null}
       </div>
     </div>
@@ -223,14 +224,17 @@ function EndScreen({
   game,
   score,
   token,
+  board: boardId,
   onReplay,
 }: {
   game: GameDef;
   score: number;
   token: string | null;
+  board?: string;
   onReplay: () => void;
 }) {
-  const storageKey = `uniedd-games-pb:${game.slug}`;
+  const boardLabel = game.boards?.find((b) => b.id === boardId)?.label;
+  const storageKey = `uniedd-games-pb:${game.slug}${boardId ? `:${boardId}` : ""}`;
   const nameKey = "uniedd-games-nickname";
   const [nickname, setNickname] = useState(() => {
     if (typeof window === "undefined") return "";
@@ -254,10 +258,11 @@ function EndScreen({
   useEffect(() => {
     void loadBoard();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [game.slug]);
+  }, [game.slug, boardId]);
 
   async function loadBoard() {
-    const res = await fetch(`/api/games/leaderboard?game=${game.slug}`, { cache: "no-store" });
+    const q = boardId ? `&board=${encodeURIComponent(boardId)}` : "";
+    const res = await fetch(`/api/games/leaderboard?game=${game.slug}${q}`, { cache: "no-store" });
     if (res.ok) setBoard((await res.json()) as Board);
   }
 
@@ -273,7 +278,7 @@ function EndScreen({
     const res = await fetch("/api/games/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, nickname, score }),
+      body: JSON.stringify({ token, nickname, score, board: boardId }),
     });
     const data = (await res.json()) as { error?: string; persistent?: boolean; note?: string };
     setSaving(false);
@@ -288,7 +293,7 @@ function EndScreen({
   return (
     <div>
       <div className="text-center">
-        <p className="text-sm uppercase tracking-wide text-[var(--muted)]">Your score</p>
+        <p className="text-sm uppercase tracking-wide text-[var(--muted)]">Your score{boardLabel ? ` · ${boardLabel}` : ""}</p>
         <p className="text-5xl font-bold" style={{ color: game.accent }}>
           {score}
         </p>
@@ -322,8 +327,8 @@ function EndScreen({
       {status ? <p className="mt-2 text-center text-sm text-[var(--muted)]">{status}</p> : null}
 
       <div className="mt-8 grid gap-4 md:grid-cols-2">
-        <BoardList title="Top 10 all-time" rows={board?.allTime || []} />
-        <BoardList title="This week" rows={board?.week || []} />
+        <BoardList title={`Top 10 all-time${boardLabel ? ` · ${boardLabel}` : ""}`} rows={board?.allTime || []} />
+        <BoardList title={`This week${boardLabel ? ` · ${boardLabel}` : ""}`} rows={board?.week || []} />
       </div>
       {board && !board.persistent ? (
         <p className="mt-3 text-center text-xs text-[var(--muted)]">

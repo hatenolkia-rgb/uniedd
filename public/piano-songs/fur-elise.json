@@ -1,0 +1,24 @@
+{
+  "id": "fur-elise",
+  "title": "Für Elise (opening)",
+  "level": 4,
+  "bpm": 60,
+  "timeSig": [
+    3,
+    8
+  ],
+  "pickup": 0.5,
+  "key": "Am",
+  "credit": "L. van Beethoven, Bagatelle No. 25 in A minor (1810), public domain",
+  "blurb": "The famous opening: fast sixteenths in the right hand handed over to left-hand arpeggios.",
+  "tracks": [
+    {
+      "hand": "R",
+      "notes": "E5:0.25 D#5:0.25 | E5:0.25 D#5:0.25 E5:0.25 B4:0.25 D5:0.25 C5:0.25 | A4:0.5 r:0.25 C4:0.25 E4:0.25 A4:0.25 | B4:0.5 r:0.25 E4:0.25 G#4:0.25 B4:0.25 | C5:0.5 r:0.25 E4:0.25 E5:0.25 D#5:0.25 | E5:0.25 D#5:0.25 E5:0.25 B4:0.25 D5:0.25 C5:0.25 | A4:0.5 r:0.25 C4:0.25 E4:0.25 A4:0.25 | B4:0.5 r:0.25 E4:0.25 C5:0.25 B4:0.25 | A4:1"
+    },
+    {
+      "hand": "L",
+      "notes": "r:0.5 | r:1.5 | A2:0.25 E3:0.25 A3:0.25 r:0.75 | E2:0.25 E3:0.25 G#3:0.25 r:0.75 | A2:0.25 E3:0.25 A3:0.25 r:0.75 | r:1.5 | A2:0.25 E3:0.25 A3:0.25 r:0.75 | E2:0.25 E3:0.25 G#3:0.25 r:0.75 | A2:0.25 E3:0.25 A3:0.25 r:0.25"
+    }
+  ]
+}

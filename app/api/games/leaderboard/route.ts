@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { getGame } from "../../../games/catalog";
+import { boardKey, getGame } from "../../../games/catalog";
 import { listScores } from "../../../lib/games/storage";
 
 export async function GET(request: Request) {
-  const slug = new URL(request.url).searchParams.get("game") || "";
+  const params = new URL(request.url).searchParams;
+  const slug = params.get("game") || "";
   if (!getGame(slug)) return NextResponse.json({ error: "Unknown game." }, { status: 404 });
-  const board = await listScores(slug);
+  const key = boardKey(slug, params.get("board"));
+  if (!key) return NextResponse.json({ error: "Unknown leaderboard." }, { status: 404 });
+  const board = await listScores(key);
   return NextResponse.json(board);
 }

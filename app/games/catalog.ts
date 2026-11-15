@@ -23,6 +23,7 @@ export type GameKind =
   | "circle"
   | "symbols"
   | "clap-trainer"
+  | "piano-fall"
   | "chess-puzzles"
   | "chess-play";
 
@@ -35,12 +36,14 @@ export type GameDef = {
   minutes: string;
   accent: string;
   quizBank?: string;
+  /** Separate leaderboards inside one game (e.g. the piano game's clef modes). */
+  boards?: { id: string; label: string }[];
 };
 
 export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; emoji: string }[] = [
   { id: "all", label: "All games", hint: "Everything in one colorful arcade", emoji: "🎮" },
   { id: "guitar", label: "Guitar", hint: "Fretboard, chords, tabs and strumming", emoji: "🎸" },
-  { id: "piano", label: "Piano", hint: "Keys, staff reading and keyboard chords", emoji: "🎹" },
+  { id: "piano", label: "Piano", hint: "Falling-notes songs, keys, staff reading and chords", emoji: "🎹" },
   { id: "vocals", label: "Vocals", hint: "Pitch, solfege and breath challenges", emoji: "🎤" },
   {
     id: "theory",
@@ -99,6 +102,20 @@ export const GAMES: GameDef[] = [
     kind: "tab",
     minutes: "2 min",
     accent: "#b45309",
+  },
+  {
+    slug: "piano-falling-notes",
+    title: "Piano Falling Notes",
+    blurb: "Notes fall onto a piano keyboard — play each key as it reaches the line. Treble Clef, Bass Clef or Beast Mode (both hands), on a MIDI keyboard or a real piano through the mic. 16 songs, Beginner to Advanced.",
+    category: "piano",
+    kind: "piano-fall",
+    minutes: "1–3 min",
+    accent: "#0ea5e9",
+    boards: [
+      { id: "treble", label: "Treble Clef" },
+      { id: "bass", label: "Bass Clef" },
+      { id: "beast", label: "Beast Mode" },
+    ],
   },
   {
     slug: "piano-keys",
@@ -348,6 +365,14 @@ export const MIN_DURATION_MS = 8000;
 
 export function getGame(slug: string) {
   return GAMES.find((game) => game.slug === slug);
+}
+
+/** Storage key for a game's leaderboard (`slug` or `slug:board`); null if the board is unknown. */
+export function boardKey(slug: string, board?: string | null) {
+  const game = getGame(slug);
+  if (!game) return null;
+  if (!board) return game.boards?.length ? null : game.slug;
+  return game.boards?.some((b) => b.id === board) ? `${game.slug}:${board}` : null;
 }
 
 export function gamesByCategory(id: CategoryId | "all") {
