@@ -2,6 +2,7 @@
 // The server replays the whole move list with chess.js before storing a move,
 // so both players always see a legal game.
 import { Chess, type Square } from "chess.js";
+import { mergeReactions, parseReactions, sameReactions, type Reactions } from "./reactions";
 
 export type Color = "w" | "b";
 export type GameStatus = "waiting" | "active" | "checkmate" | "stalemate" | "draw" | "resigned" | "abandoned";
@@ -31,6 +32,8 @@ export type OnlineGame = {
   demoMode: boolean;
   /** A student's pending take-back request, made when the game had `n` moves. */
   takebackRequest: { n: number } | null;
+  /** Latest emoji reaction per player for the current position (stored in last_move.rx). */
+  reactions?: Reactions;
 };
 
 export type Role = "teacher" | "student";
@@ -143,7 +146,8 @@ export function sanList(moves: string[]): string[] {
 
 /** Map a chess_games row (Supabase / Realtime payload) to an OnlineGame. */
 export function rowToGame(row: Record<string, unknown>): OnlineGame {
-  const lm = row.last_move as { from?: string; to?: string } | null | undefined;
+  const lm = row.last_move as { from?: string; to?: string; rx?: unknown } | null | undefined;
+  const reactions = parseReactions(lm?.rx);
   return {
     id: String(row.id),
     whiteName: String(row.white_name ?? "White"),
@@ -167,17 +171,25 @@ export function rowToGame(row: Record<string, unknown>): OnlineGame {
       row.takeback_request && typeof (row.takeback_request as { n?: unknown }).n === "number"
         ? { n: (row.takeback_request as { n: number }).n }
         : null,
+    ...(reactions ? { reactions } : {}),
   };
 }
 
 /** Keep whichever copy of the game is further along (Realtime and polling can race). */
 export function newerGame(a: OnlineGame | null, b: OnlineGame): OnlineGame {
   if (!a || a.id !== b.id) return b;
-  if (a.version || b.version) return b.version >= a.version ? (b.version === a.version ? a : b) : a;
-  if (b.ply > a.ply) return b;
-  if (b.ply < a.ply) return a;
-  if (a.status === "active" && b.status !== "active") return b;
-  return a;
+  let base: OnlineGame;
+  if (a.version || b.version) {
+    if (b.version !== a.version) return b.version > a.version ? b : a;
+    base = a;
+  } else {
+    if (b.ply > a.ply) return b;
+    if (b.ply < a.ply) return a;
+    base = a.status === "active" && b.status !== "active" ? b : a;
+  }
+  // Same position: keep the newest emoji reaction from either copy.
+  const merged = mergeReactions(base.reactions, base === a ? b.reactions : a.reactions);
+  return sameReactions(merged, base.reactions) ? base : { ...base, reactions: merged };
 }
 
 /** Headline for the end of the game, from one player's point of view. */

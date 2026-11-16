@@ -26,6 +26,8 @@ import {
   type OnlineGame,
 } from "./online";
 import { nicknameError, normalizeNickname } from "../../lib/games/nickname";
+import { ReactionBar, useFloatingReactions } from "./Reactions";
+import type { ReactionId } from "./reactions";
 
 const API = "/api/games/chess";
 const NAME_KEY = "uniedd-chess-online-name";
@@ -555,6 +557,18 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
 
   const sans = useMemo(() => (game ? sanList(game.moves) : []), [game]);
 
+  const oppNameForReactions = game ? (color === "w" ? game.blackName : game.whiteName) : "";
+  const { overlay: reactionOverlay, spawnMine } = useFloatingReactions(!!game, game?.reactions, color, oppNameForReactions);
+  const react = useCallback(
+    async (e: ReactionId) => {
+      spawnMine(e);
+      const { status, data } = await call<StateReply>({ action: "react", gameId, secret, emoji: e });
+      if (data.game) accept(data);
+      return status === 200 ? null : data.error || "Couldn't send that reaction.";
+    },
+    [gameId, secret, accept, spawnMine],
+  );
+
   if (gone) {
     return (
       <div className="mx-auto max-w-md p-8 text-center">
@@ -685,7 +699,7 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
       <div className="mx-auto w-full max-w-[min(640px,calc(100vh-260px))] min-w-[280px] space-y-2">
         <p className={`rounded-xl px-3 py-1.5 text-center text-sm font-semibold lg:hidden ${myTurn || ended ? statusClass : "text-[var(--muted)]"}`}>{status}</p>
         {player(flipped ? "me" : "opp")}
-        <Board fen={game.fen} orientation={orientation} playerColor={movable} onMove={onMove} lastMove={game.lastMove} />
+        <Board fen={game.fen} orientation={orientation} playerColor={movable} onMove={onMove} lastMove={game.lastMove} overlay={reactionOverlay} />
         {player(flipped ? "opp" : "me")}
       </div>
       <aside className="space-y-4">
@@ -809,6 +823,7 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
           </div>
         ) : null}
 
+        {!isRoom ? <ReactionBar onReact={react} /> : null}
         <div className="flex flex-wrap gap-2">
           {isRoom && role === "student" && !waitingRoom ? (
             game.allowTakebacks ? (

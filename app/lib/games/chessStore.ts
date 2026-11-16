@@ -21,6 +21,7 @@ import {
   type GameStatus,
   type OnlineGame,
 } from "../../games/chess/online";
+import { addReaction, reactionToken, type Reactions } from "../../games/chess/reactions";
 
 export type MatchState = { state: "waiting" } | { state: "matched"; gameId: string; color: Color } | { state: "cancelled" } | { state: "gone" };
 export type Seat = { color: Color; opponentIdleMs: number };
@@ -35,6 +36,7 @@ export type StoredMove = {
 
 export type RoomSeat = { role: Role; color: Color; opponentIdleMs: number; code: string; studentJoined: boolean };
 export type RoomJoin = { state: "joined"; gameId: string; role: Role } | { state: "full" } | { state: "missing" };
+export type ReactResult = { ok: true } | { ok: false; error: string; retryMs: number };
 
 export interface ChessStore {
   kind: "supabase" | "memory";
@@ -44,6 +46,8 @@ export interface ChessStore {
   touch(gameId: string, secretHash: string): Promise<Seat | null>;
   getGame(gameId: string): Promise<OnlineGame | null>;
   applyMove(gameId: string, secretHash: string, expectedPly: number, move: StoredMove): Promise<boolean>;
+  /** Store an emoji reaction (allowlisted id) by a seated player; enforces the per-player cooldown. */
+  react(gameId: string, color: Color, emoji: string): Promise<ReactResult>;
   endGame(gameId: string, secretHash: string, kind: "resign" | "claim"): Promise<boolean>;
   // Private teacher rooms (supabase/chess_teacher_lobby.sql)
   createRoom(name: string, secretHash: string): Promise<{ gameId: string; code: string }>;
@@ -73,7 +77,7 @@ function supabaseError(error: { message?: string; code?: string } | null): never
     throw new ChessStoreError(
       /room/.test(msg)
         ? "Private lobbies aren't switched on yet. Run supabase/chess_teacher_lobby.sql in Supabase."
-        : "Online chess tables are missing. Run supabase/chess_multiplayer.sql in Supabase.",
+        : `Online chess tables are missing. Run supabase/chess_multiplayer.sql in Supabase. (${error?.code ?? "?"}: ${msg.slice(0, 160)})`,
       "missing-tables",
     );
   }
@@ -131,6 +135,32 @@ function supabaseStore(): ChessStore | null {
       });
       if (error) supabaseError(error);
       return data === true;
+    },
+    async react(gameId, color, emoji) {
+      // No extra SQL: the reaction lives in chess_games.last_move.rx. The update
+      // only applies if nobody moved and the opponent's reaction didn't change
+      // since we read the row (retry a couple of times if it did).
+      const other = color === "w" ? "b" : "w";
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: row, error } = await sb.from("chess_games").select("ply, last_move").eq("id", gameId).maybeSingle();
+        if (error) supabaseError(error);
+        if (!row) return { ok: false, error: "Game not found.", retryMs: 0 };
+        const lastMove = (row.last_move ?? null) as Record<string, unknown> | null;
+        const current = rowToGame({ id: gameId, last_move: lastMove }).reactions;
+        const added = addReaction(current, color, emoji, Date.now(), reactionToken());
+        if (!added.ok) return added;
+        let q = sb
+          .from("chess_games")
+          .update({ last_move: { ...(lastMove ?? {}), rx: added.reactions } })
+          .eq("id", gameId)
+          .eq("ply", Number(row.ply));
+        const otherId = current?.[other]?.id;
+        q = otherId ? q.eq(`last_move->rx->${other}->>id`, otherId) : q.is(`last_move->rx->${other}`, null);
+        const { data: updated, error: upErr } = await q.select("id");
+        if (upErr) supabaseError(upErr);
+        if (updated && updated.length) return { ok: true };
+      }
+      return { ok: false, error: "The board changed — try again.", retryMs: 300 };
     },
     async endGame(gameId, secretHash, kind) {
       const { data, error } = await sb.rpc("chess_end_game", { p_game: gameId, p_secret_hash: secretHash, p_kind: kind });
@@ -306,6 +336,7 @@ export function createMemoryStore(now: () => number = Date.now, random: () => nu
       const g = s.g.game;
       s.g.seats[s.color].seenAt = now();
       if (g.ply !== expectedPly || g.status !== "active") return false;
+      delete g.reactions; // a move replaces last_move, clearing reactions (same as the SQL)
       Object.assign(g, {
         moves: [...g.moves, m.uci],
         fen: m.fen,
@@ -319,6 +350,14 @@ export function createMemoryStore(now: () => number = Date.now, random: () => nu
       });
       s.g.updated = now();
       return true;
+    },
+    async react(gameId, color, emoji) {
+      const g = games.get(gameId);
+      if (!g) return { ok: false, error: "Game not found.", retryMs: 0 };
+      const added = addReaction(g.game.reactions as Reactions | undefined, color, emoji, now(), reactionToken());
+      if (!added.ok) return added;
+      g.game.reactions = added.reactions;
+      return { ok: true };
     },
     async endGame(gameId, secretHash, kind) {
       const s = seatOf(gameId, secretHash);

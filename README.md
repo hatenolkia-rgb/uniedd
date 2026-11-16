@@ -61,6 +61,20 @@ synth + mic clap detector, `highway.ts` canvas renderer, `ClapTrainer.tsx` UI).
   code and secrets live in the server-only `chess_rooms` table, never in `chess_games`.
 - **Local dev:** without Supabase env vars, `npm run dev` uses an in-memory store with the same rules, so you can
   play yourself in two browser windows. Production never uses the memory store.
+- **Emoji reactions:** players tap one of 10 allowlisted emoji (`app/games/chess/reactions.ts`); only the id is
+  sent. The server stores the latest one per player in the existing `chess_games.last_move` jsonb (`rx`), so it
+  reaches the opponent through the same Realtime update/polling as moves — no extra SQL. Rate-limited per player
+  (1.5 s cooldown, checked against the stored reaction) and per IP (30/min). The next move clears them.
+
+### Board styles and capture animations
+
+All chess pages share `app/games/chess/Board.tsx`. The "🎨 Board style" panel (`StylePicker.tsx`) picks a board
+theme and a piece set (classic or emoji sets on white/blue vs dark/orange discs) from `themes.ts`; the choice is
+saved in localStorage. Capturing a knight/bishop, rook or queen plays a short (~1.5 s), non-blocking celebration
+(`captures.ts`, `CaptureFx.tsx`, CSS in `chessThemes.css`) that grows with the piece's value. It can be switched
+off in the panel and is toned down for `prefers-reduced-motion`. The "⛶ Fullscreen" button (`ChessGame.tsx`) puts
+the whole chess area in browser fullscreen, or a full-window layer where the Fullscreen API isn't available
+(iPhone Safari); Esc exits.
 
 ## How demo bookings work
 
