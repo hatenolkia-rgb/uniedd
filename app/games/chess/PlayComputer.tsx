@@ -202,7 +202,10 @@ export default function PlayComputer() {
     <div className="overflow-hidden rounded-3xl border border-[var(--border)] bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] bg-[#e8962e14] px-5 py-3">
         <p className="font-semibold">♟️ Play vs Computer</p>
-        <div className="flex gap-3 text-sm">
+        <div className="flex flex-wrap gap-3 text-sm">
+          <Link href="/games/chess-online" className="font-semibold text-[var(--brand-blue)] hover:underline">
+            Play online
+          </Link>
           <Link href="/games/chess-puzzles" className="text-[var(--brand-blue)] hover:underline">
             Chess puzzles
           </Link>

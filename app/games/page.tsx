@@ -100,10 +100,14 @@ export default function GamesPage() {
             practise the guitar fretboard, piano keys and singing. Chess fans can solve{" "}
             <Link href="/games/chess-puzzles" className="font-semibold text-[var(--brand-blue)] hover:underline">
               free chess puzzles by difficulty
-            </Link>{" "}
-            or{" "}
+            </Link>
+            ,{" "}
             <Link href="/games/chess" className="font-semibold text-[var(--brand-blue)] hover:underline">
               play chess against the computer
+            </Link>{" "}
+            or{" "}
+            <Link href="/games/chess-online" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              online against other players
             </Link>
             .
           </p>

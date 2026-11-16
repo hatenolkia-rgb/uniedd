@@ -267,8 +267,8 @@ describe("static quiz banks", () => {
 });
 
 describe("catalog", () => {
-  it("lists 32 distinct games", () => {
-    expect(GAMES).toHaveLength(32);
-    expect(new Set(GAMES.map((game) => game.slug)).size).toBe(32);
+  it("lists 33 distinct games", () => {
+    expect(GAMES).toHaveLength(33);
+    expect(new Set(GAMES.map((game) => game.slug)).size).toBe(33);
   });
 });

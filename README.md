@@ -36,6 +36,25 @@ synth + mic clap detector, `highway.ts` canvas renderer, `ClapTrainer.tsx` UI).
   ±150 ms with the **Audio sync** slider (`localStorage["uniedd-clap-audio-sync"]`), checking with **Guide clap**.
   Add `?clapdebug=1` to the URL to log every marker crossing in `window.__clapSync`.
 
+## Online chess
+
+`/games/chess-online` lets two visitors play a live game. A player types a display name (no sign-up), presses
+**Find opponent** and waits in the online waiting room until they're paired with the next waiting player
+(first in, first out). Code: `app/games/chess/PlayOnline.tsx` (UI), `app/games/chess/online.ts` (shared rules),
+`app/api/games/chess/route.ts` (API) and `app/lib/games/chessStore.ts` (storage).
+
+- **Storage:** Supabase tables and functions from `supabase/chess_multiplayer.sql`, called only from the server
+  with the service-role key. `chess_matchmake()` pairs players under an advisory lock with
+  `FOR UPDATE SKIP LOCKED`, so nobody is matched twice. Every move is checked with chess.js on the server and
+  stored with an expected-ply check, so a stale or illegal move is rejected.
+- **Security:** each player gets a random secret in their browser; only its SHA-256 hash is stored. RLS lets the
+  anon key *read* `chess_games` (names and moves) for Realtime and nothing else.
+- **Live updates:** Supabase Realtime on `chess_games` when `SUPABASE_ANON_KEY` is set, plus a heartbeat that
+  doubles as polling. Waiting players not seen for 15 s are never matched; an opponent silent for 15 s shows a
+  "disconnected" notice and after 45 s the other player can claim the win.
+- **Local dev:** without Supabase env vars, `npm run dev` uses an in-memory store with the same rules, so you can
+  play yourself in two browser windows. Production never uses the memory store.
+
 ## How demo bookings work
 
 1. A visitor submits the "Book a Demo" form (`app/components/CTA.tsx`). Demos are free.
@@ -57,7 +76,8 @@ Set these in Vercel → Project Settings → Environment Variables.
 | `RESEND_API_KEY` | Confirmation and digest emails (sent from `no-reply@uniedd.com`) |
 | `ADMIN_EMAIL` | Where the daily lead digest goes |
 | `CRON_SECRET` | Authorises the digest cron job (enable "Secure Cron Jobs" in Vercel) |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Lead digest queue. Server-side only; never expose the service-role key |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Lead digest queue and online chess. Server-side only; never expose the service-role key |
+| `SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_ANON_KEY`) | Optional. Lets online chess push moves instantly with Supabase Realtime; without it the game polls every 1.5 s |
 | `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN` | WhatsApp Cloud API sender |
 | `WHATSAPP_NOTIFY_TO` | Comma-separated team numbers for lead alerts (E.164 without `+`) |
 | `WHATSAPP_TEMPLATE_NAME`, `WHATSAPP_TEMPLATE_LANG` | Team alert template (default `new_lead_alert` / `en_US`) |
@@ -69,6 +89,7 @@ The WhatsApp templates must be approved in Meta WhatsApp Manager. `app/lib/whats
 ## One-time setup
 
 - Run `supabase/lead_digest_queue.sql` in the Supabase SQL editor.
+- Run `supabase/chess_multiplayer.sql` in the Supabase SQL editor (online chess; safe to re-run).
 
 ## Tracking
 
