@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { getGame, MIN_DURATION_MS, SCORE_CAP } from "../../games/catalog";
 
-function secret() {
+export function gamesSecret() {
   return (
     process.env.GAMES_SESSION_SECRET ||
     process.env.LMS_BOOKING_SECRET ||
@@ -28,14 +28,14 @@ export function signSession(slug: string) {
     n: randomBytes(8).toString("hex"),
   };
   const body = b64url(JSON.stringify(payload));
-  const sig = createHmac("sha256", secret()).update(body).digest("base64url");
+  const sig = createHmac("sha256", gamesSecret()).update(body).digest("base64url");
   return { token: `${body}.${sig}`, payload };
 }
 
 export function readSession(token: string): SessionPayload | null {
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
-  const expected = createHmac("sha256", secret()).update(body).digest("base64url");
+  const expected = createHmac("sha256", gamesSecret()).update(body).digest("base64url");
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;

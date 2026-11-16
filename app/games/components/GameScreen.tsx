@@ -63,7 +63,7 @@ export function GameScreen({ game }: { game: GameDef }) {
           <div className="mx-auto max-w-lg text-center">
             <p className="text-[var(--muted)] leading-relaxed">{game.blurb}</p>
             <p className="mt-3 text-sm text-[var(--muted)]">
-              Scores can land on the global leaderboard. Pick a friendly nickname at the end (no email).
+              Scores can land on the global leaderboard with a friendly nickname (no email). You can also get a free certificate on WhatsApp at the end.
             </p>
             {error ? <p className="mt-3 text-sm text-rose-600">{error}</p> : null}
             <button
@@ -300,6 +300,8 @@ function EndScreen({
         <p className="mt-2 text-sm text-[var(--muted)]">Personal best on this device: {best}</p>
       </div>
 
+      <CertificateBox game={game} score={score} token={token} />
+
       <form
         className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row"
         onSubmit={(e) => {
@@ -344,6 +346,106 @@ function EndScreen({
           More games
         </Link>
       </div>
+    </div>
+  );
+}
+
+const AGE_OPTIONS = ["Under 5", "5–8", "9–12", "13–17", "18+"];
+
+// "Save your score + get a certificate on WhatsApp", then "Book free demo".
+// Saves the player to the LMS Leads page (source = game name) via
+// /api/games/lead.
+function CertificateBox({ game, score, token }: { game: GameDef; score: number; token: string | null }) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("+91 ");
+  const [childAge, setChildAge] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [website, setWebsite] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState<{ certificateUrl: string; whatsapp: boolean } | null>(null);
+
+  if (!token) return null;
+
+  async function submit() {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch("/api/games/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, score, name, phone, childAge, consent, website }),
+      });
+      const data = (await res.json()) as { ok?: boolean; certificateUrl?: string; whatsapp?: boolean; error?: string };
+      if (!res.ok || !data.ok) setError(data.error || "Could not save that. Please try again.");
+      else setDone({ certificateUrl: data.certificateUrl || "", whatsapp: !!data.whatsapp });
+    } catch {
+      setError("Could not save that. Please check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const field = "w-full rounded-2xl border border-[var(--border)] px-4 py-3 text-sm";
+
+  return (
+    <div className="mx-auto mt-6 max-w-md rounded-3xl border-2 p-5" style={{ borderColor: game.accent, background: `${game.accent}0d` }}>
+      {done ? (
+        <div className="text-center">
+          <p className="text-lg font-bold">🎉 Saved!</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {done.whatsapp ? "Your certificate is on its way to your WhatsApp." : "Our team will send your certificate on WhatsApp soon."}
+          </p>
+          {done.certificateUrl ? (
+            <a href={done.certificateUrl} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm text-[var(--brand-blue)] hover:underline">
+              View your certificate
+            </a>
+          ) : null}
+          <Link href="/#contact" className="mt-4 block rounded-full px-6 py-3 text-sm font-semibold text-white shadow" style={{ background: game.accent }}>
+            Book a free 30-min demo class
+          </Link>
+        </div>
+      ) : (
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <div className="text-center">
+            <p className="text-lg font-bold">🏅 Save your score + get a certificate on WhatsApp</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Free. Parents, please fill this in for children.</p>
+          </div>
+          <input value={name} onChange={(e) => setName(e.target.value)} maxLength={40} required autoComplete="name" placeholder="Learner's name (for the certificate)" className={field} />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={22} required type="tel" autoComplete="tel" placeholder="WhatsApp number, e.g. +91 98765 43210" className={field} />
+          <select value={childAge} onChange={(e) => setChildAge(e.target.value)} required className={field} aria-label="Learner's age">
+            <option value="" disabled>
+              Learner&apos;s age
+            </option>
+            {AGE_OPTIONS.map((a) => (
+              <option key={a} value={a}>
+                {a === "18+" ? "18+ (adult)" : `${a} years`}
+              </option>
+            ))}
+          </select>
+          <input value={website} onChange={(e) => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" name="website" />
+          <label className="flex items-start gap-2 text-left text-xs text-[var(--muted)]">
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} required className="mt-0.5" />
+            <span>
+              I&apos;m the parent/guardian or 18+, and UniEDD may message this WhatsApp number about my certificate and classes. See our{" "}
+              <Link href="/privacy" className="underline">
+                privacy policy
+              </Link>
+              .
+            </span>
+          </label>
+          {error ? <p className="text-center text-sm text-rose-600">{error}</p> : null}
+          <button type="submit" disabled={saving} className="rounded-full px-6 py-3 text-sm font-semibold text-white shadow disabled:opacity-60" style={{ background: game.accent }}>
+            {saving ? "Saving…" : "Send my certificate"}
+          </button>
+        </form>
+      )}
     </div>
   );
 }

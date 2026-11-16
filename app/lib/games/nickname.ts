@@ -1,4 +1,4 @@
-const BLOCKED = [
+export const BLOCKED = [
   "ass", "asshole", "bastard", "bitch", "bollocks", "cock", "crap", "cunt",
   "damn", "dick", "dyke", "fag", "faggot", "fuck", "fucker", "fucking",
   "hell", "homo", "idiot", "jerk", "kill", "nazi", "nigga", "nigger",
