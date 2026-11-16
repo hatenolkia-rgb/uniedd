@@ -59,7 +59,7 @@ export function hashSecret(secret: string) {
 function supabaseError(error: { message?: string; code?: string } | null): never {
   const msg = error?.message ?? "Unknown error";
   if (error?.code === "PGRST202" || error?.code === "42P01" || error?.code === "PGRST205" || /does not exist|could not find/i.test(msg)) {
-    throw new ChessStoreError("Online chess tables are missing. Run supabase/chess_multiplayer.sql in Supabase.", "missing-tables");
+    throw new ChessStoreError(`Online chess tables are missing. Run supabase/chess_multiplayer.sql in Supabase. (${error?.code ?? "?"}: ${msg.slice(0, 160)})`, "missing-tables");
   }
   if (error?.code === "42501") throw new ChessStoreError("Not allowed.", "forbidden");
   throw new ChessStoreError(msg, "failed");
