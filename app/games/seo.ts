@@ -223,6 +223,22 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
     ],
     goodFor: "Beginners practising full games, kids learning how the pieces move, and players who want a quick game at their level.",
   },
+  "chess-online": {
+    title: "Play Chess Online with Other Players – Free, No Sign-Up | UniEDD",
+    description:
+      "Play live chess online against another player for free. Enter a name, wait in the online waiting room and get matched with the next available player. Works on phones, tablets and computers, no sign-up.",
+    h1: "Play chess online against other players",
+    intro:
+      "Play a live game of chess against a real person, free in your web browser. Type a name, press Find opponent and you are matched with the next player in the waiting room. Colours are picked at random, and every move is checked so only legal moves are allowed.",
+    howTo: [
+      "Type a display name (3–16 letters or numbers) and press Find opponent.",
+      "Wait in the waiting room until another player joins. Press Cancel to leave the queue.",
+      "When you are matched you get White or Black at random. White moves first.",
+      "Drag a piece, or tap it and tap the target square. The game ends with checkmate, stalemate, a draw or a resignation.",
+      "If your opponent disconnects you will see a notice, and after a short wait you can claim the win. Press Play again to go back to the waiting room.",
+    ],
+    goodFor: "Students who want to practise against real opponents, friends playing each other from different devices, and anyone who wants a quick live game.",
+  },
   "rhythm-tap": {
     title: "Rhythm Tap – Free Online Rhythm & Ear Training Game | UniEDD",
   },
@@ -259,5 +275,5 @@ export function gameSeo(game: GameDef): GameSeo {
 export const GAMES_HUB_SEO = {
   title: "Free Online Music Games & Chess Puzzles for Kids – Piano, Rhythm, Ear Training, Guitar | UniEDD",
   description:
-    "Play free online games in your browser: a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer. No downloads.",
+    "Play free online games in your browser: a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
 };

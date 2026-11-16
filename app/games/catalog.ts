@@ -25,7 +25,8 @@ export type GameKind =
   | "clap-trainer"
   | "piano-fall"
   | "chess-puzzles"
-  | "chess-play";
+  | "chess-play"
+  | "chess-online";
 
 export type GameDef = {
   slug: string;
@@ -52,7 +53,7 @@ export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; 
     emoji: "🎼",
   },
   { id: "rhythm", label: "Rhythm", hint: "Clap along to songs — the mic scores every clap", emoji: "👏" },
-  { id: "chess", label: "Chess", hint: "Chess puzzles by difficulty and games against the computer", emoji: "♟️" },
+  { id: "chess", label: "Chess", hint: "Chess puzzles by difficulty, games against the computer and live games online", emoji: "♟️" },
   { id: "other", label: "Other", hint: "Art, public speaking, AI and music quizzes", emoji: "🌟" },
 ];
 
@@ -317,6 +318,15 @@ export const GAMES: GameDef[] = [
     kind: "chess-play",
     minutes: "10+ min",
     accent: "#475569",
+  },
+  {
+    slug: "chess-online",
+    title: "Play Chess Online",
+    blurb: "Play a live game of chess against another player. Enter a name, join the waiting room and get matched with the next player — no sign-up.",
+    category: "chess",
+    kind: "chess-online",
+    minutes: "10+ min",
+    accent: "#0f766e",
   },
   {
     slug: "music-quiz",
