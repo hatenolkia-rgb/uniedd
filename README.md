@@ -65,7 +65,9 @@ All chess pages share `app/games/chess/Board.tsx`. The "🎨 Board style" panel 
 theme and a piece set (classic or emoji sets on white/blue vs dark/orange discs) from `themes.ts`; the choice is
 saved in localStorage. Capturing a knight/bishop, rook or queen plays a short (~1.5 s), non-blocking celebration
 (`captures.ts`, `CaptureFx.tsx`, CSS in `chessThemes.css`) that grows with the piece's value. It can be switched
-off in the panel and is toned down for `prefers-reduced-motion`.
+off in the panel and is toned down for `prefers-reduced-motion`. The "⛶ Fullscreen" button (`ChessGame.tsx`) puts
+the whole chess area in browser fullscreen, or a full-window layer where the Fullscreen API isn't available
+(iPhone Safari); Esc exits.
 
 ## How demo bookings work
 

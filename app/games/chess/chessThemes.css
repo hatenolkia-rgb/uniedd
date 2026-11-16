@@ -72,3 +72,8 @@
   .ct-fx-text { animation-name: ct-fade-text; }
   @keyframes ct-fade-text { 0% { opacity: 0; } 15%, 80% { opacity: 1; } 100% { opacity: 0; } }
 }
+
+/* Fullscreen chess area: drop the page chrome and let the board grow. */
+.ct-fs { width: 100%; height: 100%; }
+.ct-fs:fullscreen { background: #fff; }
+.ct-fs [class*="max-w-[min(640px"] { max-width: min(900px, calc(100dvh - 170px)) !important; }
