@@ -7,6 +7,12 @@ import { Board, type MoveInput } from "./Board";
 import { moveSound, sounds } from "./sound";
 import {
   CLAIM_WIN_MS,
+  ROOM_CODE,
+  colorOf,
+  planRoomAction,
+  type Role,
+  type RoomInput,
+  type RoomKind,
   DISCONNECT_NOTICE_MS,
   GAME_HEARTBEAT_MS,
   GAME_POLL_MS,
@@ -25,7 +31,7 @@ const API = "/api/games/chess";
 const NAME_KEY = "uniedd-chess-online-name";
 const SESSION_KEY = "uniedd-chess-online-game";
 
-type Session = { gameId: string; color: Color; secret: string };
+type Session = { gameId: string; color: Color; secret: string; room?: boolean };
 type Ticket = { ticket: string; secret: string };
 type Realtime = { url: string; anonKey: string } | null;
 
@@ -95,6 +101,27 @@ export default function PlayOnline() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const ticket = useRef<Ticket | null>(null);
+  const [roomCode, setRoomCode] = useState(() => (new URLSearchParams(window.location.search).get("room") ?? "").toUpperCase().slice(0, 6));
+  const [tab, setTab] = useState<"public" | "private">(() => (new URLSearchParams(window.location.search).get("room") ? "private" : "public"));
+
+  async function privateRoom(action: "room-create" | "room-join") {
+    const clean = normalizeNickname(name);
+    const err = nicknameError(clean);
+    if (err) return setError(err);
+    const code = roomCode.trim().toUpperCase();
+    if (action === "room-join" && !ROOM_CODE.test(code)) return setError("Room codes are 6 letters and numbers, like K7M2QX.");
+    setError("");
+    setBusy(true);
+    writeStorage("localStorage", NAME_KEY, clean);
+    const secret = randomSecret();
+    const { data } = await call<{ state?: string; gameId?: string; role?: Role }>({ action, secret, name: clean, code });
+    setBusy(false);
+    if (data.state !== "joined" || !data.gameId) return setError(data.error || "Couldn't open the room.");
+    const s: Session = { gameId: data.gameId, color: data.role === "teacher" ? "w" : "b", secret, room: true };
+    writeStorage("sessionStorage", SESSION_KEY, JSON.stringify(s));
+    setSession(s);
+    sounds.correct();
+  }
 
   const enterGame = useCallback((t: Ticket, gameId: string, color: Color) => {
     const s = { gameId, color, secret: t.secret };
@@ -195,7 +222,48 @@ export default function PlayOnline() {
       {session ? (
         <OnlineGameView key={session.gameId} session={session} onExit={backToLobby} />
       ) : (
-        <Lobby name={name} setName={setName} waiting={waiting} busy={busy} error={error} onFind={findOpponent} onCancel={cancel} />
+        <>
+          {waiting ? null : (
+            <div className="mx-auto flex max-w-md justify-center gap-2 px-5 pt-5" role="tablist" aria-label="How to play">
+              {(
+                [
+                  ["public", "🌐 Play anyone"],
+                  ["private", "🎓 Private lobby"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  onClick={() => {
+                    setTab(id);
+                    setError("");
+                  }}
+                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                    tab === id ? "bg-[var(--brand-blue)] text-white shadow" : "bg-white ring-1 ring-[var(--border)] hover:ring-[var(--brand-blue)]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          {tab === "public" || waiting ? (
+            <Lobby name={name} setName={setName} waiting={waiting} busy={busy} error={error} onFind={findOpponent} onCancel={cancel} />
+          ) : (
+            <PrivateLobby
+              name={name}
+              setName={setName}
+              code={roomCode}
+              setCode={setRoomCode}
+              busy={busy}
+              error={error}
+              onCreate={() => void privateRoom("room-create")}
+              onJoin={() => void privateRoom("room-join")}
+            />
+          )}
+        </>
       )}
     </div>
   );
@@ -287,17 +355,117 @@ function Lobby({
   );
 }
 
-type StateReply = { game?: OnlineGame; color?: Color; opponentIdleMs?: number; realtime?: Realtime };
+function PrivateLobby({
+  name,
+  setName,
+  code,
+  setCode,
+  busy,
+  error,
+  onCreate,
+  onJoin,
+}: {
+  name: string;
+  setName: (v: string) => void;
+  code: string;
+  setCode: (v: string) => void;
+  busy: boolean;
+  error: string;
+  onCreate: () => void;
+  onJoin: () => void;
+}) {
+  const input = "mt-1.5 w-full rounded-xl border border-[var(--border)] px-4 py-3 text-base outline-none focus:border-[var(--brand-blue)]";
+  const label = "block text-xs font-semibold uppercase tracking-wide text-[var(--muted)]";
+  return (
+    <div className="mx-auto max-w-md p-5 sm:p-8">
+      <p className="text-lg font-semibold">Private lobby</p>
+      <p className="mt-1 text-sm text-[var(--muted)]">
+        For lessons: a teacher creates a room and shares the code or link, and the student joins with it. Private rooms are never matched with strangers.
+      </p>
+      <label htmlFor="chess-room-name" className={`mt-5 ${label}`}>
+        Your display name
+      </label>
+      <input id="chess-room-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={16} autoComplete="nickname" placeholder="e.g. Coach Priya" className={input} />
+      {error ? (
+        <p className="mt-2 text-sm text-rose-600" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="rounded-2xl bg-slate-50 p-4">
+          <p className="font-semibold">I&apos;m the teacher</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">You get a room code and teacher controls: take-backs, reset, colours and demo mode.</p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onCreate}
+            className="mt-3 w-full rounded-full bg-[var(--brand-blue)] px-4 py-2.5 text-sm font-semibold text-white shadow hover:opacity-90 disabled:opacity-50"
+          >
+            Create private lobby
+          </button>
+        </div>
+        <form
+          className="rounded-2xl bg-slate-50 p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onJoin();
+          }}
+        >
+          <p className="font-semibold">I&apos;m the student</p>
+          <label htmlFor="chess-room-code" className={`mt-2 ${label}`}>
+            Room code
+          </label>
+          <input
+            id="chess-room-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6))}
+            placeholder="K7M2QX"
+            autoCapitalize="characters"
+            autoComplete="off"
+            className={`${input} font-mono tracking-widest`}
+          />
+          <button
+            type="submit"
+            disabled={busy}
+            className="mt-3 w-full rounded-full bg-white px-4 py-2.5 text-sm font-semibold ring-1 ring-[var(--border)] hover:ring-[var(--brand-blue)] disabled:opacity-50"
+          >
+            Join room
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+type StateReply = {
+  game?: OnlineGame;
+  color?: Color;
+  opponentIdleMs?: number;
+  realtime?: Realtime;
+  role?: Role;
+  code?: string;
+  studentJoined?: boolean;
+};
+
+const btn = "rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-[var(--border)] hover:ring-[var(--brand-blue)] disabled:opacity-40";
 
 function OnlineGameView({ session, onExit }: { session: Session; onExit: () => void }) {
-  const { gameId, color, secret } = session;
+  const { gameId, secret } = session;
+  const isRoom = !!session.room;
   const [game, setGame] = useState<OnlineGame | null>(null);
+  const [seatColor, setSeatColor] = useState<Color>(session.color);
+  const [role, setRole] = useState<Role | null>(null);
+  const [code, setCode] = useState("");
+  const [studentJoined, setStudentJoined] = useState(true);
   const [idle, setIdle] = useState(0);
   const [realtime, setRealtime] = useState<Realtime>(null);
   const [live, setLive] = useState(false);
   const [notice, setNotice] = useState("");
   const [gone, setGone] = useState("");
   const [confirmResign, setConfirmResign] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [flipped, setFlipped] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [sending, setSending] = useState(false);
   const seenPly = useRef<number | null>(null);
 
@@ -305,18 +473,22 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
     const g = data.game;
     if (g) setGame((prev) => (force ? g : newerGame(prev, g)));
     if (typeof data.opponentIdleMs === "number") setIdle(data.opponentIdleMs);
+    if (data.color === "w" || data.color === "b") setSeatColor(data.color);
+    if (data.role === "teacher" || data.role === "student") setRole(data.role);
+    if (typeof data.code === "string") setCode(data.code);
+    if (typeof data.studentJoined === "boolean") setStudentJoined(data.studentJoined);
     const rt = data.realtime;
     if (rt !== undefined) setRealtime((prev) => (prev?.url === rt?.url && prev?.anonKey === rt?.anonKey ? prev : rt));
   }, []);
 
   const refresh = useCallback(async () => {
-    const { status, data } = await call<StateReply>({ action: "state", gameId, secret });
+    const { status, data } = await call<StateReply>({ action: "state", gameId, secret, room: isRoom });
     if (status === 403 || status === 404) setGone(data.error || "This game is no longer available.");
     else if (status === 200) {
       accept(data);
-      setNotice("");
+      setNotice((n) => (n.startsWith("Your move didn't") || n.startsWith("You seem") ? "" : n));
     } else if (data.error) setNotice(data.error);
-  }, [gameId, secret, accept]);
+  }, [gameId, secret, isRoom, accept]);
 
   // Heartbeat + fallback polling (fast when Realtime isn't connected).
   useEffect(() => {
@@ -333,7 +505,7 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
     };
   }, [refresh, live]);
 
-  // Supabase Realtime: instant move updates when the server shares its public settings.
+  // Supabase Realtime: instant updates when the server shares its public settings.
   useEffect(() => {
     if (!realtime) return;
     let client: SupabaseClient | null = null;
@@ -356,12 +528,17 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
     };
   }, [realtime, gameId]);
 
-  // Sound when the opponent moves or the game ends.
+  // In a private room colours can be swapped, so read them from the game.
+  const color: Color = isRoom && role && game?.teacherColor ? colorOf(game, role) : seatColor;
+  const isTeacher = isRoom && role === "teacher";
+
+  // Sound when the other side moves.
   useEffect(() => {
     if (!game) return;
     const prev = seenPly.current;
     seenPly.current = game.ply;
-    if (prev === null || game.ply <= prev) return;
+    if (prev === null || game.ply === prev) return;
+    if (game.ply < prev) return sounds.move();
     const moverColor: Color = (game.ply - 1) % 2 === 0 ? "w" : "b";
     if (moverColor !== color) {
       const sans = sanList(game.moves);
@@ -370,7 +547,7 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
     }
   }, [game, color]);
 
-  const ended = game ? game.status !== "active" : false;
+  const ended = game ? game.status !== "active" && game.status !== "waiting" : false;
   const lost = !!game && ((game.result === "1-0" && color === "b") || (game.result === "0-1" && color === "w"));
   useEffect(() => {
     if (ended) (lost ? sounds.wrong : sounds.solved)();
@@ -383,44 +560,66 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
       <div className="mx-auto max-w-md p-8 text-center">
         <p className="font-semibold">{gone}</p>
         <button type="button" onClick={onExit} className="mt-5 rounded-full bg-[var(--brand-blue)] px-6 py-2.5 font-semibold text-white">
-          Back to the waiting room
+          Back to the lobby
         </button>
       </div>
     );
   }
 
-  if (!game) {
+  if (!game || (isRoom && !role)) {
     return <div className="flex aspect-square max-h-[480px] w-full items-center justify-center text-[var(--muted)]">{notice || "Loading the game…"}</div>;
   }
 
+  const waitingRoom = game.status === "waiting";
   const turn: Color = game.ply % 2 === 0 ? "w" : "b";
-  const myTurn = !ended && turn === color && !sending;
+  const demo = isTeacher && game.demoMode;
+  const movable: Color | null = ended || waitingRoom || sending ? null : demo ? turn : turn === color ? color : null;
+  const myTurn = movable !== null;
   const myName = color === "w" ? game.whiteName : game.blackName;
   const oppName = color === "w" ? game.blackName : game.whiteName;
   const inCheck = !ended && /[+#]$/.test(sans[sans.length - 1] ?? "");
-  const oppAway = !ended && idle >= DISCONNECT_NOTICE_MS;
-  const canClaim = !ended && idle >= CLAIM_WIN_MS;
+  const oppAway = !ended && !waitingRoom && idle >= DISCONNECT_NOTICE_MS;
+  const canClaim = !isRoom && !ended && idle >= CLAIM_WIN_MS;
+  const shareLink = code ? `${window.location.origin}/games/chess-online?room=${code}` : "";
 
   function onMove(m: MoveInput) {
     if (!game || !myTurn) return false;
-    const check = checkMove(game.moves, color, m, game.status);
-    if (!check.ok) return false;
     const before = game;
-    moveSound(check.san, check.captured);
-    setGame({
-      ...game,
-      moves: [...game.moves, check.uci],
-      fen: check.fen,
-      ply: game.ply + 1,
-      lastMove: { from: check.from, to: check.to },
-      status: check.status,
-      result: check.result,
-      reason: check.reason,
-    });
+    let next: OnlineGame;
+    let san: string;
+    let captured: boolean;
+    if (isRoom && role) {
+      const plan = planRoomAction(game, role, "move", m, studentJoined);
+      if (!plan.ok) return false;
+      next = plan.game;
+      san = plan.san ?? "";
+      captured = !!plan.captured;
+    } else {
+      const check = checkMove(game.moves, color, m, game.status);
+      if (!check.ok) return false;
+      san = check.san;
+      captured = check.captured;
+      next = {
+        ...game,
+        moves: [...game.moves, check.uci],
+        fen: check.fen,
+        ply: game.ply + 1,
+        version: game.version + 1,
+        lastMove: { from: check.from, to: check.to },
+        status: check.status,
+        result: check.result,
+        reason: check.reason,
+      };
+    }
+    moveSound(san, captured);
+    setGame(next);
     setSending(true);
-    void call<StateReply>({ action: "move", gameId, secret, ply: before.ply, from: m.from, to: m.to, promotion: m.promotion }).then(({ status, data }) => {
+    const body = isRoom
+      ? { action: "room", kind: "move", room: true, version: before.version, gameId, secret, from: m.from, to: m.to, promotion: m.promotion }
+      : { action: "move", gameId, secret, ply: before.ply, from: m.from, to: m.to, promotion: m.promotion };
+    void call<StateReply>(body).then(({ status, data }) => {
       setSending(false);
-      if (status === 200) accept(data);
+      if (status === 200) accept(data, true);
       else if (data.game) {
         accept(data, true);
         setNotice(data.error || "");
@@ -433,26 +632,42 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
     return true;
   }
 
+  async function roomAction(kind: RoomKind, input: RoomInput = {}) {
+    if (!game) return;
+    setConfirmReset(false);
+    setConfirmResign(false);
+    const { status, data } = await call<StateReply>({ action: "room", room: true, kind, version: game.version, gameId, secret, ...input });
+    if (data.game) accept(data, true);
+    setNotice(status === 200 ? "" : data.error || "That didn't work. Try again.");
+  }
+
   async function endGame(kind: "resign" | "claim") {
     setConfirmResign(false);
+    if (isRoom) return roomAction("resign");
     const { data } = await call<StateReply>({ action: kind, gameId, secret });
     if (data.game) accept(data, true);
     if (data.error) setNotice(data.error);
   }
 
   let status: string;
-  if (ended) status = resultText(game, color);
-  else if (myTurn || (turn === color && sending)) status = inCheck ? "Check! Your move." : "Your move.";
+  if (waitingRoom) status = isTeacher ? "Waiting for your student to join…" : "Waiting for the teacher…";
+  else if (ended) status = resultText(game, color);
+  else if (demo) status = `Demo mode — move either side. ${turn === "w" ? "White" : "Black"} to move.`;
+  else if (turn === color) status = inCheck ? "Check! Your move." : "Your move.";
   else status = inCheck ? `Check! ${oppName} to move…` : `${oppName} is thinking…`;
 
   const player = (who: "me" | "opp") => {
     const c: Color = who === "me" ? color : color === "w" ? "b" : "w";
-    const active = !ended && turn === c;
+    const active = !ended && !waitingRoom && turn === c;
+    const tag = isRoom && game.teacherColor ? (c === game.teacherColor ? " · teacher" : " · student") : "";
     return (
       <div className={`flex items-center justify-between gap-2 rounded-2xl px-3 py-2 text-sm ${active ? "bg-[#0f766e14] ring-2 ring-teal-600/40" : "bg-slate-50"}`}>
         <span className="flex min-w-0 items-center gap-2 font-semibold">
           <span aria-hidden className={`inline-block h-4 w-4 shrink-0 rounded-full ring-1 ring-slate-400 ${c === "w" ? "bg-white" : "bg-slate-900"}`} />
-          <span className="truncate">{who === "me" ? `${myName} (you)` : oppName}</span>
+          <span className="truncate">
+            {who === "me" ? `${myName} (you)` : waitingRoom ? "Waiting for student…" : oppName}
+            <span className="font-normal text-[var(--muted)]">{tag}</span>
+          </span>
         </span>
         <span className="shrink-0 text-xs text-[var(--muted)]">
           {who === "opp" && oppAway ? "disconnected?" : active ? "to move" : c === "w" ? "White" : "Black"}
@@ -461,29 +676,68 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
     );
   };
 
+  const statusClass = ended ? "bg-amber-50 text-amber-900" : myTurn ? "bg-emerald-50 text-emerald-900" : "bg-slate-50 text-slate-800";
+  const orientation = (color === "w") !== flipped ? "white" : "black";
+  const studentName = game.studentName ?? "Your student";
+
   return (
     <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="mx-auto w-full max-w-[min(640px,calc(100vh-260px))] min-w-[280px] space-y-2">
-        <p className={`rounded-xl px-3 py-1.5 text-center text-sm font-semibold lg:hidden ${ended ? "bg-amber-50 text-amber-900" : myTurn ? "bg-emerald-50 text-emerald-900" : "text-[var(--muted)]"}`}>{status}</p>
-        {player("opp")}
-        <Board fen={game.fen} orientation={color === "w" ? "white" : "black"} playerColor={myTurn ? color : null} onMove={onMove} lastMove={game.lastMove} />
-        {player("me")}
+        <p className={`rounded-xl px-3 py-1.5 text-center text-sm font-semibold lg:hidden ${myTurn || ended ? statusClass : "text-[var(--muted)]"}`}>{status}</p>
+        {player(flipped ? "me" : "opp")}
+        <Board fen={game.fen} orientation={orientation} playerColor={movable} onMove={onMove} lastMove={game.lastMove} />
+        {player(flipped ? "opp" : "me")}
       </div>
       <aside className="space-y-4">
-        <div
-          className={`rounded-2xl px-4 py-3 text-sm font-semibold ${ended ? "bg-amber-50 text-amber-900" : myTurn ? "bg-emerald-50 text-emerald-900" : "bg-slate-50 text-slate-800"}`}
-          aria-live="polite"
-          data-testid="chess-online-status"
-        >
+        <div className={`rounded-2xl px-4 py-3 text-sm font-semibold ${statusClass}`} aria-live="polite" data-testid="chess-online-status">
           {status}
         </div>
+
+        {isTeacher && code ? (
+          <div className="rounded-2xl border border-[var(--border)] px-4 py-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Room code</p>
+            <p className="font-mono text-2xl font-bold tracking-[0.3em]" data-testid="room-code">
+              {code}
+            </p>
+            <p className="mt-1 break-all text-xs text-[var(--muted)]">{shareLink}</p>
+            <button
+              type="button"
+              className={`${btn} mt-2`}
+              onClick={() => {
+                void navigator.clipboard?.writeText(shareLink).then(() => {
+                  setCopied(true);
+                  window.setTimeout(() => setCopied(false), 1500);
+                });
+              }}
+            >
+              {copied ? "✓ Copied" : "Copy invite link"}
+            </button>
+          </div>
+        ) : null}
+
+        {isTeacher && game.takebackRequest ? (
+          <div className="rounded-2xl bg-sky-50 px-4 py-3 text-sm text-sky-900" role="status" data-testid="takeback-request">
+            <p className="font-semibold">{studentName} asks to take back their last move.</p>
+            <div className="mt-2 flex gap-2">
+              <button type="button" onClick={() => void roomAction("approve")} className="rounded-full bg-sky-700 px-4 py-1.5 text-sm font-semibold text-white">
+                ✓ Approve take-back
+              </button>
+              <button type="button" onClick={() => void roomAction("decline")} className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold ring-1 ring-sky-300">
+                Decline
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {oppAway ? (
           <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
             <p className="font-semibold">{oppName} seems to have disconnected.</p>
             <p className="mt-1">
-              {canClaim
-                ? "They haven't come back. You can claim the win or keep waiting."
-                : `Waiting for them to come back… you can claim the win in ${Math.ceil((CLAIM_WIN_MS - idle) / 1000)} s.`}
+              {isRoom
+                ? "They can come back with the same link or code."
+                : canClaim
+                  ? "They haven't come back. You can claim the win or keep waiting."
+                  : `Waiting for them to come back… you can claim the win in ${Math.ceil((CLAIM_WIN_MS - idle) / 1000)} s.`}
             </p>
             {canClaim ? (
               <button type="button" onClick={() => void endGame("claim")} className="mt-2 rounded-full bg-amber-600 px-4 py-1.5 text-sm font-semibold text-white">
@@ -493,27 +747,116 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
           </div>
         ) : null}
         {notice ? <p className="text-sm text-[var(--muted)]">{notice}</p> : null}
+
+        {isTeacher ? (
+          <div className="space-y-3 rounded-2xl border border-[var(--border)] px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Teacher controls</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={btn} disabled={!game.moves.length || waitingRoom} onClick={() => void roomAction("undo")}>
+                ↶ Take back last move
+              </button>
+              {confirmReset ? (
+                <>
+                  <button type="button" className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white" onClick={() => void roomAction("reset")}>
+                    Yes, reset
+                  </button>
+                  <button type="button" className={btn} onClick={() => setConfirmReset(false)}>
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button type="button" className={btn} onClick={() => setConfirmReset(true)}>
+                  ⟲ Reset board
+                </button>
+              )}
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--brand-blue)]"
+                checked={game.allowTakebacks}
+                onChange={(e) => void roomAction("set_takebacks", { flag: e.target.checked })}
+                data-testid="allow-takebacks"
+              />
+              Allow student take-backs
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[var(--brand-blue)]"
+                checked={game.demoMode}
+                onChange={(e) => void roomAction("set_demo", { flag: e.target.checked })}
+                data-testid="demo-mode"
+              />
+              Demo mode (I move both sides)
+            </label>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-[var(--muted)]">I play</span>
+              {(["w", "b"] as const).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => game.teacherColor !== c && void roomAction("set_teacher_color", { teacherColor: c })}
+                  className={`rounded-full px-3 py-1.5 font-semibold ${game.teacherColor === c ? "bg-[var(--brand-blue)] text-white" : "bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  {c === "w" ? "♔ White" : "♚ Black"}
+                </button>
+              ))}
+              <button type="button" className={btn} onClick={() => void roomAction("set_teacher_color", { teacherColor: game.teacherColor === "b" ? "w" : "b" })}>
+                ⇄ Swap colours
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap gap-2">
-          {ended ? (
+          {isRoom && role === "student" && !waitingRoom ? (
+            game.allowTakebacks ? (
+              <button type="button" className={btn} disabled={!sans.length} onClick={() => void roomAction("takeback")}>
+                ↶ Take back my move
+              </button>
+            ) : game.takebackRequest ? (
+              <button type="button" className={btn} disabled>
+                Take-back requested…
+              </button>
+            ) : (
+              <button type="button" className={btn} disabled={!sans.length} onClick={() => void roomAction("request")}>
+                ↶ Ask to take back
+              </button>
+            )
+          ) : null}
+          {isRoom ? (
+            <button type="button" className={btn} onClick={() => setFlipped((f) => !f)}>
+              ⇅ Flip board
+            </button>
+          ) : null}
+          {ended && !isRoom ? (
             <button type="button" onClick={onExit} className="rounded-full bg-[var(--brand-blue)] px-5 py-2.5 text-sm font-semibold text-white shadow hover:opacity-90">
               ↻ Play again
             </button>
-          ) : confirmResign ? (
+          ) : ended || waitingRoom ? null : confirmResign ? (
             <>
               <button type="button" onClick={() => void endGame("resign")} className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white">
                 Yes, resign
               </button>
-              <button type="button" onClick={() => setConfirmResign(false)} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-[var(--border)]">
+              <button type="button" onClick={() => setConfirmResign(false)} className={btn}>
                 Keep playing
               </button>
             </>
           ) : (
-            <button type="button" onClick={() => setConfirmResign(true)} className="rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-[var(--border)] hover:ring-rose-400">
+            <button type="button" onClick={() => setConfirmResign(true)} className={`${btn} hover:ring-rose-400`}>
               🏳 Resign
             </button>
           )}
+          {isRoom ? (
+            <button type="button" className={btn} onClick={onExit}>
+              Leave room
+            </button>
+          ) : null}
         </div>
-        <div className="max-h-56 overflow-y-auto rounded-2xl border border-[var(--border)] px-3 py-2 font-mono text-sm">
+        {isRoom && ended && role === "student" ? <p className="text-xs text-[var(--muted)]">Your teacher can take moves back or reset the board for another game.</p> : null}
+
+        <div className="max-h-56 overflow-y-auto rounded-2xl border border-[var(--border)] px-3 py-2 font-mono text-sm" data-testid="move-list">
           {sans.length ? (
             <ol className="grid grid-cols-[2.5rem_1fr_1fr] gap-x-2">
               {Array.from({ length: Math.ceil(sans.length / 2) }, (_, i) => (
@@ -528,7 +871,9 @@ function OnlineGameView({ session, onExit }: { session: Session; onExit: () => v
             <p className="text-[var(--muted)]">{color === "w" ? "You play White — make the first move." : "You play Black — White moves first."}</p>
           )}
         </div>
-        <p className="text-xs text-[var(--muted)]">{live ? "● Live" : "Connected"} · Game {gameId.slice(0, 8)}</p>
+        <p className="text-xs text-[var(--muted)]">
+          {live ? "● Live" : "Connected"} · {isRoom ? `Private room${code ? ` ${code}` : ""}` : `Game ${gameId.slice(0, 8)}`}
+        </p>
       </aside>
     </div>
   );

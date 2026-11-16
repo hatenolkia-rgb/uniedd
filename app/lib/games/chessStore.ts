@@ -12,8 +12,11 @@ import {
   CLAIM_WIN_MS,
   QUEUE_STALE_MS,
   START_FEN,
+  applyRoomUpdate,
   rowToGame,
   type Color,
+  type Role,
+  type RoomUpdate,
   type GameResult,
   type GameStatus,
   type OnlineGame,
@@ -30,6 +33,9 @@ export type StoredMove = {
   reason: string | null;
 };
 
+export type RoomSeat = { role: Role; color: Color; opponentIdleMs: number; code: string; studentJoined: boolean };
+export type RoomJoin = { state: "joined"; gameId: string; role: Role } | { state: "full" } | { state: "missing" };
+
 export interface ChessStore {
   kind: "supabase" | "memory";
   matchmake(ticket: string, name: string, secretHash: string): Promise<MatchState>;
@@ -39,6 +45,11 @@ export interface ChessStore {
   getGame(gameId: string): Promise<OnlineGame | null>;
   applyMove(gameId: string, secretHash: string, expectedPly: number, move: StoredMove): Promise<boolean>;
   endGame(gameId: string, secretHash: string, kind: "resign" | "claim"): Promise<boolean>;
+  // Private teacher rooms (supabase/chess_teacher_lobby.sql)
+  createRoom(name: string, secretHash: string): Promise<{ gameId: string; code: string }>;
+  joinRoom(code: string, name: string, secretHash: string): Promise<RoomJoin>;
+  touchRoom(gameId: string, secretHash: string): Promise<RoomSeat | null>;
+  updateRoom(gameId: string, secretHash: string, expectedVersion: number, update: RoomUpdate): Promise<boolean>;
 }
 
 export class ChessStoreError extends Error {
@@ -59,7 +70,12 @@ export function hashSecret(secret: string) {
 function supabaseError(error: { message?: string; code?: string } | null): never {
   const msg = error?.message ?? "Unknown error";
   if (error?.code === "PGRST202" || error?.code === "42P01" || error?.code === "PGRST205" || /does not exist|could not find/i.test(msg)) {
-    throw new ChessStoreError("Online chess tables are missing. Run supabase/chess_multiplayer.sql in Supabase.", "missing-tables");
+    throw new ChessStoreError(
+      /room/.test(msg)
+        ? "Private lobbies aren't switched on yet. Run supabase/chess_teacher_lobby.sql in Supabase."
+        : "Online chess tables are missing. Run supabase/chess_multiplayer.sql in Supabase.",
+      "missing-tables",
+    );
   }
   if (error?.code === "42501") throw new ChessStoreError("Not allowed.", "forbidden");
   throw new ChessStoreError(msg, "failed");
@@ -121,6 +137,45 @@ function supabaseStore(): ChessStore | null {
       if (error) supabaseError(error);
       return data === true;
     },
+    async createRoom(name, secretHash) {
+      const { data, error } = await sb.rpc("chess_room_create", { p_name: name, p_secret_hash: secretHash });
+      if (error) supabaseError(error);
+      const row = (data as { game_id: string; code: string }[] | null)?.[0];
+      if (!row) throw new ChessStoreError("Couldn't create the room.", "failed");
+      return { gameId: row.game_id, code: row.code };
+    },
+    async joinRoom(code, name, secretHash) {
+      const { data, error } = await sb.rpc("chess_room_join", { p_code: code, p_name: name, p_secret_hash: secretHash });
+      if (error) supabaseError(error);
+      const row = (data as { state: string; game_id: string | null; role: string | null }[] | null)?.[0];
+      if (row?.state === "joined" && row.game_id && (row.role === "teacher" || row.role === "student")) return { state: "joined", gameId: row.game_id, role: row.role };
+      return { state: row?.state === "full" ? "full" : "missing" };
+    },
+    async touchRoom(gameId, secretHash) {
+      const { data, error } = await sb.rpc("chess_room_touch", { p_game: gameId, p_secret_hash: secretHash });
+      if (error) supabaseError(error);
+      const row = (data as { role: string; color: string; opponent_idle_ms: number | string; code: string; student_joined: boolean }[] | null)?.[0];
+      if (!row || (row.role !== "teacher" && row.role !== "student") || (row.color !== "w" && row.color !== "b")) return null;
+      return { role: row.role, color: row.color, opponentIdleMs: Number(row.opponent_idle_ms) || 0, code: row.code, studentJoined: !!row.student_joined };
+    },
+    async updateRoom(gameId, secretHash, expectedVersion, u) {
+      const { data, error } = await sb.rpc("chess_room_update", {
+        p_game: gameId,
+        p_secret_hash: secretHash,
+        p_expected_version: expectedVersion,
+        p_kind: u.kind,
+        p_moves: u.moves ?? null,
+        p_fen: u.fen ?? null,
+        p_last_move: u.lastMove ?? null,
+        p_status: u.status ?? null,
+        p_result: u.result ?? null,
+        p_reason: u.reason ?? null,
+        p_flag: u.flag ?? null,
+        p_teacher_color: u.teacherColor ?? null,
+      });
+      if (error) supabaseError(error);
+      return data === true;
+    },
   };
 }
 
@@ -129,12 +184,36 @@ function supabaseStore(): ChessStore | null {
 type Ticket = { id: string; name: string; secretHash: string; joinedAt: number; seenAt: number; gameId: string | null; color: Color | null };
 type MemSeat = { name: string; secretHash: string; seenAt: number };
 type MemGame = { game: OnlineGame; seats: Record<Color, MemSeat>; updated: number };
+type MemRoom = { gameId: string; code: string; teacherHash: string; studentHash: string | null; teacherSeen: number; studentSeen: number | null };
+
+const PUBLIC_DEFAULTS = {
+  version: 0,
+  isPrivate: false,
+  teacherName: null,
+  studentName: null,
+  teacherColor: null,
+  allowTakebacks: false,
+  demoMode: false,
+  takebackRequest: null,
+} satisfies Partial<OnlineGame>;
+
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 /** In-memory store mirroring supabase/chess_multiplayer.sql (also used by unit tests). */
 export function createMemoryStore(now: () => number = Date.now, random: () => number = Math.random): ChessStore {
   const queue = new Map<string, Ticket>();
   const games = new Map<string, MemGame>();
+  const rooms = new Map<string, MemRoom>(); // by game id
+  const privateGames = new Map<string, OnlineGame>();
   let seq = 0;
+
+  function roomRole(gameId: string, secretHash: string): { room: MemRoom; role: Role } | null {
+    const room = rooms.get(gameId);
+    if (!room) return null;
+    if (room.teacherHash === secretHash) return { room, role: "teacher" };
+    if (room.studentHash && room.studentHash === secretHash) return { room, role: "student" };
+    return null;
+  }
 
   function cleanup() {
     const t = now();
@@ -189,6 +268,7 @@ export function createMemoryStore(now: () => number = Date.now, random: () => nu
           reason: null,
           lastMove: null,
           updatedAt: new Date(t).toISOString(),
+          ...PUBLIC_DEFAULTS,
         },
         seats: {
           w: { name: white.name, secretHash: white.secretHash, seenAt: t },
@@ -215,8 +295,8 @@ export function createMemoryStore(now: () => number = Date.now, random: () => nu
       return { color: s.color, opponentIdleMs: t - s.g.seats[s.color === "w" ? "b" : "w"].seenAt };
     },
     async getGame(gameId) {
-      const g = games.get(gameId);
-      return g ? structuredClone(g.game) : null;
+      const g = games.get(gameId)?.game ?? privateGames.get(gameId);
+      return g ? structuredClone(g) : null;
     },
     async applyMove(gameId, secretHash, expectedPly, m) {
       const s = seatOf(gameId, secretHash);
@@ -234,6 +314,7 @@ export function createMemoryStore(now: () => number = Date.now, random: () => nu
         status: m.status,
         result: m.result,
         reason: m.reason,
+        version: g.version + 1,
         updatedAt: new Date(now()).toISOString(),
       });
       s.g.updated = now();
@@ -252,7 +333,85 @@ export function createMemoryStore(now: () => number = Date.now, random: () => nu
         Object.assign(g, { status: "abandoned", result: white ? "1-0" : "0-1", reason: white ? "Black left the game" : "White left the game" });
       }
       g.updatedAt = new Date(now()).toISOString();
+      g.version += 1;
       s.g.updated = now();
+      return true;
+    },
+    async createRoom(name, secretHash) {
+      const taken = new Set([...rooms.values()].map((r) => r.code));
+      let code = "";
+      do code = Array.from({ length: 6 }, () => CODE_ALPHABET[Math.floor(random() * CODE_ALPHABET.length)]).join("");
+      while (taken.has(code));
+      const id = crypto.randomUUID();
+      const t = now();
+      const teacher = name.slice(0, 32);
+      privateGames.set(id, {
+        id,
+        whiteName: teacher,
+        blackName: "Student",
+        moves: [],
+        fen: START_FEN,
+        ply: 0,
+        status: "waiting",
+        result: null,
+        reason: null,
+        lastMove: null,
+        updatedAt: new Date(t).toISOString(),
+        ...PUBLIC_DEFAULTS,
+        isPrivate: true,
+        teacherName: teacher,
+        teacherColor: "w",
+      });
+      rooms.set(id, { gameId: id, code, teacherHash: secretHash, studentHash: null, teacherSeen: t, studentSeen: null });
+      return { gameId: id, code };
+    },
+    async joinRoom(code, name, secretHash) {
+      const room = [...rooms.values()].find((r) => r.code === code.trim().toUpperCase());
+      if (!room) return { state: "missing" };
+      const t = now();
+      if (room.teacherHash === secretHash) return { state: "joined", gameId: room.gameId, role: "teacher" };
+      if (room.studentHash === secretHash) {
+        room.studentSeen = t;
+        return { state: "joined", gameId: room.gameId, role: "student" };
+      }
+      if (room.studentHash && room.studentSeen !== null && room.studentSeen > t - 60_000) return { state: "full" };
+      room.studentHash = secretHash;
+      room.studentSeen = t;
+      const g = privateGames.get(room.gameId)!;
+      const student = name.slice(0, 32);
+      Object.assign(g, {
+        studentName: student,
+        whiteName: g.teacherColor === "w" ? g.teacherName : student,
+        blackName: g.teacherColor === "w" ? student : g.teacherName,
+        status: g.status === "waiting" ? "active" : g.status,
+        takebackRequest: null,
+        version: g.version + 1,
+      });
+      return { state: "joined", gameId: room.gameId, role: "student" };
+    },
+    async touchRoom(gameId, secretHash) {
+      const r = roomRole(gameId, secretHash);
+      if (!r) return null;
+      const t = now();
+      const g = privateGames.get(gameId)!;
+      const tc: Color = g.teacherColor ?? "w";
+      if (r.role === "teacher") {
+        r.room.teacherSeen = t;
+        return { role: "teacher", color: tc, opponentIdleMs: r.room.studentSeen === null ? 0 : t - r.room.studentSeen, code: r.room.code, studentJoined: !!r.room.studentHash };
+      }
+      r.room.studentSeen = t;
+      return { role: "student", color: tc === "w" ? "b" : "w", opponentIdleMs: t - r.room.teacherSeen, code: r.room.code, studentJoined: true };
+    },
+    async updateRoom(gameId, secretHash, expectedVersion, u) {
+      const r = roomRole(gameId, secretHash);
+      const g = privateGames.get(gameId);
+      if (!r || !g || g.version !== expectedVersion) return false;
+      const next = applyRoomUpdate(g, r.role, u, !!r.room.studentHash);
+      if (!next) return false;
+      next.updatedAt = new Date(now()).toISOString();
+      privateGames.set(gameId, next);
+      if (r.role === "teacher") r.room.teacherSeen = now();
+      else r.room.studentSeen = now();
       return true;
     },
   };

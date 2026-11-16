@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { clientKey, isRateLimited } from "../../rate-limit";
 import { nicknameError, normalizeNickname } from "../../../lib/games/nickname";
 import { ChessStoreError, getChessStore, hashSecret, realtimeConfig } from "../../../lib/games/chessStore";
-import { checkMove } from "../../../games/chess/online";
+import { ROOM_CODE, checkMove, planRoomAction, type Color, type RoomKind } from "../../../games/chess/online";
 
 // Online multiplayer chess: waiting room, moves, heartbeats, resign.
 // Every request carries the player's random secret (kept in their browser);
@@ -18,7 +18,16 @@ type Body = {
   from?: string;
   to?: string;
   promotion?: string;
+  // private teacher rooms
+  room?: boolean;
+  code?: string;
+  kind?: string;
+  version?: number;
+  flag?: boolean;
+  teacherColor?: string;
 };
+
+const ROOM_KINDS: RoomKind[] = ["move", "undo", "takeback", "request", "approve", "decline", "set_takebacks", "set_demo", "reset", "set_teacher_color", "resign"];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -60,8 +69,54 @@ export async function POST(request: Request) {
       return ok(await store.matchmake(body.ticket, normalizeNickname(body.name || ""), secretHash));
     }
 
+    if (body.action === "room-create" || body.action === "room-join") {
+      const nameErr = nicknameError(body.name || "");
+      if (nameErr) return bad(nameErr);
+      const name = normalizeNickname(body.name || "");
+      if (body.action === "room-create") {
+        const room = await store.createRoom(name, secretHash);
+        return ok({ state: "joined", gameId: room.gameId, code: room.code, role: "teacher" });
+      }
+      const code = String(body.code ?? "").trim().toUpperCase();
+      if (!ROOM_CODE.test(code)) return bad("Room codes are 6 letters and numbers, like K7M2QX.");
+      const joined = await store.joinRoom(code, name, secretHash);
+      if (joined.state === "missing") return bad("No room with that code. Check it with your teacher.", 404);
+      if (joined.state === "full") return bad("This room already has a student.", 409);
+      return ok(joined);
+    }
+
     if (!body.gameId || !UUID.test(body.gameId)) return bad("Bad game.");
     const gameId = body.gameId;
+
+    if (body.room) {
+      const seat = await store.touchRoom(gameId, secretHash);
+      if (!seat) return bad("You aren't in this room.", 403);
+      const game = await store.getGame(gameId);
+      if (!game) return bad("Room not found.", 404);
+      const info = { color: seat.color, role: seat.role, code: seat.code, studentJoined: seat.studentJoined, opponentIdleMs: seat.opponentIdleMs };
+      if (body.action === "state") return ok({ game, ...info, realtime: realtimeConfig() });
+      if (body.action !== "room") return bad("Unknown action.");
+      const kind = body.kind as RoomKind;
+      if (!ROOM_KINDS.includes(kind)) return bad("Unknown room action.");
+      if (typeof body.version === "number" && body.version !== game.version) {
+        return NextResponse.json({ error: "The board changed. Updating…", game, ...info }, { status: 409 });
+      }
+      const teacherColor = body.teacherColor === "w" || body.teacherColor === "b" ? (body.teacherColor as Color) : undefined;
+      const plan = planRoomAction(
+        game,
+        seat.role,
+        kind,
+        { from: body.from, to: body.to, promotion: body.promotion || undefined, flag: body.flag, teacherColor },
+        seat.studentJoined,
+      );
+      if (!plan.ok) return NextResponse.json({ error: plan.error, game, ...info }, { status: kind !== "move" && plan.error.startsWith("Only the teacher") ? 403 : 422 });
+      const saved = await store.updateRoom(gameId, secretHash, game.version, plan.update);
+      const fresh = await store.getGame(gameId);
+      const after = await store.touchRoom(gameId, secretHash);
+      const infoAfter = after ? { color: after.color, role: after.role, code: after.code, studentJoined: after.studentJoined, opponentIdleMs: after.opponentIdleMs } : info;
+      if (!saved) return NextResponse.json({ error: "The board changed. Updating…", game: fresh, ...infoAfter }, { status: 409 });
+      return ok({ game: fresh, ...infoAfter });
+    }
     const seat = await store.touch(gameId, secretHash);
     if (!seat) return bad("You aren't playing in this game.", 403);
 
