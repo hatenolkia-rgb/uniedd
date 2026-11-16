@@ -1,8 +1,13 @@
 "use client";
 
 import { Chess, type Square } from "chess.js";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
+import { useChessPrefs, useReducedMotion } from "./prefs";
+import { useCaptureFx } from "./CaptureFx";
+import { EmojiPiece, buildPieces } from "./pieces";
+import { PIECE_NAMES, pieceEmoji, type PieceLetter } from "./themes";
+import "./chessThemes.css";
 
 export type MoveInput = { from: string; to: string; promotion?: string };
 export type Arrow = { startSquare: string; endSquare: string; color: string };
@@ -18,13 +23,19 @@ type Props = {
   highlights?: Record<string, React.CSSProperties>;
   arrows?: Arrow[];
   flash?: "good" | "bad" | null;
+  /** Extra layer drawn over the board (e.g. floating emoji reactions). */
+  overlay?: React.ReactNode;
 };
 
 const PROMO = ["q", "r", "b", "n"] as const;
 const PROMO_ICON: Record<string, [string, string]> = { q: ["♕", "♛"], r: ["♖", "♜"], b: ["♗", "♝"], n: ["♘", "♞"] };
 
 /** Chessboard with drag, click-to-move, legal-move dots and a promotion picker. */
-export function Board({ fen, orientation, playerColor, onMove, lastMove, highlights, arrows, flash }: Props) {
+export function Board({ fen, orientation, playerColor, onMove, lastMove, highlights, arrows, flash, overlay }: Props) {
+  const { theme, pieceSet, captureFx } = useChessPrefs();
+  const reduced = useReducedMotion();
+  const { overlay: fxOverlay, shake } = useCaptureFx(fen, orientation, captureFx, reduced);
+  const pieces = useMemo(() => buildPieces(pieceSet, theme), [pieceSet, theme]);
   const [selected, setSelected] = useState<string | null>(null);
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null);
   const game = useMemo(() => {
@@ -65,7 +76,13 @@ export function Board({ fen, orientation, playerColor, onMove, lastMove, highlig
     return onMove({ from, to });
   }
 
+  // react-chessboard fires both onPieceClick and onSquareClick for a tap on a
+  // piece; handle each tap once so a capture isn't sent twice.
+  const lastTap = useRef({ square: "", at: 0 });
   function clickSquare(square: string) {
+    const now = performance.now();
+    if (lastTap.current.square === square && now - lastTap.current.at < 60) return;
+    lastTap.current = { square, at: now };
     if (!game || !canMove || promo) return;
     const piece = game.get(square as Square);
     if (selected) {
@@ -79,8 +96,8 @@ export function Board({ fen, orientation, playerColor, onMove, lastMove, highlig
 
   const squareStyles: Record<string, React.CSSProperties> = {};
   if (lastMove) {
-    squareStyles[lastMove.from] = { background: "rgba(255, 214, 10, 0.38)" };
-    squareStyles[lastMove.to] = { background: "rgba(255, 214, 10, 0.5)" };
+    squareStyles[lastMove.from] = { background: theme.lastFrom };
+    squareStyles[lastMove.to] = { background: theme.lastTo };
   }
   if (game?.inCheck()) {
     const board = game.board();
@@ -90,24 +107,27 @@ export function Board({ fen, orientation, playerColor, onMove, lastMove, highlig
           squareStyles[sq.square] = { background: "radial-gradient(circle, rgba(239,68,68,0.85) 0%, rgba(239,68,68,0.35) 55%, transparent 75%)" };
   }
   Object.assign(squareStyles, highlights ?? {});
-  if (selected) squareStyles[selected] = { ...(squareStyles[selected] ?? {}), background: "rgba(59, 130, 246, 0.5)" };
+  if (selected) squareStyles[selected] = { ...(squareStyles[selected] ?? {}), background: theme.selected };
   for (const t of targets)
     squareStyles[t.to] = {
       ...(squareStyles[t.to] ?? {}),
       backgroundImage: t.capture
-        ? "radial-gradient(circle, transparent 58%, rgba(20,20,40,0.32) 60%)"
-        : "radial-gradient(circle, rgba(20,20,40,0.28) 22%, transparent 24%)",
+        ? `radial-gradient(circle, transparent 58%, ${theme.dot} 60%)`
+        : `radial-gradient(circle, ${theme.dot} 22%, transparent 24%)`,
     };
 
   const promoColor = playerColor ?? "w";
 
   return (
-    <div className="relative w-full select-none" style={{ touchAction: "none" }}>
+    <div className="relative w-full select-none" style={{ touchAction: "none" }} data-theme={theme.id} data-pieces={pieceSet.id}>
+      <div className={`ct-frame ct-frame-${theme.id} ${shake}`}>
       <div
-        className={`overflow-hidden rounded-xl shadow-lg ring-4 transition-colors ${
+        className={`ct-clip relative overflow-hidden rounded-xl shadow-lg ring-4 transition-colors ${
           flash === "good" ? "ring-emerald-400" : flash === "bad" ? "ring-rose-400" : "ring-transparent"
         }`}
       >
+        {theme.boardBackground ? <div aria-hidden className="ct-board-bg absolute inset-0" style={{ background: theme.boardBackground }} /> : null}
+        <div className="relative">
         <Chessboard
           options={{
             id: "uniedd-board",
@@ -122,11 +142,18 @@ export function Board({ fen, orientation, playerColor, onMove, lastMove, highlig
             arrows: arrows ?? [],
             allowDrawingArrows: false,
             animationDurationInMs: 180,
-            darkSquareStyle: { backgroundColor: "#7a8fb8" },
-            lightSquareStyle: { backgroundColor: "#eef1f7" },
+            darkSquareStyle: theme.dark,
+            lightSquareStyle: theme.light,
+            darkSquareNotationStyle: { color: theme.darkNotation },
+            lightSquareNotationStyle: { color: theme.lightNotation },
+            ...(pieces ? { pieces } : {}),
           }}
         />
+        </div>
+        {fxOverlay}
       </div>
+      </div>
+      {overlay}
       {promo ? (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/40" onClick={() => setPromo(null)}>
           <div className="rounded-2xl bg-white p-3 shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -144,7 +171,13 @@ export function Board({ fen, orientation, playerColor, onMove, lastMove, highlig
                   }}
                   className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-200 text-4xl hover:bg-amber-100"
                 >
-                  {PROMO_ICON[p][promoColor === "w" ? 0 : 1]}
+                  {pieceEmoji(pieceSet, `${promoColor}${p.toUpperCase()}`) ? (
+                    <span className="block h-12 w-12" title={PIECE_NAMES[p.toUpperCase() as PieceLetter]}>
+                      <EmojiPiece emoji={pieceEmoji(pieceSet, `${promoColor}${p.toUpperCase()}`)!} color={promoColor} />
+                    </span>
+                  ) : (
+                    PROMO_ICON[p][promoColor === "w" ? 0 : 1]
+                  )}
                 </button>
               ))}
             </div>

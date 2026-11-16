@@ -6,9 +6,19 @@ const Loading = () => <div className="flex aspect-square max-h-[640px] w-full it
 const PuzzleTrainer = dynamic(() => import("./PuzzleTrainer"), { ssr: false, loading: Loading });
 const PlayComputer = dynamic(() => import("./PlayComputer"), { ssr: false, loading: Loading });
 const PlayOnline = dynamic(() => import("./PlayOnline"), { ssr: false, loading: Loading });
+const StylePicker = dynamic(() => import("./StylePicker").then((m) => m.StylePicker), { ssr: false });
 
-export default function ChessGame({ kind }: { kind: string }) {
+function Game({ kind }: { kind: string }) {
   if (kind === "chess-play") return <PlayComputer />;
   if (kind === "chess-online") return <PlayOnline />;
   return <PuzzleTrainer />;
+}
+
+export default function ChessGame({ kind }: { kind: string }) {
+  return (
+    <div className="space-y-3">
+      <StylePicker />
+      <Game kind={kind} />
+    </div>
+  );
 }

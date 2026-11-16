@@ -2,6 +2,7 @@
 // The server replays the whole move list with chess.js before storing a move,
 // so both players always see a legal game.
 import { Chess, type Square } from "chess.js";
+import { mergeReactions, parseReactions, sameReactions, type Reactions } from "./reactions";
 
 export type Color = "w" | "b";
 export type GameStatus = "active" | "checkmate" | "stalemate" | "draw" | "resigned" | "abandoned";
@@ -20,6 +21,8 @@ export type OnlineGame = {
   reason: string | null;
   lastMove: { from: string; to: string } | null;
   updatedAt: string;
+  /** Latest emoji reaction per player for the current position (stored in last_move.rx). */
+  reactions?: Reactions;
 };
 
 export type Outcome = { status: GameStatus; result: GameResult; reason: string | null };
@@ -130,7 +133,8 @@ export function sanList(moves: string[]): string[] {
 
 /** Map a chess_games row (Supabase / Realtime payload) to an OnlineGame. */
 export function rowToGame(row: Record<string, unknown>): OnlineGame {
-  const lm = row.last_move as { from?: string; to?: string } | null | undefined;
+  const lm = row.last_move as { from?: string; to?: string; rx?: unknown } | null | undefined;
+  const reactions = parseReactions(lm?.rx);
   return {
     id: String(row.id),
     whiteName: String(row.white_name ?? "White"),
@@ -143,6 +147,7 @@ export function rowToGame(row: Record<string, unknown>): OnlineGame {
     reason: (row.reason as string | null) ?? null,
     lastMove: lm && lm.from && lm.to ? { from: lm.from, to: lm.to } : null,
     updatedAt: String(row.updated_at ?? ""),
+    ...(reactions ? { reactions } : {}),
   };
 }
 
@@ -151,8 +156,10 @@ export function newerGame(a: OnlineGame | null, b: OnlineGame): OnlineGame {
   if (!a || a.id !== b.id) return b;
   if (b.ply > a.ply) return b;
   if (b.ply < a.ply) return a;
-  if (a.status === "active" && b.status !== "active") return b;
-  return a;
+  const base = a.status === "active" && b.status !== "active" ? b : a;
+  // Same position: keep the newest emoji reaction from either copy.
+  const merged = mergeReactions(base.reactions, base === a ? b.reactions : a.reactions);
+  return sameReactions(merged, base.reactions) ? base : { ...base, reactions: merged };
 }
 
 /** Headline for the end of the game, from one player's point of view. */
