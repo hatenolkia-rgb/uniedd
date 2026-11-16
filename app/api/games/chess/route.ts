@@ -3,6 +3,7 @@ import { clientKey, isRateLimited } from "../../rate-limit";
 import { nicknameError, normalizeNickname } from "../../../lib/games/nickname";
 import { ChessStoreError, getChessStore, hashSecret, realtimeConfig } from "../../../lib/games/chessStore";
 import { checkMove } from "../../../games/chess/online";
+import { REACTION_IP_LIMIT, REACTION_IP_WINDOW_MS, isReactionId } from "../../../games/chess/reactions";
 
 // Online multiplayer chess: waiting room, moves, heartbeats, resign.
 // Every request carries the player's random secret (kept in their browser);
@@ -18,6 +19,7 @@ type Body = {
   from?: string;
   to?: string;
   promotion?: string;
+  emoji?: string;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -90,6 +92,18 @@ export async function POST(request: Request) {
       const fresh = await store.getGame(gameId);
       if (!saved) return NextResponse.json({ error: "The board changed. Updating…", game: fresh }, { status: 409 });
       return ok({ game: fresh, color: seat.color, opponentIdleMs: seat.opponentIdleMs });
+    }
+
+    if (body.action === "react") {
+      // Fixed allowlist of emoji ids only — never free text.
+      if (!isReactionId(body.emoji)) return bad("Pick one of the emoji buttons.");
+      if (await isRateLimited(`games-chess-react:${clientKey(request)}`, REACTION_IP_LIMIT, REACTION_IP_WINDOW_MS)) {
+        return bad("Slow down a little 🙂", 429);
+      }
+      const r = await store.react(gameId, seat.color, body.emoji);
+      const game = await store.getGame(gameId);
+      if (!r.ok) return NextResponse.json({ error: r.error, retryMs: r.retryMs, game }, { status: 429, headers: { "Cache-Control": "no-store" } });
+      return ok({ game, color: seat.color, opponentIdleMs: seat.opponentIdleMs });
     }
 
     if (body.action === "resign" || body.action === "claim") {
