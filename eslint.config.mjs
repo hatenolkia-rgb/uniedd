@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Third-party engine build served as a static asset
     "public/stockfish/**",
+    // onnxruntime-web runtime copied at build time (scripts/copy-ort.mjs)
+    "public/karaoke/ort/**",
   ]),
 ]);
 

@@ -1,0 +1,34 @@
+/* Karaoke Maker — playful animations (prefix: km-) */
+.km-sky {
+  background:
+    radial-gradient(circle at 10% 20%, #fff7 0 5px, transparent 6px),
+    radial-gradient(circle at 85% 25%, #fff6 0 4px, transparent 5px),
+    radial-gradient(circle at 60% 10%, #fff5 0 3px, transparent 4px),
+    linear-gradient(135deg, #1a9fd4 0%, #7c5cff 50%, #e8962e 100%);
+}
+.km-float { animation: km-float 3s ease-in-out infinite; }
+@keyframes km-float { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
+.km-note { position: absolute; font-size: 1.4rem; opacity: 0; animation: km-note 4.5s linear infinite; pointer-events: none; }
+@keyframes km-note { 0% { transform: translateY(30px) rotate(0); opacity: 0; } 15% { opacity: .9; } 100% { transform: translateY(-140px) rotate(25deg); opacity: 0; } }
+.km-pop { animation: km-pop .35s cubic-bezier(.3,1.8,.5,1); }
+@keyframes km-pop { 0% { transform: scale(.7); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.km-bar { display: inline-block; width: 6px; margin: 0 2px; border-radius: 3px; background: currentColor; height: 30%; transform-origin: bottom; }
+.km-eq-on .km-bar { animation: km-eq .9s ease-in-out infinite; }
+.km-eq-on .km-bar:nth-child(2) { animation-delay: -.3s; }
+.km-eq-on .km-bar:nth-child(3) { animation-delay: -.6s; }
+.km-eq-on .km-bar:nth-child(4) { animation-delay: -.15s; }
+.km-eq-on .km-bar:nth-child(5) { animation-delay: -.45s; }
+@keyframes km-eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+.km-stripes {
+  background-image: linear-gradient(45deg, #ffffff33 25%, transparent 25%, transparent 50%, #ffffff33 50%, #ffffff33 75%, transparent 75%);
+  background-size: 22px 22px;
+  animation: km-stripes 1s linear infinite;
+}
+@keyframes km-stripes { from { background-position: 0 0; } to { background-position: 22px 0; } }
+.km-drop { transition: transform .15s ease, border-color .15s ease, background-color .15s ease; }
+.km-drop-active { transform: scale(1.02); border-color: #7c5cff; background-color: #f3efff; }
+.km-range { accent-color: #7c5cff; }
+@media (prefers-reduced-motion: reduce) {
+  .km-float, .km-note, .km-pop, .km-eq-on .km-bar, .km-stripes { animation: none; }
+  .km-note { display: none; }
+}

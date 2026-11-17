@@ -46,6 +46,26 @@ const nextConfig: NextConfig = {
         source: "/games/alternate-picking",
         headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=()" }],
       },
+      {
+        // Karaoke Maker: cross-origin isolation enables the multi-threaded
+        // WASM backend of the on-device vocal remover (3–5x faster).
+        // "credentialless" still allows ordinary cross-origin images/scripts.
+        source: "/games/karaoke-maker",
+        headers: [
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
+        ],
+      },
+      {
+        // The vocal-remover worker and its onnxruntime-web files.
+        source: "/karaoke/:path*",
+        headers: [
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          { key: "Cross-Origin-Embedder-Policy", value: "credentialless" },
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
     ];
   },
 };

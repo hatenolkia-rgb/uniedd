@@ -1,4 +1,4 @@
-export type CategoryId = "guitar" | "piano" | "vocals" | "theory" | "rhythm" | "chess" | "other";
+export type CategoryId = "karaoke" | "guitar" | "piano" | "vocals" | "theory" | "rhythm" | "chess" | "other";
 
 export type GameKind =
   | "quiz"
@@ -25,6 +25,7 @@ export type GameKind =
   | "clap-trainer"
   | "piano-fall"
   | "pick-coach"
+  | "karaoke-maker"
   | "chess-puzzles"
   | "chess-play"
   | "chess-online";
@@ -44,6 +45,12 @@ export type GameDef = {
 
 export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; emoji: string }[] = [
   { id: "all", label: "All games", hint: "Everything in one colorful arcade", emoji: "🎮" },
+  {
+    id: "karaoke",
+    label: "Karaoke Maker",
+    hint: "Upload any song, remove the vocals and change the key — all on your device",
+    emoji: "🎤",
+  },
   { id: "guitar", label: "Guitar", hint: "Picking and strumming coach, fretboard, chords and tabs", emoji: "🎸" },
   { id: "piano", label: "Piano", hint: "Falling-notes songs, keys, staff reading and chords", emoji: "🎹" },
   { id: "vocals", label: "Vocals", hint: "Pitch, solfege and breath challenges", emoji: "🎤" },
@@ -59,6 +66,15 @@ export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; 
 ];
 
 export const GAMES: GameDef[] = [
+  {
+    slug: "karaoke-maker",
+    title: "Karaoke Maker",
+    blurb: "Upload any song, remove the singer's voice and move it up or down by half steps or whole steps to suit your voice — the speed stays the same. Preview original vs karaoke and download an MP3 or WAV. Your song stays on your device.",
+    category: "karaoke",
+    kind: "karaoke-maker",
+    minutes: "Any song",
+    accent: "#7c5cff",
+  },
   {
     slug: "alternate-picking",
     title: "Alternate Picking & Strumming Coach",

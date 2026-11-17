@@ -10,6 +10,7 @@ import { GAMES, getGame } from "../catalog";
 import { GameScreen } from "../components/GameScreen";
 import { categoryLabel, gameSeo } from "../seo";
 import ChessGame from "../chess/ChessGame";
+import KaraokeMaker from "../karaoke/KaraokeMaker";
 
 export const dynamicParams = false;
 
@@ -47,7 +48,7 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
   const url = `${SITE_URL}/games/${game.slug}`;
   const related = GAMES.filter((g) => g.category === game.category && g.slug !== game.slug).slice(0, 6);
   const isChess = game.category === "chess";
-  const isClap = game.kind === "clap-trainer" || game.kind === "piano-fall" || game.kind === "pick-coach" || isChess;
+  const isClap = game.kind === "clap-trainer" || game.kind === "piano-fall" || game.kind === "pick-coach" || game.kind === "karaoke-maker" || isChess;
 
   return (
     <main>
@@ -82,7 +83,7 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
       </section>
       <section className="px-4 sm:px-6 pb-16 bg-white">
         <div className={`mx-auto ${isClap ? "max-w-6xl" : "max-w-4xl"}`}>
-          {isChess ? <ChessGame kind={game.kind} /> : <GameScreen game={game} />}
+          {isChess ? <ChessGame kind={game.kind} /> : game.kind === "karaoke-maker" ? <KaraokeMaker /> : <GameScreen game={game} />}
         </div>
       </section>
       <section className="px-6 pb-24 bg-white" aria-labelledby="about-game">
