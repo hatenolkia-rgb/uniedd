@@ -130,6 +130,13 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
           "With the tap buttons or the F and J keys the game also checks the direction of every stroke, so it is a good way to learn a new pattern before picking up the guitar.",
         ],
       },
+      {
+        heading: "Camera Coach (optional)",
+        body: [
+          "Turn on Camera Coach and the game watches your strumming hand through the webcam or the phone's front camera. It spots strokes that go the wrong way, missed and extra strokes and uneven timing, and in Chords mode it takes a rough, approximate look at your chord hand.",
+          "We are not recording anything. Your camera and microphone are never recorded, saved, or uploaded; everything is checked live on your device. Camera Coach works best at slow and medium speeds, with both hands in the picture and good light.",
+        ],
+      },
     ],
     genre: ["Music", "Educational", "Rhythm"],
   },

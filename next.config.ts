@@ -40,6 +40,12 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
         ],
       },
+      {
+        // The picking & strumming game's optional Camera Coach uses the webcam
+        // (hand tracking runs on-device; nothing is recorded or uploaded).
+        source: "/games/alternate-picking",
+        headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=()" }],
+      },
     ];
   },
 };
