@@ -99,7 +99,7 @@ export const PICKING: Record<Level, PickPattern[]> = {
     { strings: { seq: [40], per: 1 }, id: "e-burst", title: "Pop-Pop Bursts", desc: "Open low E · a quick 16th burst, then a long note", say: "down up down up, down. down up down up, down", segs: [{ grid: 4, s: "dudud---dudud---" }], reps: 2 },
   ],
   pro: [
-    { strings: { seq: [40], per: 1 }, id: "p-16", title: "Sixteenth Sprint", desc: "Muted low E string · 16 even 16th notes", say: "down up down up, four times", segs: [{ grid: 4, s: "dudududududududu" }], reps: 2 },
+    { strings: { seq: [40], per: 1 }, id: "p-16", title: "Sixteenth Sprint", desc: "Low E string · 16 even 16th notes", say: "down up down up, four times", segs: [{ grid: 4, s: "dudududududududu" }], reps: 2 },
     { id: "p-acc3", title: "Accent Shifter", desc: "16th notes · accent every 3rd note", say: "DOWN up down, UP down up, DOWN up down, UP down up, DOWN up, down up", segs: [{ grid: 4, s: "DudUduDudUduDudu" }], reps: 2 },
     { strings: { seq: [40], per: 1 }, id: "p-gallop", title: "Gallop", desc: "Low E · 8th + two 16ths (the up after the 8th is an air-pick)", say: "down, down up. down, down up. down, down up. down, down up", segs: [{ grid: 4, s: "d-dud-dud-dud-du" }], reps: 2 },
     { strings: { seq: [50], per: 1 }, id: "p-six", title: "Sextuplet Storm", desc: "Open D string · 6 notes per beat, then 8ths", say: "down up down up down up, twice, then down up, down up", segs: [{ grid: 6, s: "dudududududu" }, { grid: 2, s: "dudu" }], reps: 2 },
