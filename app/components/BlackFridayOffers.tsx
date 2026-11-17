@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { BLACK_FRIDAY } from "../lib/blackFriday";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { BLACK_FRIDAY, useCountry } from "../lib/blackFriday";
 
-const COURSES = ["🎸 Guitar", "🎹 Keyboard", "🎤 Vocals", "🥁 Tabla", "💃 Dance", "🎙️ Public Speaking", "♟️ Chess"];
+const COURSES = ["🎸 Guitar", "🎹 Piano", "🎤 Singing"];
 const YEAR_COURSE_TERMS = "*Valid only on the 96-session, 1-year course with one-time payment. Not valid on 3- or 6-month courses. T&C apply.";
 const AUTO_MS = 6000;
 
@@ -23,35 +23,49 @@ type Offer = {
   accent: string;
 };
 
-const OFFERS: Offer[] = [
+// The $9-a-session offer: rupees in India, dollars elsewhere. null = don't
+// show it (India visitors while no rupee price is set).
+function sessionPrice(country: string): string | null {
+  if (country !== "IN") return "$9";
+  return BLACK_FRIDAY.inrPerSession ? `₹${BLACK_FRIDAY.inrPerSession.toLocaleString("en-IN")}` : null;
+}
+
+function offersFor(country: string): Offer[] {
+  const price = sessionPrice(country);
+  return [
   {
-    tag: "Live 1:1 classes",
-    title: BLACK_FRIDAY.offer,
-    body: "With a real teacher, live online, at a time that suits you. Kids and adults welcome.",
-    badge: `🎁 Early bird: ${BLACK_FRIDAY.earlyBird.replace(/^Enrol/, "enrol")}`,
-    stamp: "SALE",
+    tag: "Parents, don't miss this",
+    title: (
+      <>
+        40% off your child&apos;s{" "}
+        <span className="italic" style={{ fontFamily: "var(--font-playfair), serif" }}>first two</span> music classes
+      </>
+    ),
+    body: "Live 1:1 online guitar, piano & singing classes for kids 3–19, at a time that suits you.",
+    badge: "🎁 Black Friday offer · ends 30 November",
+    stamp: "40%",
     chips: COURSES,
     bg: "bg-gradient-to-br from-[#ffb347] via-[#e8962e] to-[#c4560f]",
     ink: "text-[#1d0f02]",
     dark: "bg-[#1d0f02]",
     accent: "text-[#ffcf6b]",
   },
-  {
+  ...(price ? [{
     tag: "Guitar & piano · 1-year course",
     title: (
       <>
-        Guitar or piano lessons at just <span className="text-[#ffcf6b]">$9</span> a session*
+        Guitar or piano lessons at just <span className="text-[#ffcf6b]">{price}</span> a session*
       </>
     ),
-    body: "Live 1:1 online classes with expert teachers, for kids 3–19 across the US.",
+    body: "Live 1:1 online classes with expert teachers, for kids 3–19.",
     badge: "📅 96-session, 1-year course",
-    stamp: "$9",
+    stamp: price,
     terms: YEAR_COURSE_TERMS,
     bg: "bg-gradient-to-br from-[#2f6fd6] via-[#1f5bb9] to-[#0f2f6b]",
     ink: "text-white",
     dark: "bg-[#0b1f47]",
     accent: "text-[#ffcf6b]",
-  },
+  }] : []),
   {
     tag: "Black Friday gift",
     title: (
@@ -68,14 +82,18 @@ const OFFERS: Offer[] = [
     dark: "bg-[#06281f]",
     accent: "text-[#ffcf6b]",
   },
-];
+  ];
+}
 
 // The Black Friday offers as a slider: changes by itself every few seconds,
 // and visitors can swipe or use the arrows and dots. Auto-play pauses
 // while the pointer or keyboard focus is on it, and is off for people who
 // ask their device for reduced motion.
 export default function BlackFridayOffers() {
-  const [index, setIndex] = useState(0);
+  const country = useCountry();
+  const OFFERS = useMemo(() => offersFor(country), [country]);
+  const [rawIndex, setIndex] = useState(0);
+  const index = rawIndex % OFFERS.length;
   const [paused, setPaused] = useState(false);
   const swipeFrom = useRef<number | null>(null);
 
@@ -85,9 +103,11 @@ export default function BlackFridayOffers() {
 
   useEffect(() => {
     if (paused || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = window.setInterval(() => go(index + 1), AUTO_MS);
+    // Restarts after each move (index), so a manual move gets a full 6 s.
+    const count = OFFERS.length;
+    const id = window.setInterval(() => setIndex((i) => (i + 1) % count), AUTO_MS);
     return () => window.clearInterval(id);
-  }, [index, paused]);
+  }, [index, paused, OFFERS.length]);
 
   return (
     <div

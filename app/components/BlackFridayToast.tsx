@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BLACK_FRIDAY, pad, useBlackFriday } from "../lib/blackFriday";
+import { BLACK_FRIDAY, pad, useBlackFriday, useCountry } from "../lib/blackFriday";
 
 const CLOSED_KEY = "uniedd-bf-toast-closed";
 
@@ -13,6 +13,9 @@ const CLOSED_KEY = "uniedd-bf-toast-closed";
 export default function BlackFridayToast() {
   const left = useBlackFriday();
   const live = !!left;
+  const country = useCountry();
+  // Same rule as the offers slider: rupees in India, or no per-session price.
+  const session = country !== "IN" ? "$9" : BLACK_FRIDAY.inrPerSession ? `₹${BLACK_FRIDAY.inrPerSession.toLocaleString("en-IN")}` : null;
   const [show, setShow] = useState(false);
 
   // Depends on `live`, not the countdown, so the 1-second ticks don't keep
@@ -57,7 +60,7 @@ export default function BlackFridayToast() {
           Black Friday sale is live
         </p>
         <p className="mt-1.5 text-lg font-bold leading-snug">
-          {BLACK_FRIDAY.offer}, $9 lessons or a FREE guitar 🎸🎹
+          40% off 2 classes{session ? `, ${session} lessons` : ""} or a FREE guitar 🎸🎹
         </p>
         <p className="mt-1 text-xs text-white/60 tabular-nums">
           Ends in {left.d}d {pad(left.h)}h {pad(left.m)}m {pad(left.s)}s
