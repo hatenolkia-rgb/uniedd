@@ -22,6 +22,8 @@ import {
   type TargetState,
 } from "./patterns";
 import { ChordDiagram, Confetti, FingerLegend, Mascot, PatternLane, Stars, type Mood } from "./visuals";
+import { CameraOptIn, CameraPreview, useCameraCoach } from "./CameraCoach";
+import { cameraTip, type CamSummary } from "./camera";
 import "./picking.css";
 
 type View = "setup" | "calibrate" | "play" | "results";
@@ -54,6 +56,8 @@ type Live = {
   summary: Summary | null;
   tip: string;
   ear: number;
+  cam: CamSummary | null;
+  camTip: string;
 };
 
 type RoundResult = {
@@ -63,6 +67,7 @@ type RoundResult = {
   input: InputMode;
   summary: Summary;
   perExercise: { title: string; stars: number }[];
+  cam: { right: number; wrong: number; missed: number; extra: number } | null;
   boardScore: number;
   newBest: boolean;
 };
@@ -127,6 +132,8 @@ const emptyLive = (): Live => ({
   summary: null,
   tip: "",
   ear: 0,
+  cam: null,
+  camTip: "",
 });
 
 class Aborted extends Error {}
@@ -151,6 +158,13 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
   const levelBarRef = useRef<HTMLDivElement | null>(null);
   const optsRef = useRef(opts);
   const offsetsRef = useRef(offsets);
+  const [camEnabled, setCamEnabled] = useState(false);
+  const heardForCam = useCallback((perf: number) => (engineRef.current ? engineRef.current.heardAt(perf) : null), []);
+  const cam = useCameraCoach(heardForCam);
+  const camRef = useRef(cam);
+  useEffect(() => {
+    camRef.current = cam;
+  }, [cam]);
 
   useEffect(() => {
     optsRef.current = opts;
@@ -310,12 +324,12 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
 
   // ------------------------------------------------------------ one exercise
 
-  const playExercise = async (engine: PickEngine, ex: Exercise, exIdx: number, token: number, bpmNow: number): Promise<{ summary: Summary; targets: TargetState[] }> => {
+  const playExercise = async (engine: PickEngine, ex: Exercise, exIdx: number, token: number, bpmNow: number): Promise<{ summary: Summary; targets: TargetState[]; cam: CamSummary | null }> => {
     const spb = 60 / bpmNow;
     const o = optsRef.current;
     judgeRef.current = null;
     phaseRef.current = "speak";
-    patchLive({ phase: "speak", exIdx, results: ex.steps.map(() => null), active: -1, mood: "listen", bubble: ex.say, summary: null, tip: "", count: 0, pop: null, streak: 0 });
+    patchLive({ phase: "speak", exIdx, results: ex.steps.map(() => null), active: -1, mood: "listen", bubble: ex.say, summary: null, tip: "", count: 0, pop: null, streak: 0, cam: null, camTip: "" });
     await sleep(250, token);
     await say(`${ex.title}. ${ex.say}`, token);
 
@@ -388,6 +402,20 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       events.push({ at: start + b * spb, play: (at) => engine.click(at, b < 0 ? b === -countBeats : b % 4 === 0, b < 0 ? 0.55 : 0.4) });
     }
     engine.runSchedule(events);
+    const camOn = camRef.current.status === "on";
+    if (camOn) {
+      camRef.current.begin(
+        ex.slots.map((s) => ({ t: start + s.beat * spb, dir: s.dir, rest: s.rest })),
+        ex.mode === "chords"
+          ? (t: number) => {
+              const beat = (t - start) / spb;
+              let name = ex.chordTimeline[0]?.name;
+              for (const c of ex.chordTimeline) if (beat + 1e-9 >= c.beat) name = c.name;
+              return name;
+            }
+          : undefined,
+      );
+    }
     patchLive({ phase: "countin", active: -1, mood: "happy", bubble: "Get ready…", results: ex.steps.map(() => null) });
     const times = slotTime(start);
     let lastActive = -2;
@@ -431,7 +459,8 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
     phaseRef.current = "feedback";
     engine.stopSchedule();
     const summary = judge.summary();
-    return { summary, targets: judge.targets };
+    const camSummary = camOn ? camRef.current.end() : null;
+    return { summary, targets: judge.targets, cam: camSummary };
   };
 
   // ------------------------------------------------------------ the round
@@ -451,7 +480,7 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
     setResult(null);
     setLive(emptyLive());
     setView("play");
-    const finals: { summary: Summary; targets: TargetState[]; title: string }[] = [];
+    const finals: { summary: Summary; targets: TargetState[]; title: string; cam: CamSummary | null }[] = [];
     try {
       for (let i = 0; i < list.length; i++) {
         let attempt = await playExercise(engine, list[i], i, token, bpmNow);
@@ -462,7 +491,10 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
           const seed = Date.now() / 1000;
           const cheer = s.stars >= 3 ? pickOne(CHEERS, seed) : s.stars >= 1 ? pickOne(OKAYS, seed) : pickOne(OOPS, seed);
           const tip = coachTip(s, usesDir);
+          const camTip = attempt.cam ? cameraTip(attempt.cam) : "";
           patchLive((l) => ({
+            cam: attempt.cam,
+            camTip,
             phase: "feedback",
             summary: s,
             tip,
@@ -471,7 +503,8 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
             mood: s.stars >= 2 ? "wow" : s.stars === 1 ? "happy" : "oops",
             confetti: great ? l.confetti + 1 : l.confetti,
           }));
-          const spoken = say(`${cheer} ${s.stars >= 3 ? "" : tip.replace(/[↓↑—]/g, "")}`, token).catch(() => undefined);
+          const camWords = attempt.cam && (attempt.cam.wrong >= 2 || attempt.cam.seen === 0 || attempt.cam.tooFast) ? camTip : "";
+          const spoken = say(`${cheer} ${s.stars >= 3 ? "" : tip.replace(/[↓↑—]/g, "")} ${camWords}`.trim(), token).catch(() => undefined);
           const choice = await new Promise<"next" | "retry">((resolve) => {
             choiceRef.current = resolve;
             window.setTimeout(() => resolve("next"), s.stars >= 2 ? 4500 : 7000);
@@ -515,6 +548,12 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       input: o.input,
       summary,
       perExercise: finals.map((f) => ({ title: f.title, stars: f.summary.stars })),
+      cam: finals.some((f) => f.cam)
+        ? finals.reduce(
+            (a, f) => (f.cam ? { right: a.right + f.cam.right, wrong: a.wrong + f.cam.wrong, missed: a.missed + f.cam.missed, extra: a.extra + f.cam.extra } : a),
+            { right: 0, wrong: 0, missed: 0, extra: 0 },
+          )
+        : null,
       boardScore: score,
       newBest,
     });
@@ -669,7 +708,12 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
           </button>
         </div>
 
-        <div className="mt-4 flex items-start gap-3">
+        {cam.status === "on" ? (
+          <div className="mt-3 flex justify-center sm:absolute sm:right-4 sm:top-14 sm:z-10 sm:mt-0">
+            <CameraPreview cam={cam} showShape={opts.mode === "chords"} />
+          </div>
+        ) : null}
+        <div className={`mt-4 flex items-start gap-3 ${cam.status === "on" ? "sm:pr-60" : ""}`}>
           <Mascot mood={live.mood} beat={live.phase === "play" || live.phase === "countin" || live.phase === "demo" ? live.beat : 0} size={84} />
           <div className="relative flex-1 rounded-2xl rounded-tl-none bg-white p-3 text-slate-800 shadow-lg">
             <p className="text-lg font-black text-violet-700 sm:text-xl">{ex.title}</p>
@@ -720,6 +764,15 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
               {live.summary.extra ? ` · ${live.summary.extra} extra` : ""}
             </p>
             <p className="mt-1 font-semibold">💡 {live.tip}</p>
+            {live.cam ? (
+              <div className="mx-auto mt-2 max-w-md rounded-2xl bg-violet-50 p-2 text-sm text-violet-900" data-testid="camera-feedback">
+                <p className="font-bold">
+                  📷 Camera Coach: {live.cam.tooFast ? "too fast to check directions" : `${live.cam.right} right way · ${live.cam.wrong} other way · ${live.cam.missed} missed · ${live.cam.extra} extra`}
+                  {live.cam.spreadMs !== null && !live.cam.tooFast ? ` · ${live.cam.spreadMs > 70 ? "uneven" : "even"} timing` : ""}
+                </p>
+                <p>{live.camTip}</p>
+              </div>
+            ) : null}
             <div className="mt-3 flex flex-wrap justify-center gap-3">
               <button type="button" onClick={() => choiceRef.current?.("retry")} className="rounded-full bg-violet-100 px-5 py-2.5 font-bold text-violet-700">
                 🔁 Try again
@@ -827,6 +880,10 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
             <p className="mt-2 text-sm text-slate-600">No guitar handy? Tap ↓ and ↑ (or press F and J) — direction counts too!</p>
           )}
         </Card>
+      </div>
+
+      <div className="mt-4">
+        <CameraOptIn cam={cam} enabled={camEnabled} setEnabled={setCamEnabled} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-700">
@@ -969,6 +1026,11 @@ function ResultsView({ result, confetti, onPost, onAgain, onSetup }: { result: R
           </li>
         ))}
       </ul>
+      {result.cam ? (
+        <p className="mt-3 text-sm font-semibold text-white">
+          📷 Camera Coach saw {result.cam.right} strokes the right way, {result.cam.wrong} the other way, {result.cam.missed} missed and {result.cam.extra} extra.
+        </p>
+      ) : null}
       {s.avgMs !== null ? (
         <p className="mt-3 text-sm text-white/90">
           Timing: {Math.abs(s.avgMs) <= 20 ? "right on the beat 🎯" : s.avgMs > 0 ? `about ${s.avgMs} ms late` : `about ${-s.avgMs} ms early`}
