@@ -96,6 +96,10 @@ export default function GamesPage() {
             <Link href="/games/piano-falling-notes" className="font-semibold text-[var(--brand-blue)] hover:underline">
               falling-notes piano game
             </Link>
+            , learn to pick and strum in time with the{" "}
+            <Link href="/games/alternate-picking" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              alternate picking and strumming coach
+            </Link>
             , sharpen your ear with music theory and ear training games, or
             practise the guitar fretboard, piano keys and singing. Chess fans can solve{" "}
             <Link href="/games/chess-puzzles" className="font-semibold text-[var(--brand-blue)] hover:underline">

@@ -47,7 +47,7 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
   const url = `${SITE_URL}/games/${game.slug}`;
   const related = GAMES.filter((g) => g.category === game.category && g.slug !== game.slug).slice(0, 6);
   const isChess = game.category === "chess";
-  const isClap = game.kind === "clap-trainer" || game.kind === "piano-fall" || isChess;
+  const isClap = game.kind === "clap-trainer" || game.kind === "piano-fall" || game.kind === "pick-coach" || isChess;
 
   return (
     <main>
