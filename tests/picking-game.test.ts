@@ -3,16 +3,16 @@ import { boardKey, getGame } from "../app/games/catalog";
 import {
   CHORDS,
   LEVELS,
-  LiveJudge,
   PICKING,
   STRUMS,
   boardScore,
   buildExercise,
+  chordSequence,
+  exerciseStars,
+  type ExerciseResult,
   roundExercises,
   slotsOf,
   strumWords,
-  targetTimes,
-  windowsFor,
   type Level,
   type Mode,
 } from "../app/games/picking/patterns";
@@ -32,16 +32,12 @@ describe("alternate picking catalog entry", () => {
 });
 
 describe("levels", () => {
-  it("have rising, non-trivial BPM ranges", () => {
+  it("each mode has Beginner, Expert and Pro with rising multipliers", () => {
     for (const mode of MODES) {
+      expect(LEVELS[mode].map((l) => l.id)).toEqual(["beginner", "expert", "pro"]);
       const [b, e, p] = LEVELS[mode];
-      expect(b.bpm.max).toBeLessThan(p.bpm.max);
-      expect(b.bpm.min).toBeLessThan(e.bpm.min);
-      expect(e.bpm.min).toBeLessThan(p.bpm.min);
-      for (const l of LEVELS[mode]) {
-        expect(l.bpm.def).toBeGreaterThanOrEqual(l.bpm.min);
-        expect(l.bpm.def).toBeLessThanOrEqual(l.bpm.max);
-      }
+      expect(b.mult).toBeLessThan(e.mult);
+      expect(e.mult).toBeLessThan(p.mult);
     }
   });
 });
@@ -128,57 +124,32 @@ describe("chords", () => {
   });
 });
 
-describe("judge", () => {
-  const ex = buildExercise("picking", "beginner", 1); // 8ths, 2 bars
-  const bpm = 60;
-  const targets = targetTimes(ex, bpm, 10);
-  const win = windowsFor(targets.map((t) => t.t), 1);
+describe("own-pace scoring", () => {
+  const res = (p: Partial<ExerciseResult>): ExerciseResult => ({ mode: "picking", total: 8, done: 8, wrong: 0, skipped: 0, seconds: [], ...p });
 
-  it("windows never overlap neighbours", () => {
-    expect(win.good).toBeLessThanOrEqual(0.25);
-    const fast = buildExercise("picking", "pro", 3);
-    const ft = targetTimes(fast, 160, 0).map((t) => t.t);
-    const w = windowsFor(ft, 1);
-    const gap = Math.min(...ft.slice(1).map((t, i) => t - ft[i]));
-    expect(w.good).toBeLessThanOrEqual(gap / 2 + 1e-9);
-    expect(w.perfect).toBeLessThan(w.good);
+  it("chord exercises list each chord once per change", () => {
+    expect(chordSequence(buildExercise("chords", "beginner", 0))).toEqual(["G"]);
+    expect(chordSequence(buildExercise("chords", "beginner", 4))).toEqual(["G", "C"]);
+    expect(chordSequence(buildExercise("chords", "expert", 1))).toEqual(["A", "D", "E", "A"]);
+    expect(chordSequence(buildExercise("chords", "pro", 1))).toEqual(["Bm", "G", "D", "A"]);
   });
 
-  it("perfect play scores 100% and 3 stars", () => {
-    const j = new LiveJudge(targets, win);
-    for (const t of targets) expect(j.input(t.t + 0.01)?.result).toBe("perfect");
-    const s = j.summary();
-    expect(s.accuracy).toBe(1);
-    expect(s.stars).toBe(3);
-    expect(s.maxStreak).toBe(targets.length);
+  it("stars: all played = 3, wrong directions and skips cost stars", () => {
+    expect(exerciseStars(res({}))).toBe(3);
+    expect(exerciseStars(res({ wrong: 1 }))).toBe(2);
+    expect(exerciseStars(res({ wrong: 4 }))).toBe(1);
+    expect(exerciseStars(res({ done: 0, skipped: 8 }))).toBe(0);
+    expect(exerciseStars(res({ mode: "chords", total: 4, done: 3, skipped: 1, seconds: [2, 2, 2] }))).toBe(1);
   });
 
-  it("tap direction is checked; mic (no direction) is timing-only", () => {
-    const j = new LiveJudge(targets, win);
-    expect(j.input(targets[0].t, "U")?.result).toBe("wrong");
-    expect(j.input(targets[1].t, "U")?.result).toBe("perfect");
-    expect(j.input(targets[2].t)?.result).toBe("perfect");
-  });
-
-  it("counts late strokes as good, misses and extras", () => {
-    const j = new LiveJudge(targets, win);
-    expect(j.input(targets[0].t + win.perfect + 0.01)?.result).toBe("good");
-    expect(j.input(targets[0].t + 0.2)).toBeNull(); // between notes -> extra
-    expect(j.extra).toBe(1);
-    j.expire(targets[targets.length - 1].t + 1);
-    const s = j.summary();
-    expect(s.miss).toBe(targets.length - 1);
-    expect(s.stars).toBe(0);
-  });
-
-  it("board score stays within 0–5000 and rewards level and speed", () => {
-    for (const mode of MODES) {
-      for (const l of LEVELS[mode]) {
-        expect(boardScore(1, 999, mode, l.id, l.bpm.max)).toBeLessThanOrEqual(5000);
-        expect(boardScore(0, 0, mode, l.id, l.bpm.min)).toBe(0);
-      }
-      expect(boardScore(0.9, 10, mode, "pro", 120)).toBeGreaterThan(boardScore(0.9, 10, mode, "beginner", 60));
+  it("board score stays within 0–5000 and rewards level and quick chord changes", () => {
+    for (const mode of MODES) for (const l of LEVELS[mode]) {
+      expect(boardScore([res({ seconds: Array(200).fill(0) })], mode, l.id)).toBeLessThanOrEqual(5000);
+      expect(boardScore([res({ done: 0, skipped: 8 })], mode, l.id)).toBe(0);
     }
-    expect(boardScore(0.9, 10, "picking", "pro", 150)).toBeGreaterThan(boardScore(0.9, 10, "picking", "pro", 110));
+    expect(boardScore([res({})], "picking", "pro")).toBeGreaterThan(boardScore([res({})], "picking", "beginner"));
+    const quick = boardScore([res({ mode: "chords", total: 4, done: 4, seconds: [1, 1, 1, 1] })], "chords", "pro");
+    const slow = boardScore([res({ mode: "chords", total: 4, done: 4, seconds: [9, 9, 9, 9] })], "chords", "pro");
+    expect(quick).toBeGreaterThan(slow);
   });
 });

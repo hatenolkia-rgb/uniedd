@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { StrokeTracker, checkChordShape, fingerArches, judgeCamera, pickStrummingHand, type CamSlot, type Pt } from "../app/games/picking/camera";
+import { StrokeTracker, checkChordShape, fingerArches, judgeCameraSequence, pickStrummingHand, type CamStroke, type Pt } from "../app/games/picking/camera";
 
 /** Simulate a hand swinging down/up; stroke i (down when even) peaks at start + i·strokeDur. */
 function swing(opts: { bpm: number; perBeat: number; beats: number; fps: number; amp?: number; start?: number }) {
@@ -39,43 +39,27 @@ describe("StrokeTracker", () => {
   });
 });
 
-describe("judgeCamera", () => {
-  const slots: CamSlot[] = Array.from({ length: 8 }, (_, i) => ({ t: 1 + i * 0.375, dir: i % 2 ? "U" : "D", rest: i === 5 }));
+describe("judgeCameraSequence (own pace, no tempo)", () => {
+  const st = (dirs: string, gap = 0.4): CamStroke[] => [...dirs].map((d, i) => ({ t: 1 + i * gap, dir: d as "D" | "U", amp: 0.1 }));
   it("all right", () => {
-    const strokes = slots.map((s) => ({ t: s.t + 0.06, dir: s.dir, amp: 0.1 }));
-    const r = judgeCamera(slots, strokes, 0.06);
-    expect(r.right).toBe(7);
-    expect(r.wrong + r.missed + r.extra).toBe(0);
-    expect(r.total).toBe(7);
-    expect(r.tooFast).toBe(false);
+    const r = judgeCameraSequence(["D", "U", "D", "U"], st("DUDU"));
+    expect(r).toMatchObject({ right: 4, wrong: 0, missed: 0, extra: 0, total: 4, uneven: false });
   });
   it("flags wrong direction, missed and extra strokes", () => {
-    const strokes = slots
-      .filter((_, i) => i !== 2)
-      .map((s, i) => ({ t: s.t, dir: (i === 0 ? (s.dir === "D" ? "U" : "D") : s.dir) as "D" | "U", amp: 0.1 }));
-    strokes.push({ t: 10, dir: "D", amp: 0.1 });
-    const r = judgeCamera(slots, strokes, 0);
-    expect(r.wrong).toBe(1);
-    expect(r.missed).toBe(1);
-    expect(r.extra).toBe(1);
+    expect(judgeCameraSequence(["D", "U", "D", "U"], st("DDDU")).wrong).toBe(1);
+    expect(judgeCameraSequence(["D", "U", "D", "U"], st("DU")).missed).toBe(2);
+    expect(judgeCameraSequence(["D", "U"], st("DUUD")).extra).toBe(1); // one follow-through is free
   });
-  it("return swings between two downs are not extra strokes", () => {
-    const downs: CamSlot[] = Array.from({ length: 4 }, (_, i) => ({ t: 1 + i, dir: "D", rest: false }));
-    const strokes = downs.flatMap((s) => [
-      { t: s.t, dir: "D" as const, amp: 0.1 },
-      { t: s.t + 0.5, dir: "U" as const, amp: 0.1 },
-    ]);
-    const r = judgeCamera(downs, strokes, 0);
-    expect(r.right).toBe(4);
-    expect(r.extra).toBe(0);
-    // but a second down between two downs is extra
-    const r2 = judgeCamera(downs, [...strokes, { t: 1.5, dir: "D", amp: 0.1 }], 0);
-    expect(r2.extra).toBe(1);
+  it("return swings between two downs and a wind-up are not mistakes", () => {
+    const r = judgeCameraSequence(["D", "D", "D", "D"], st("UDUDUDUDU"));
+    expect(r).toMatchObject({ right: 4, wrong: 0, missed: 0, extra: 0 });
   });
-
-  it("marks very fast patterns as too fast for the camera", () => {
-    const fast: CamSlot[] = Array.from({ length: 16 }, (_, i) => ({ t: i * 0.1, dir: i % 2 ? "U" : "D", rest: false }));
-    expect(judgeCamera(fast, []).tooFast).toBe(true);
+  it("spots uneven strokes", () => {
+    const strokes = [1, 1.3, 2.4, 2.6, 3.9, 4.0].map((t, i) => ({ t, dir: (i % 2 ? "U" : "D") as "D" | "U", amp: 0.1 }));
+    expect(judgeCameraSequence(["D", "U", "D", "U", "D", "U"], strokes).uneven).toBe(true);
+  });
+  it("chords mode just counts strokes", () => {
+    expect(judgeCameraSequence(null, st("DUDDU"))).toMatchObject({ seen: 5, total: 0, wrong: 0 });
   });
 });
 

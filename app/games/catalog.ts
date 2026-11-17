@@ -62,14 +62,14 @@ export const GAMES: GameDef[] = [
   {
     slug: "alternate-picking",
     title: "Alternate Picking & Strumming Coach",
-    blurb: "Picky the guitar pick says a down-up pattern out loud — you play it on your guitar in time with the click. Single-note picking or chords and strum patterns, Beginner, Expert and Pro, scored by your microphone or the tap buttons.",
+    blurb: "Picky the guitar pick calls out a chord or a down-up picking pattern — play it at your own pace (no metronome) and the microphone listens and recognises your chord. Beginner, Expert and Pro, open chords to barre chords; tap mode if you have no mic.",
     category: "guitar",
     kind: "pick-coach",
     minutes: "3–5 min",
     accent: "#8b5cf6",
     boards: [
       { id: "picking", label: "Alternate Picking" },
-      { id: "chords", label: "Chords & Strumming" },
+      { id: "chords", label: "Chords" },
     ],
   },
   {

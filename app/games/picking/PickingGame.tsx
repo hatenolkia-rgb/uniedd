@@ -4,38 +4,35 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MicStatus } from "../clap/engine";
 import { PickEngine, speak, speechSupported, stopSpeaking } from "./audio";
 import {
+  CHORDS,
   LEVELS,
-  LiveJudge,
   boardScore,
+  chordSequence,
   coachTip,
+  exerciseStars,
   levelInfo,
   roundExercises,
-  summarize,
-  targetTimes,
-  windowsFor,
   type Dir,
   type Exercise,
+  type ExerciseResult,
   type Judgement,
   type Level,
   type Mode,
-  type Summary,
-  type TargetState,
 } from "./patterns";
+import { SustainMeter, bestNote, chordSpoken, frameMatches, parseChord } from "./chroma";
 import { ChordDiagram, Confetti, FingerLegend, Mascot, PatternLane, Stars, type Mood } from "./visuals";
 import { CameraOptIn, CameraPreview, useCameraCoach } from "./CameraCoach";
 import { cameraTip, type CamSummary } from "./camera";
 import "./picking.css";
 
-type View = "setup" | "calibrate" | "play" | "results";
+type View = "setup" | "play" | "results";
 type InputMode = "mic" | "tap";
-type Phase = "speak" | "demo" | "countin" | "play" | "feedback";
+type Phase = "intro" | "listen" | "feedback";
 
 type Options = {
   mode: Mode;
   level: Level;
-  bpm: Record<string, number>;
   input: InputMode;
-  demo: boolean;
   voice: boolean;
   sensitivity: number;
 };
@@ -43,19 +40,23 @@ type Options = {
 type Live = {
   phase: Phase;
   exIdx: number;
-  count: number;
-  active: number;
+  /** Picking: result per stroke. */
   results: (Judgement | null)[];
+  step: number;
+  /** Chords: index of the chord being asked for, and how each one went. */
+  chordIdx: number;
+  chordState: ("done" | "skip" | null)[];
+  meter: number;
+  hearing: string;
   mood: Mood;
-  beat: number;
+  bounce: number;
   bubble: string;
   pop: { text: string; color: string; key: number } | null;
-  streak: number;
   points: number;
   confetti: number;
-  summary: Summary | null;
+  result: ExerciseResult | null;
+  stars: number;
   tip: string;
-  ear: number;
   cam: CamSummary | null;
   camTip: string;
 };
@@ -63,10 +64,10 @@ type Live = {
 type RoundResult = {
   mode: Mode;
   level: Level;
-  bpm: number;
   input: InputMode;
-  summary: Summary;
+  results: ExerciseResult[];
   perExercise: { title: string; stars: number }[];
+  stars: number;
   cam: { right: number; wrong: number; missed: number; extra: number } | null;
   boardScore: number;
   newBest: boolean;
@@ -75,22 +76,16 @@ type RoundResult = {
 export const NO_RECORDING_MIC =
   "We are not recording anything. Your microphone is never recorded, saved, or uploaded; everything is checked live on your device.";
 
-const OPTS_KEY = "uniedd-pick-opts-v1";
-const OFFSET_KEY = (m: InputMode) => `uniedd-pick-offset-v1:${m}`;
-const BEST_KEY = (mode: Mode, level: Level) => `uniedd-pick-best-v1:${mode}:${level}`;
+const OPTS_KEY = "uniedd-pick-opts-v2";
+const BEST_KEY = (mode: Mode, level: Level) => `uniedd-pick-best-v2:${mode}:${level}`;
 
-const CHEERS = ["Awesome!", "Rock star!", "Super picking!", "You nailed it!", "High five!", "Amazing!"];
+const CHEERS = ["Awesome!", "Rock star!", "Super playing!", "You nailed it!", "High five!", "Amazing!"];
 const OKAYS = ["Nice try!", "Getting there!", "Good job!", "Keep going!"];
 const OOPS = ["Let's try that again!", "Almost! You can do it!", "Shake it off — again!"];
-const POP: Record<Judgement, { text: string; color: string }> = {
-  perfect: { text: "Perfect! ⭐", color: "#16a34a" },
-  good: { text: "Good! 👍", color: "#ca8a04" },
-  wrong: { text: "Other way! ↻", color: "#9333ea" },
-  miss: { text: "Missed", color: "#64748b" },
-};
+const CHORD_YES = ["Yes!", "Got it!", "Beautiful!", "That's it!", "Perfect!"];
 
 function defaultOpts(): Options {
-  return { mode: "picking", level: "beginner", bpm: {}, input: "tap", demo: true, voice: true, sensitivity: 0.65 };
+  return { mode: "picking", level: "beginner", input: "tap", voice: true, sensitivity: 0.65 };
 }
 
 function loadOpts(): Options {
@@ -103,64 +98,75 @@ function loadOpts(): Options {
   return defaultOpts();
 }
 
-function loadNum(key: string) {
-  try {
-    const v = Number(localStorage.getItem(key));
-    return Number.isFinite(v) ? v : 0;
-  } catch {
-    return 0;
-  }
-}
-
 function pickOne<T>(list: T[], seed: number) {
   return list[Math.abs(Math.floor(seed)) % list.length];
 }
 
 const emptyLive = (): Live => ({
-  phase: "speak",
+  phase: "intro",
   exIdx: 0,
-  count: 0,
-  active: -1,
   results: [],
+  step: 0,
+  chordIdx: 0,
+  chordState: [],
+  meter: 0,
+  hearing: "",
   mood: "happy",
-  beat: 0,
+  bounce: 0,
   bubble: "",
   pop: null,
-  streak: 0,
   points: 0,
   confetti: 0,
-  summary: null,
+  result: null,
+  stars: 0,
   tip: "",
-  ear: 0,
   cam: null,
   camTip: "",
 });
 
 class Aborted extends Error {}
 
+/** Mutable progress of the exercise being played (read by input handlers). */
+type Progress = {
+  ex: Exercise;
+  seq: string[];
+  step: number;
+  wrong: number;
+  stringOk: number;
+  stringChecked: number;
+  chordIdx: number;
+  chordStart: number;
+  seconds: number[];
+  skipped: number;
+  meter: SustainMeter;
+  finish: (skipped: boolean) => void;
+};
+
+/** Label for the live "hearing" readout, e.g. "G major". */
+function hearingLabel(name: string) {
+  const l = parseChord(name);
+  return l ? chordSpoken(l).replace(" seven", "7") : name;
+}
+
 export function PickingGame({ onFinish }: { onFinish: (score: number, board?: string) => void }) {
   const [view, setView] = useState<View>("setup");
   const [opts, setOpts] = useState<Options>(loadOpts);
-  const [offsets, setOffsets] = useState<Record<InputMode, number>>(() => ({ mic: loadNum(OFFSET_KEY("mic")), tap: loadNum(OFFSET_KEY("tap")) }));
   const [mic, setMic] = useState<MicStatus>("off");
   const [live, setLive] = useState<Live>(emptyLive);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [result, setResult] = useState<RoundResult | null>(null);
   const [notice, setNotice] = useState("");
-  const [calib, setCalib] = useState<{ step: number; hits: number; msg: string }>({ step: 0, hits: 0, msg: "" });
 
   const engineRef = useRef<PickEngine | null>(null);
   const tokenRef = useRef(0);
-  const judgeRef = useRef<LiveJudge | null>(null);
-  const phaseRef = useRef<Phase | "calibrate" | "idle">("idle");
-  const calibRef = useRef<{ clicks: number[]; strokes: number[] }>({ clicks: [], strokes: [] });
+  const progRef = useRef<Progress | null>(null);
+  const listeningRef = useRef(false);
+  const pausedUntilRef = useRef(0);
   const choiceRef = useRef<((c: "next" | "retry") => void) | null>(null);
   const levelBarRef = useRef<HTMLDivElement | null>(null);
   const optsRef = useRef(opts);
-  const offsetsRef = useRef(offsets);
   const [camEnabled, setCamEnabled] = useState(false);
-  const heardForCam = useCallback((perf: number) => (engineRef.current ? engineRef.current.heardAt(perf) : null), []);
-  const cam = useCameraCoach(heardForCam);
+  const cam = useCameraCoach();
   const camRef = useRef(cam);
   useEffect(() => {
     camRef.current = cam;
@@ -174,52 +180,54 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       /* ignore */
     }
   }, [opts]);
-  useEffect(() => {
-    offsetsRef.current = offsets;
-  }, [offsets]);
 
   const info = levelInfo(opts.mode, opts.level);
-  const bpmKey = `${opts.mode}:${opts.level}`;
-  const bpm = Math.max(info.bpm.min, Math.min(info.bpm.max, opts.bpm[bpmKey] ?? info.bpm.def));
   const patch = (p: Partial<Options>) => setOpts((o) => ({ ...o, ...p }));
-  const setBpm = (v: number) => setOpts((o) => ({ ...o, bpm: { ...o.bpm, [bpmKey]: v } }));
   const patchLive = useCallback((p: Partial<Live> | ((l: Live) => Partial<Live>)) => {
     setLive((l) => ({ ...l, ...(typeof p === "function" ? p(l) : p) }));
   }, []);
 
-  // ------------------------------------------------------------ engine + inputs
+  const paused = () => performance.now() < pausedUntilRef.current;
+
+  // ------------------------------------------------------------ picking: one stroke heard / tapped
 
   const handleStroke = useCallback(
-    (heardT: number, dir: Dir | undefined, source: InputMode) => {
-      const offset = offsetsRef.current[source] / 1000;
-      const t = heardT - offset;
-      if (phaseRef.current === "calibrate") {
-        calibRef.current.strokes.push(heardT);
-        setCalib((c) => ({ ...c, hits: c.hits + 1 }));
-        return;
+    (dir: Dir | undefined, source: InputMode) => {
+      const prog = progRef.current;
+      if (!prog || !listeningRef.current || prog.ex.mode !== "picking" || paused()) return;
+      const i = prog.step;
+      if (i >= prog.ex.steps.length) return;
+      const expected = prog.ex.steps[i].dir;
+      const wrongWay = source === "tap" && dir !== undefined && dir !== expected;
+      if (wrongWay) prog.wrong++;
+      prog.step++;
+      // Mic: a moment after the pick attack, check which note rang (approximate string check)
+      if (source === "mic") {
+        const want = ((prog.ex.demoMidi[i] % 12) + 12) % 12;
+        window.setTimeout(() => {
+          const r = engineRef.current?.readChroma();
+          if (!r || !r.loud || progRef.current !== prog) return;
+          const n = bestNote(r.chroma);
+          if (!n || n.score < 0.6) return;
+          prog.stringChecked++;
+          if (n.pc === want) prog.stringOk++;
+        }, 110);
       }
-      if (phaseRef.current !== "play") return;
-      const judge = judgeRef.current;
-      if (!judge) return;
-      const r = judge.input(t, source === "tap" ? dir : undefined);
-      if (!r) {
-        patchLive((l) => ({ pop: { text: "Extra!", color: "#f97316", key: l.ear + 1 }, ear: l.ear + 1 }));
-        return;
-      }
-      const gained = r.result === "perfect" ? 100 : r.result === "good" ? 60 : r.result === "wrong" ? 25 : 0;
+      const res: Judgement = wrongWay ? "wrong" : "perfect";
+      const done = prog.step >= prog.ex.steps.length;
       patchLive((l) => {
         const results = [...l.results];
-        results[r.index] = r.result;
-        const streak = judge.streak;
+        results[i] = res;
         return {
           results,
-          streak,
-          points: l.points + Math.round(gained * (1 + Math.min(streak, 20) / 20)),
-          pop: { ...POP[r.result], text: streak >= 5 && r.result !== "wrong" && streak % 5 === 0 ? `${streak} in a row! 🔥` : POP[r.result].text, key: l.ear + 1 },
-          ear: l.ear + 1,
-          mood: r.result === "wrong" ? "oops" : streak >= 8 ? "wow" : "happy",
+          step: prog.step,
+          points: l.points + (wrongWay ? 2 : 10),
+          bounce: l.bounce + 1,
+          mood: wrongWay ? "oops" : done ? "wow" : "happy",
+          pop: wrongWay ? { text: "Other way! ↻", color: "#9333ea", key: l.bounce + 1 } : l.pop,
         };
       });
+      if (done) window.setTimeout(() => prog.finish(false), 350);
     },
     [patchLive],
   );
@@ -227,7 +235,7 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
   const ensureEngine = useCallback(async () => {
     if (!engineRef.current) {
       const e = new PickEngine();
-      e.onClap = (t) => handleStroke(t, undefined, "mic");
+      e.onClap = () => handleStroke(undefined, "mic");
       e.onLevel = (rms, thr) => {
         const el = levelBarRef.current;
         if (el) {
@@ -255,53 +263,66 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
     [],
   );
 
-  // keyboard (tap mode): F / ↓ / D = down, J / ↑ / U = up
+  // keyboard (tap mode, picking): F / ↓ / D = down, J / ↑ / U = up
   useEffect(() => {
-    if (view !== "play" && view !== "calibrate") return;
-    if (opts.input !== "tap") return;
+    if (view !== "play" || opts.input !== "tap" || opts.mode !== "picking") return;
     const onKey = (ev: KeyboardEvent) => {
       if (ev.repeat || ev.metaKey || ev.ctrlKey || ev.altKey) return;
       const k = ev.key.toLowerCase();
       const dir: Dir | null = k === "f" || k === "arrowdown" || k === "d" ? "D" : k === "j" || k === "arrowup" || k === "u" ? "U" : null;
-      if (!dir || !engineRef.current) return;
+      if (!dir) return;
       ev.preventDefault();
-      handleStroke(engineRef.current.eventToCtx(ev.timeStamp), dir, "tap");
+      handleStroke(dir, "tap");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view, opts.input, handleStroke]);
+  }, [view, opts.input, opts.mode, handleStroke]);
 
   const tap = (dir: Dir) => (ev: React.PointerEvent) => {
     ev.preventDefault();
-    if (!engineRef.current) return;
-    handleStroke(engineRef.current.eventToCtx(ev.timeStamp), dir, "tap");
+    handleStroke(dir, "tap");
   };
 
-  // ------------------------------------------------------------ timing helpers
+  // ------------------------------------------------------------ helpers
 
   const sleep = (ms: number, token: number) =>
     new Promise<void>((resolve, reject) => {
       window.setTimeout(() => (token === tokenRef.current ? resolve() : reject(new Aborted())), ms);
     });
 
-  /** Run `frame(now)` every animation frame until heard time reaches `until`. */
-  const runUntil = (engine: PickEngine, until: number, token: number, frame: (now: number) => void) =>
-    new Promise<void>((resolve, reject) => {
-      const tick = () => {
-        if (token !== tokenRef.current) return reject(new Aborted());
-        const now = engine.heardAt();
-        frame(now);
-        if (now >= until) return resolve();
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    });
-
+  /** Speak (when the voice is on) with the mic paused, so the game never hears itself. */
   const say = async (text: string, token: number) => {
     if (!optsRef.current.voice) return;
-    await speak(text);
+    pausedUntilRef.current = Infinity;
+    try {
+      await speak(text);
+    } finally {
+      pausedUntilRef.current = performance.now() + 450;
+    }
     if (token !== tokenRef.current) throw new Aborted();
   };
+
+  /** "Hear it": play the pattern (picking) or the chord (chords) on the guitar synth. */
+  const playDemo = useCallback(() => {
+    const e = engineRef.current;
+    const prog = progRef.current;
+    if (!e || !prog) return;
+    const t0 = e.ctx.currentTime + 0.1;
+    let length = 0;
+    if (prog.ex.mode === "chords") {
+      const chord = prog.seq[Math.min(prog.chordIdx, prog.seq.length - 1)];
+      e.strum(t0, chord, "D", true);
+      e.strum(t0 + 0.7, chord, "D");
+      e.strum(t0 + 1.05, chord, "U");
+      length = 2.6;
+    } else {
+      const spb = 60 / 80; // a comfortable demo pace — there's no tempo to keep up with
+      const passSteps = prog.ex.steps.filter((s) => s.beat < prog.ex.passBeats - 1e-9);
+      passSteps.forEach((s, i) => e.pluck(t0 + s.beat * spb, prog.ex.demoMidi[i], 0.3, s.accent));
+      length = prog.ex.passBeats * spb + 1.2;
+    }
+    pausedUntilRef.current = Math.max(pausedUntilRef.current, performance.now() + length * 1000);
+  }, []);
 
   // ------------------------------------------------------------ mic
 
@@ -310,157 +331,210 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
     setMic("asking");
     const status = await e.startMic();
     setMic(status);
-    if (status === "on") e.setSensitivity(optsRef.current.sensitivity);
-    else {
+    if (status === "on") {
+      e.setSensitivity(optsRef.current.sensitivity);
+      e.setDebounce(0.07);
+      e.ensureAnalyser();
+    } else {
       setNotice(
         status === "denied"
           ? "We couldn't use the microphone, so you're playing with the tap buttons. You can allow the mic in your browser settings any time."
           : "This browser can't use the microphone here, so you're playing with the tap buttons.",
       );
-      patch({ input: "tap" });
+      setOpts((o) => ({ ...o, input: "tap" }));
     }
     return status;
   }, [ensureEngine]);
 
-  // ------------------------------------------------------------ one exercise
+  // ------------------------------------------------------------ chords: listening loop
 
-  const playExercise = async (engine: PickEngine, ex: Exercise, exIdx: number, token: number, bpmNow: number): Promise<{ summary: Summary; targets: TargetState[]; cam: CamSummary | null }> => {
-    const spb = 60 / bpmNow;
-    const o = optsRef.current;
-    judgeRef.current = null;
-    phaseRef.current = "speak";
-    patchLive({ phase: "speak", exIdx, results: ex.steps.map(() => null), active: -1, mood: "listen", bubble: ex.say, summary: null, tip: "", count: 0, pop: null, streak: 0, cam: null, camTip: "" });
-    await sleep(250, token);
-    await say(`${ex.title}. ${ex.say}`, token);
-
-    const slotTime = (start: number) => ex.slots.map((s) => start + s.beat * spb);
-    const activeAt = (times: number[], now: number, limit = times.length) => {
-      let best = -1;
-      let bestD = Infinity;
-      for (let i = 0; i < limit; i++) {
-        const d = Math.abs(now - times[i]);
-        if (d < bestD) {
-          bestD = d;
-          best = i;
-        }
+  useEffect(() => {
+    if (view !== "play" || opts.mode !== "chords" || opts.input !== "mic") return;
+    let last = performance.now();
+    let lastHearing = "";
+    let lastMeter = -1;
+    const id = window.setInterval(() => {
+      const now = performance.now();
+      const dt = (now - last) / 1000;
+      last = now;
+      const prog = progRef.current;
+      const e = engineRef.current;
+      if (!prog || !e || !listeningRef.current) return;
+      if (paused()) {
+        prog.meter.update(false, dt);
+        return;
       }
-      const gap = Math.min(spb / ex.maxGrid, spb) * 0.5;
-      return bestD <= gap ? best : -1;
+      const target = prog.seq[prog.chordIdx];
+      if (!target) return;
+      const r = e.readChroma();
+      let match = false;
+      let hearing = "";
+      if (r && r.loud) {
+        const m = frameMatches(r.chroma, target);
+        match = m.match;
+        if (m.guess && m.guess.score >= 0.7) hearing = m.match ? hearingLabel(target) : hearingLabel(m.guess.name);
+      }
+      const ok = prog.meter.update(match, dt);
+      const meter = Math.round(prog.meter.progress * 20) / 20;
+      if (hearing !== lastHearing || meter !== lastMeter) {
+        lastHearing = hearing;
+        lastMeter = meter;
+        patchLive({ hearing, meter });
+      }
+      if (ok) chordDone(prog, "done");
+    }, 60);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, opts.mode, opts.input, patchLive]);
+
+  // picking + mic: live "hearing: A" note readout
+  useEffect(() => {
+    if (view !== "play" || opts.mode !== "picking" || opts.input !== "mic") return;
+    let lastNote = "";
+    const id = window.setInterval(() => {
+      const e = engineRef.current;
+      if (!e || !listeningRef.current || paused()) return;
+      const r = e.readChroma();
+      let note = "";
+      if (r && r.loud) {
+        const n = bestNote(r.chroma);
+        if (n && n.score > 0.6) note = n.name;
+      }
+      if (note !== lastNote) {
+        lastNote = note;
+        patchLive({ hearing: note });
+      }
+    }, 120);
+    return () => window.clearInterval(id);
+  }, [view, opts.mode, opts.input, patchLive]);
+
+  /** A chord was recognised (or skipped / confirmed by tap): move to the next one. */
+  const chordDone = (prog: Progress, how: "done" | "skip") => {
+    if (progRef.current !== prog || prog.chordIdx >= prog.seq.length) return;
+    const idx = prog.chordIdx;
+    const name = prog.seq[idx];
+    if (how === "done") prog.seconds.push((performance.now() - prog.chordStart) / 1000);
+    else prog.skipped++;
+    prog.chordIdx++;
+    prog.meter.reset();
+    prog.chordStart = performance.now();
+    const finished = prog.chordIdx >= prog.seq.length;
+    const yes = pickOne(CHORD_YES, Date.now() / 997);
+    patchLive((l) => {
+      const chordState = [...l.chordState];
+      chordState[idx] = how;
+      return {
+        chordState,
+        chordIdx: prog.chordIdx,
+        meter: 0,
+        hearing: "",
+        bounce: l.bounce + 1,
+        points: l.points + (how === "done" ? 100 : 0),
+        mood: how === "done" ? "wow" : "happy",
+        pop: how === "done" ? { text: `${yes} ${name} ✓`, color: "#16a34a", key: l.bounce + 1 } : { text: "Skipped", color: "#64748b", key: l.bounce + 1 },
+        bubble: finished ? "All done! 🎉" : `Now play ${CHORDS[prog.seq[prog.chordIdx]]?.spoken ?? prog.seq[prog.chordIdx]}`,
+      };
+    });
+    const token = tokenRef.current;
+    if (finished) {
+      window.setTimeout(() => prog.finish(false), 500);
+      return;
+    }
+    const next = CHORDS[prog.seq[prog.chordIdx]]?.spoken ?? prog.seq[prog.chordIdx];
+    say(how === "done" ? `${yes} Now, ${next}.` : `Now, ${next}.`, token).catch(() => undefined);
+  };
+
+  // ------------------------------------------------------------ one exercise (own pace)
+
+  const playExercise = async (ex: Exercise, exIdx: number, token: number): Promise<{ result: ExerciseResult; cam: CamSummary | null }> => {
+    const o = optsRef.current;
+    const seq = ex.mode === "chords" ? chordSequence(ex) : [];
+    listeningRef.current = false;
+    let finishFn: (skipped: boolean) => void = () => undefined;
+    const ended = new Promise<boolean>((resolve) => {
+      finishFn = resolve;
+    });
+    const prog: Progress = {
+      ex,
+      seq,
+      step: 0,
+      wrong: 0,
+      stringOk: 0,
+      stringChecked: 0,
+      chordIdx: 0,
+      chordStart: performance.now(),
+      seconds: [],
+      skipped: 0,
+      meter: new SustainMeter(0.6),
+      finish: (s) => finishFn(s),
     };
-
-    // Demo: one pass with the guitar synth, so the student hears it first
-    if (o.demo) {
-      phaseRef.current = "demo";
-      patchLive({ phase: "demo", mood: "happy" });
-      const start = engine.ctx.currentTime + 0.35;
-      const passSlots = ex.slots.filter((s) => s.beat < ex.passBeats - 1e-9);
-      let step = 0;
-      const events: { at: number; play: (at: number) => void }[] = [];
-      for (let b = 0; b < Math.ceil(ex.passBeats); b++) events.push({ at: start + b * spb, play: (at) => engine.click(at, b % 4 === 0, 0.35) });
-      passSlots.forEach((s) => {
-        if (s.rest) return;
-        const i = step++;
-        const at = start + s.beat * spb;
-        events.push({
-          at,
-          play: (when) => (ex.mode === "chords" && s.chord ? engine.strum(when, s.chord, s.dir, s.accent) : engine.pluck(when, ex.demoMidi[i], 0.3, s.accent)),
-        });
-      });
-      engine.runSchedule(events);
-      const times = slotTime(start);
-      let lastActive = -2;
-      let lastBeat = -1;
-      await runUntil(engine, start + ex.passBeats * spb + 0.25, token, (now) => {
-        const a = activeAt(times, now, passSlots.length);
-        const beat = Math.floor((now - start) / spb);
-        if (a !== lastActive || beat !== lastBeat) {
-          lastActive = a;
-          lastBeat = beat;
-          patchLive({ active: a, beat: beat >= 0 ? beat + 1 : 0 });
-        }
-      });
-      engine.stopSchedule();
+    progRef.current = prog;
+    patchLive({
+      phase: "intro",
+      exIdx,
+      results: ex.steps.map(() => null),
+      step: 0,
+      chordIdx: 0,
+      chordState: seq.map(() => null),
+      meter: 0,
+      hearing: "",
+      mood: "listen",
+      bubble: ex.mode === "chords" ? `Play ${CHORDS[seq[0]]?.spoken ?? seq[0]}` : ex.say,
+      result: null,
+      tip: "",
+      pop: null,
+      cam: null,
+      camTip: "",
+    });
+    await sleep(250, token);
+    if (ex.mode === "chords") {
+      const names = seq.map((n) => CHORDS[n]?.spoken ?? n);
+      await say(`${ex.title}. ${names.length > 1 ? `${names.join(", then ")}. ` : ""}Play ${names[0]}.`, token);
+    } else {
+      await say(`${ex.title}. ${ex.say}. Your turn!`, token);
     }
-
-    // Count-in (4 clicks) then play along with the click
-    phaseRef.current = "countin";
-    const countBeats = 4;
-    const start = engine.ctx.currentTime + 0.4 + countBeats * spb;
-    const targets = targetTimes(ex, bpmNow, start);
-    const win = windowsFor(
-      targets.map((t) => t.t),
-      levelInfo(o.mode, o.level).leniency,
-    );
-    const judge = new LiveJudge(targets, win);
-    // Test hook: automated browser tests set window.__uniPickDebug = {} to read the timing grid.
-    const dbg = (window as unknown as { __uniPickDebug?: Record<string, unknown> }).__uniPickDebug;
-    if (dbg) Object.assign(dbg, { engine, targets, win, exIdx, start });
-    const minGap = targets.reduce((m, t, i) => (i ? Math.min(m, t.t - targets[i - 1].t) : m), Infinity);
-    engine.setDebounce(Math.max(0.03, Math.min(ex.mode === "chords" ? 0.08 : 0.06, (Number.isFinite(minGap) ? minGap : 0.5) * 0.6)));
-    const events: { at: number; play: (at: number) => void }[] = [];
-    for (let b = -countBeats; b < Math.ceil(ex.beats); b++) {
-      events.push({ at: start + b * spb, play: (at) => engine.click(at, b < 0 ? b === -countBeats : b % 4 === 0, b < 0 ? 0.55 : 0.4) });
-    }
-    engine.runSchedule(events);
+    // Camera Coach watches the whole exercise
     const camOn = camRef.current.status === "on";
     if (camOn) {
       camRef.current.begin(
-        ex.slots.map((s) => ({ t: start + s.beat * spb, dir: s.dir, rest: s.rest })),
-        ex.mode === "chords"
-          ? (t: number) => {
-              const beat = (t - start) / spb;
-              let name = ex.chordTimeline[0]?.name;
-              for (const c of ex.chordTimeline) if (beat + 1e-9 >= c.beat) name = c.name;
-              return name;
-            }
-          : undefined,
+        ex.mode === "picking" ? ex.steps.map((s) => s.dir) : null,
+        ex.mode === "chords" ? () => progRef.current?.seq[progRef.current.chordIdx] : undefined,
       );
     }
-    patchLive({ phase: "countin", active: -1, mood: "happy", bubble: "Get ready…", results: ex.steps.map(() => null) });
-    const times = slotTime(start);
-    let lastActive = -2;
-    let lastBeat = -99;
-    let lastCount = -1;
-    let playing = false;
-    await runUntil(engine, start + ex.beats * spb + win.good + 0.15, token, (now) => {
-      if (!playing && now >= start - win.good - 0.02) {
-        playing = true;
-        judgeRef.current = judge;
-        phaseRef.current = "play";
-      }
-      if (now < start) {
-        const c = Math.min(countBeats, Math.max(1, Math.floor((now - (start - countBeats * spb)) / spb) + 1));
-        if (c !== lastCount) {
-          lastCount = c;
-          patchLive({ count: c, beat: c });
-        }
-        return;
-      }
-      if (lastCount !== 0) {
-        lastCount = 0;
-        patchLive({ phase: "play", count: 0, bubble: o.input === "mic" ? "Play along! 🎸" : "Tap along! 👆" });
-      }
-      const a = activeAt(times, now);
-      const beat = Math.floor((now - start) / spb) + 1;
-      const missed = judge.expire(now);
-      if (a !== lastActive || beat !== lastBeat || missed.length) {
-        lastActive = a;
-        lastBeat = beat;
-        patchLive((l) => {
-          if (!missed.length) return { active: a, beat };
-          const results = [...l.results];
-          for (const i of missed) results[i] = "miss";
-          return { active: a, beat, results, streak: 0, mood: "oops" };
-        });
-      }
-    });
-    judge.expire(Infinity);
-    judgeRef.current = null;
-    phaseRef.current = "feedback";
-    engine.stopSchedule();
-    const summary = judge.summary();
+    prog.chordStart = performance.now();
+    listeningRef.current = true;
+    patchLive({ phase: "listen", mood: "happy" });
+    const dbg = (window as unknown as { __uniPickDebug?: Record<string, unknown> }).__uniPickDebug;
+    if (dbg) Object.assign(dbg, { engine: engineRef.current, prog, exIdx });
+    let skipped = false;
+    try {
+      skipped = await new Promise<boolean>((resolve, reject) => {
+        ended.then(resolve);
+        const check = window.setInterval(() => {
+          if (token !== tokenRef.current) {
+            window.clearInterval(check);
+            reject(new Aborted());
+          }
+        }, 200);
+        ended.then(() => window.clearInterval(check));
+      });
+    } finally {
+      listeningRef.current = false;
+    }
     const camSummary = camOn ? camRef.current.end() : null;
-    return { summary, targets: judge.targets, cam: camSummary };
+    const total = ex.mode === "chords" ? seq.length : ex.steps.length;
+    const done = ex.mode === "chords" ? prog.seconds.length : prog.step;
+    const result: ExerciseResult = {
+      mode: ex.mode,
+      total,
+      done,
+      wrong: prog.wrong,
+      skipped: ex.mode === "chords" ? prog.skipped : skipped ? total - done : 0,
+      seconds: prog.seconds,
+      stringOk: o.input === "mic" && ex.mode === "picking" ? prog.stringOk : undefined,
+      stringChecked: o.input === "mic" && ex.mode === "picking" ? prog.stringChecked : undefined,
+    };
+    return { result, cam: camSummary };
   };
 
   // ------------------------------------------------------------ the round
@@ -473,47 +547,47 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       const st = await startMic();
       if (st !== "on") return;
     }
+    if (o.input === "mic") engine.ensureAnalyser();
     const token = ++tokenRef.current;
-    const bpmNow = bpm;
     const list = roundExercises(o.mode, o.level);
     setExercises(list);
     setResult(null);
     setLive(emptyLive());
     setView("play");
-    const finals: { summary: Summary; targets: TargetState[]; title: string; cam: CamSummary | null }[] = [];
+    const finals: { result: ExerciseResult; cam: CamSummary | null; title: string }[] = [];
     try {
       for (let i = 0; i < list.length; i++) {
-        let attempt = await playExercise(engine, list[i], i, token, bpmNow);
+        let attempt = await playExercise(list[i], i, token);
         for (;;) {
-          const s = attempt.summary;
-          const usesDir = o.input === "tap";
-          const great = s.stars === 3;
+          const r = attempt.result;
+          const stars = exerciseStars(r);
           const seed = Date.now() / 1000;
-          const cheer = s.stars >= 3 ? pickOne(CHEERS, seed) : s.stars >= 1 ? pickOne(OKAYS, seed) : pickOne(OOPS, seed);
-          const tip = coachTip(s, usesDir);
+          const cheer = stars >= 3 ? pickOne(CHEERS, seed) : stars >= 1 ? pickOne(OKAYS, seed) : pickOne(OOPS, seed);
+          const tip = coachTip(r, o.input === "tap");
           const camTip = attempt.cam ? cameraTip(attempt.cam) : "";
           patchLive((l) => ({
+            phase: "feedback",
+            result: r,
+            stars,
+            tip,
             cam: attempt.cam,
             camTip,
-            phase: "feedback",
-            summary: s,
-            tip,
-            active: -1,
+            hearing: "",
             bubble: cheer,
-            mood: s.stars >= 2 ? "wow" : s.stars === 1 ? "happy" : "oops",
-            confetti: great ? l.confetti + 1 : l.confetti,
+            mood: stars >= 2 ? "wow" : stars === 1 ? "happy" : "oops",
+            confetti: stars === 3 ? l.confetti + 1 : l.confetti,
           }));
-          const camWords = attempt.cam && (attempt.cam.wrong >= 2 || attempt.cam.seen === 0 || attempt.cam.tooFast) ? camTip : "";
-          const spoken = say(`${cheer} ${s.stars >= 3 ? "" : tip.replace(/[↓↑—]/g, "")} ${camWords}`.trim(), token).catch(() => undefined);
+          const camWords = attempt.cam && (attempt.cam.wrong >= 2 || attempt.cam.seen === 0) ? camTip : "";
+          const spoken = say(`${cheer} ${stars >= 3 ? "" : tip.replace(/[↓↑—]/g, "")} ${camWords}`.trim(), token).catch(() => undefined);
           const choice = await new Promise<"next" | "retry">((resolve) => {
             choiceRef.current = resolve;
-            window.setTimeout(() => resolve("next"), s.stars >= 2 ? 4500 : 7000);
+            window.setTimeout(() => resolve("next"), stars >= 2 ? 4500 : 8000);
           });
           choiceRef.current = null;
           await spoken;
           if (token !== tokenRef.current) throw new Aborted();
           if (choice === "retry") {
-            attempt = await playExercise(engine, list[i], i, token, bpmNow);
+            attempt = await playExercise(list[i], i, token);
             continue;
           }
           break;
@@ -524,12 +598,13 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       if (err instanceof Aborted) return;
       throw err;
     }
-    // Results
-    const all = finals.flatMap((f) => f.targets);
-    const extra = finals.reduce((n, f) => n + f.summary.extra, 0);
-    const maxStreak = Math.max(0, ...finals.map((f) => f.summary.maxStreak));
-    const summary = summarize(all, extra, maxStreak);
-    const score = boardScore(summary.accuracy, maxStreak, o.mode, o.level, bpmNow);
+    progRef.current = null;
+    const results = finals.map((f) => f.result);
+    const score = boardScore(results, o.mode, o.level);
+    const total = results.reduce((n, r) => n + r.total, 0);
+    const good = results.reduce((n, r) => n + Math.max(0, r.done - r.wrong), 0);
+    const ratio = total ? good / total : 0;
+    const stars = ratio >= 0.95 ? 3 : ratio >= 0.75 ? 2 : ratio >= 0.4 ? 1 : 0;
     let newBest = false;
     try {
       const prev = Number(localStorage.getItem(BEST_KEY(o.mode, o.level)) || 0);
@@ -540,15 +615,15 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
     } catch {
       /* ignore */
     }
-    setLive((l) => ({ ...l, confetti: summary.stars >= 2 ? l.confetti + 1 : l.confetti }));
+    setLive((l) => ({ ...l, confetti: stars >= 2 ? l.confetti + 1 : l.confetti }));
     setResult({
       mode: o.mode,
       level: o.level,
-      bpm: bpmNow,
       input: o.input,
-      summary,
-      perExercise: finals.map((f) => ({ title: f.title, stars: f.summary.stars })),
-      cam: finals.some((f) => f.cam)
+      results,
+      perExercise: finals.map((f) => ({ title: f.title, stars: exerciseStars(f.result) })),
+      stars,
+      cam: finals.some((f) => f.cam && f.cam.total)
         ? finals.reduce(
             (a, f) => (f.cam ? { right: a.right + f.cam.right, wrong: a.wrong + f.cam.wrong, missed: a.missed + f.cam.missed, extra: a.extra + f.cam.extra } : a),
             { right: 0, wrong: 0, missed: 0, extra: 0 },
@@ -557,151 +632,65 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       boardScore: score,
       newBest,
     });
-    phaseRef.current = "idle";
     setView("results");
-    say(summary.stars >= 2 ? "Wow! You finished the round! Amazing playing!" : "You finished the round! Practice makes perfect!", token).catch(() => undefined);
+    say(stars >= 2 ? "Wow! You finished the round! Amazing playing!" : "You finished the round! Practice makes perfect!", token).catch(() => undefined);
   };
 
   const stopRound = () => {
     tokenRef.current++;
     choiceRef.current?.("next");
-    judgeRef.current = null;
-    phaseRef.current = "idle";
+    listeningRef.current = false;
+    progRef.current = null;
     stopSpeaking();
     engineRef.current?.stopAll();
     setView("setup");
   };
 
-  // ------------------------------------------------------------ calibration
+  const skip = () => {
+    const prog = progRef.current;
+    if (!prog || !listeningRef.current) return;
+    if (prog.ex.mode === "chords") chordDone(prog, "skip");
+    else prog.finish(true);
+  };
 
-  const runCalibration = async () => {
-    setNotice("");
-    const o = optsRef.current;
-    const engine = await ensureEngine();
-    if (o.input === "mic" && !engine.micOn) {
-      const st = await startMic();
-      if (st !== "on") return;
-    }
-    const token = ++tokenRef.current;
-    setView("calibrate");
-    setCalib({ step: 0, hits: 0, msg: "" });
-    const spb = 60 / 80;
-    const n = 8;
-    const start = engine.ctx.currentTime + 0.6 + 4 * spb;
-    const clicks = Array.from({ length: n }, (_, i) => start + i * spb);
-    calibRef.current = { clicks, strokes: [] };
-    engine.setDebounce(0.12);
-    engine.runSchedule(
-      Array.from({ length: n + 4 }, (_, i) => {
-        const at = start + (i - 4) * spb;
-        return { at, play: (when: number) => engine.click(when, i % 4 === 0, 0.55) };
-      }),
-    );
-    try {
-      let last = -1;
-      await runUntil(engine, start + n * spb + 0.3, token, (now) => {
-        if (now >= start - 0.3 && phaseRef.current !== "calibrate") phaseRef.current = "calibrate";
-        const step = Math.floor((now - (start - 4 * spb)) / spb) + 1;
-        if (step !== last) {
-          last = step;
-          setCalib((c) => ({ ...c, step }));
-        }
-      });
-    } catch (err) {
-      if (err instanceof Aborted) return;
-      throw err;
-    }
-    phaseRef.current = "idle";
-    engine.stopSchedule();
-    const diffs: number[] = [];
-    for (const c of clicks) {
-      let best = Infinity;
-      for (const s of calibRef.current.strokes) if (Math.abs(s - c) < Math.abs(best)) best = s - c;
-      if (Math.abs(best) < 0.3) diffs.push(best);
-    }
-    if (diffs.length < 4) {
-      setCalib((c) => ({ ...c, msg: `We only heard ${diffs.length} of 8 strokes. ${o.input === "mic" ? "Strum a little louder, move closer to the device, or raise the mic sensitivity" : "Tap on every click"} and try again.` }));
-      return;
-    }
-    diffs.sort((a, b) => a - b);
-    const median = diffs[Math.floor(diffs.length / 2)];
-    const ms = Math.round(median * 1000);
-    setOffsets((prev) => {
-      const next = { ...prev, [o.input]: ms };
-      try {
-        localStorage.setItem(OFFSET_KEY(o.input), String(ms));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-    setCalib((c) => ({ ...c, msg: `All set! Your timing offset is ${ms > 0 ? "+" : ""}${ms} ms — the game will correct for it.` }));
+  const confirmChord = () => {
+    const prog = progRef.current;
+    if (!prog || !listeningRef.current || prog.ex.mode !== "chords") return;
+    chordDone(prog, "done");
   };
 
   // ------------------------------------------------------------ render
 
   if (view === "results" && result) return <ResultsView result={result} confetti={live.confetti} onPost={() => onFinish(result.boardScore, result.mode)} onAgain={startRound} onSetup={() => setView("setup")} />;
 
-  if (view === "calibrate") {
-    const stage = calib.step <= 0 ? "Get ready…" : calib.step <= 4 ? `Listen… ${calib.step}` : calib.step <= 12 ? `${opts.input === "mic" ? "Strum" : "Tap"} on every click! (${calib.step - 4}/8)` : "Done!";
-    return (
-      <div className="pk-stage pk-sky rounded-3xl p-6 text-center text-white sm:p-10">
-        <h3 className="text-2xl font-black">⏱ Timing check</h3>
-        <p className="mx-auto mt-2 max-w-md text-white/90">
-          After 4 &quot;listen&quot; clicks, {opts.input === "mic" ? "strum your guitar (any chord, or muted strings)" : "tap the ↓ button or press F"} exactly on each of the next 8 clicks.
-        </p>
-        <p className="pk-pop mt-6 text-3xl font-black" key={calib.step}>
-          {stage}
-        </p>
-        <p className="mt-2 text-sm text-white/80">Strokes heard: {calib.hits}</p>
-        {opts.input === "mic" ? <MicMeter barRef={levelBarRef} /> : null}
-        {opts.input === "tap" ? (
-          <div className="mt-6 flex justify-center">
-            <BigTap dir="D" onPointerDown={tap("D")} />
-          </div>
-        ) : null}
-        {calib.msg ? <p className="mx-auto mt-6 max-w-md rounded-2xl bg-white/20 p-3 font-semibold">{calib.msg}</p> : null}
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          {calib.msg ? (
-            <button type="button" onClick={runCalibration} className="rounded-full bg-white/20 px-5 py-2.5 font-bold">
-              Try again
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => {
-              tokenRef.current++;
-              phaseRef.current = "idle";
-              engineRef.current?.stopAll();
-              setView("setup");
-            }}
-            className="rounded-full bg-white px-6 py-2.5 font-bold text-violet-700"
-          >
-            {calib.msg ? "Back" : "Cancel"}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   if (view === "play" && exercises.length) {
     const ex = exercises[live.exIdx] ?? exercises[0];
-    const nowBeat = live.active >= 0 ? (ex.slots[live.active]?.beat ?? 0) : live.phase === "play" ? Math.max(0, live.beat - 1) : 0;
-    const chordIdx = ex.chordTimeline.reduce((acc, c, i) => (nowBeat + 1e-9 >= c.beat ? i : acc), 0);
-    const currentChord = ex.mode === "chords" ? ex.chordTimeline[chordIdx]?.name : undefined;
-    const nextChord = ex.mode === "chords" ? ex.chordTimeline.slice(chordIdx + 1).find((c) => c.name !== currentChord)?.name : undefined;
+    const seq = ex.mode === "chords" ? chordSequence(ex) : [];
+    const currentChord = seq[Math.min(live.chordIdx, seq.length - 1)];
+    const nextChord = seq[live.chordIdx + 1];
+    // slot index of the next stroke to play (picking)
+    let nextSlot = -1;
+    if (ex.mode === "picking" && live.phase === "listen") {
+      let k = 0;
+      ex.slots.forEach((s, i) => {
+        if (s.rest) return;
+        if (k === live.step) nextSlot = i;
+        k++;
+      });
+    }
+    const listening = live.phase === "listen";
     return (
       <div className="pk-stage pk-sky relative -mx-3 rounded-3xl p-3 text-white sm:mx-0 sm:p-6" data-testid="pick-play" data-phase={live.phase}>
         <Confetti burst={live.confetti} />
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-bold">
           <span className="rounded-full bg-white/20 px-3 py-1">
-            {info.emoji} {info.label} · {opts.mode === "chords" ? "Chords" : "Picking"} · {bpm} BPM
+            {info.emoji} {info.label} · {opts.mode === "chords" ? "Chords" : "Picking"}
           </span>
           <span className="rounded-full bg-white/20 px-3 py-1">
             Exercise {live.exIdx + 1}/{exercises.length}
           </span>
           <span className="rounded-full bg-white/20 px-3 py-1" data-testid="points">
-            ⭐ {live.points} {live.streak >= 3 ? `· 🔥${live.streak}` : ""}
+            ⭐ {live.points}
           </span>
           <button type="button" onClick={stopRound} className="rounded-full bg-white/90 px-3 py-1 text-violet-700">
             ✕ Stop
@@ -714,12 +703,12 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
           </div>
         ) : null}
         <div className={`mt-4 flex items-start gap-3 ${cam.status === "on" ? "sm:pr-60" : ""}`}>
-          <Mascot mood={live.mood} beat={live.phase === "play" || live.phase === "countin" || live.phase === "demo" ? live.beat : 0} size={84} />
+          <Mascot mood={live.mood} beat={live.bounce} size={84} />
           <div className="relative flex-1 rounded-2xl rounded-tl-none bg-white p-3 text-slate-800 shadow-lg">
             <p className="text-lg font-black text-violet-700 sm:text-xl">{ex.title}</p>
-            <p className="text-sm text-slate-600">{ex.desc}</p>
+            <p className="text-sm text-slate-600">{ex.mode === "chords" ? "Play each chord at your own pace — I'll listen and tell you when I hear it." : `${ex.desc} · at your own pace`}</p>
             <p className="mt-1 text-base font-bold sm:text-lg" data-testid="bubble">
-              {live.phase === "speak" ? "🗣️ " : ""}
+              {live.phase === "intro" ? "🗣️ " : ""}
               {live.bubble}
             </p>
           </div>
@@ -731,44 +720,79 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
               {live.pop.text}
             </span>
           ) : null}
-          {ex.mode === "chords" && currentChord ? (
-            <div className="mb-3 flex items-end justify-center gap-3 sm:mb-4 sm:gap-4">
-              <div className="rounded-3xl bg-white p-1.5 shadow-lg sm:p-2">
-                <ChordDiagram name={currentChord} className="w-[118px] sm:w-[150px]" />
+
+          {ex.mode === "chords" ? (
+            <>
+              <div className="mb-3 flex flex-wrap justify-center gap-2" data-testid="chord-steps">
+                {seq.map((n, i) => {
+                  const st = live.chordState[i];
+                  const cur = i === live.chordIdx && listening;
+                  return (
+                    <span
+                      key={i}
+                      data-state={st || (cur ? "current" : "")}
+                      className={`pk-tile rounded-2xl px-3 py-1.5 text-lg font-black shadow ${cur ? "pk-glow bg-white text-violet-700" : st === "done" ? "bg-green-500 text-white" : st === "skip" ? "bg-slate-300 text-slate-600" : "bg-white/60 text-violet-800"}`}
+                    >
+                      {st === "done" ? "✓ " : st === "skip" ? "⏭ " : ""}
+                      {n}
+                    </span>
+                  );
+                })}
               </div>
-              {nextChord ? (
-                <div className="rounded-3xl bg-white/80 p-1.5 shadow sm:p-2">
-                  <p className="text-center text-xs font-bold text-violet-700">Next</p>
-                  <ChordDiagram name={nextChord} className="w-[72px] sm:w-[92px]" dim />
+              {currentChord ? (
+                <div className="flex items-end justify-center gap-3 sm:gap-4">
+                  <div className="rounded-3xl bg-white p-1.5 shadow-lg sm:p-2">
+                    <ChordDiagram name={currentChord} className="w-[130px] sm:w-[170px]" />
+                  </div>
+                  {nextChord ? (
+                    <div className="rounded-3xl bg-white/80 p-1.5 shadow sm:p-2">
+                      <p className="text-center text-xs font-bold text-violet-700">Next</p>
+                      <ChordDiagram name={nextChord} className="w-[72px] sm:w-[92px]" dim />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
-            </div>
-          ) : null}
-          <PatternLane ex={ex} active={live.active} results={live.results} />
-          {live.phase === "countin" ? (
-            <p key={live.count} className="pk-count mt-4 text-center text-6xl font-black drop-shadow" data-testid="countin">
-              {live.count === 4 ? "GO!" : live.count}
-            </p>
-          ) : null}
-          {live.phase === "demo" ? <p className="mt-4 text-center text-lg font-black">👂 Listen to how it sounds…</p> : null}
-          {live.phase === "speak" ? <p className="pk-pulse mt-4 text-center text-lg font-black">🗣️ Listen to the pattern…</p> : null}
+              <p className="mt-3 text-center text-sm font-semibold text-white/90">🎸 Strum it any way you like — or try: {patternHint(ex)}</p>
+              {opts.input === "mic" ? (
+                <div className="mx-auto mt-3 max-w-sm rounded-2xl bg-white/90 p-3 text-center text-slate-800 shadow" data-testid="hearing-box">
+                  <p className="text-sm font-bold text-slate-500">👂 Hearing</p>
+                  <p className="text-2xl font-black text-violet-700" data-testid="hearing">
+                    {live.hearing || (listening ? "…" : "")}
+                  </p>
+                  <div className="mt-2 h-3 overflow-hidden rounded-full bg-violet-100" aria-label="How sure I am">
+                    <div className="h-full rounded-full bg-gradient-to-r from-green-400 to-emerald-600 transition-[width] duration-100" style={{ width: `${Math.round(live.meter * 100)}%` }} data-testid="meter" />
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">Let the chord ring for a moment.</p>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              <PatternLane ex={ex} active={nextSlot} results={live.results} />
+              <p className="mt-3 text-center text-sm font-bold text-white/90" data-testid="stroke-count">
+                {live.step}/{ex.steps.length} strokes {opts.input === "mic" ? "heard" : ""}
+                {opts.input === "mic" && live.hearing ? ` · 👂 hearing ${live.hearing}` : ""}
+              </p>
+            </>
+          )}
+          {live.phase === "intro" ? <p className="pk-pulse mt-3 text-center text-lg font-black">🗣️ Listen…</p> : null}
         </div>
 
-        {live.phase === "feedback" && live.summary ? (
+        {live.phase === "feedback" && live.result ? (
           <div className="pk-pop mt-5 rounded-3xl bg-white p-4 text-center text-slate-800 shadow-xl" data-testid="feedback">
-            <Stars n={live.summary.stars} />
+            <Stars n={live.stars} />
             <p className="mt-1 text-2xl font-black text-violet-700">{live.bubble}</p>
             <p className="text-sm text-slate-600">
-              ⭐ {live.summary.perfect} perfect · 👍 {live.summary.good} good
-              {opts.input === "tap" ? ` · ↻ ${live.summary.wrong} wrong way` : ""} · {live.summary.miss} missed
-              {live.summary.extra ? ` · ${live.summary.extra} extra` : ""}
+              {live.result.mode === "chords"
+                ? `🎸 ${live.result.done}/${live.result.total} chords heard${live.result.skipped ? ` · ${live.result.skipped} skipped` : ""}${live.result.seconds.length ? ` · ${Math.round((live.result.seconds.reduce((a, b) => a + b, 0) / live.result.seconds.length) * 10) / 10} s each` : ""}`
+                : `✓ ${live.result.done}/${live.result.total} strokes${opts.input === "tap" ? ` · ↻ ${live.result.wrong} wrong way` : ""}${live.result.stringChecked ? ` · 🎯 ${live.result.stringOk}/${live.result.stringChecked} on the right string (approx.)` : ""}${live.result.skipped ? ` · ${live.result.skipped} skipped` : ""}`}
             </p>
             <p className="mt-1 font-semibold">💡 {live.tip}</p>
             {live.cam ? (
               <div className="mx-auto mt-2 max-w-md rounded-2xl bg-violet-50 p-2 text-sm text-violet-900" data-testid="camera-feedback">
                 <p className="font-bold">
-                  📷 Camera Coach: {live.cam.tooFast ? "too fast to check directions" : `${live.cam.right} right way · ${live.cam.wrong} other way · ${live.cam.missed} missed · ${live.cam.extra} extra`}
-                  {live.cam.spreadMs !== null && !live.cam.tooFast ? ` · ${live.cam.spreadMs > 70 ? "uneven" : "even"} timing` : ""}
+                  📷 Camera Coach: {live.cam.total ? `${live.cam.right} right way · ${live.cam.wrong} other way · ${live.cam.missed} missed · ${live.cam.extra} extra` : `${live.cam.seen} strokes seen`}
+                  {live.cam.spreadMs !== null ? ` · ${live.cam.uneven ? "uneven" : "even"} strokes` : ""}
                 </p>
                 <p>{live.camTip}</p>
               </div>
@@ -777,28 +801,44 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
               <button type="button" onClick={() => choiceRef.current?.("retry")} className="rounded-full bg-violet-100 px-5 py-2.5 font-bold text-violet-700">
                 🔁 Try again
               </button>
-              <button type="button" onClick={() => choiceRef.current?.("next")} className="rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-2.5 font-bold text-white shadow">
+              <button type="button" onClick={() => choiceRef.current?.("next")} className="rounded-full bg-gradient-to-r from-orange-400 to-pink-500 px-6 py-2.5 font-bold text-white shadow" data-testid="next">
                 {live.exIdx + 1 < exercises.length ? "Next ▶" : "See results 🏆"}
               </button>
             </div>
           </div>
         ) : null}
 
-        {opts.input === "tap" ? (
-          <div className="mt-5 flex justify-center gap-4 sm:gap-8">
-            <BigTap dir="D" onPointerDown={tap("D")} />
-            <BigTap dir="U" onPointerDown={tap("U")} />
+        {listening ? (
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <button type="button" onClick={playDemo} className="rounded-full bg-white/90 px-5 py-2.5 font-bold text-violet-700 shadow" data-testid="hear-it">
+              🔊 Hear it
+            </button>
+            {opts.mode === "chords" && opts.input === "tap" ? (
+              <button type="button" onClick={confirmChord} className="rounded-full bg-green-500 px-5 py-2.5 font-black text-white shadow" data-testid="played-it">
+                ✓ I played it
+              </button>
+            ) : null}
+            <button type="button" onClick={skip} className="rounded-full bg-white/25 px-5 py-2.5 font-bold text-white" data-testid="skip">
+              ⏭ Skip
+            </button>
           </div>
-        ) : (
-          <div className="mt-5 flex flex-col items-center gap-1">
-            <span key={live.ear} className="pk-ear inline-flex h-12 w-12 items-center justify-center rounded-full bg-white/25 text-2xl" aria-hidden>
-              👂
-            </span>
+        ) : null}
+
+        {opts.mode === "picking" && opts.input === "tap" ? (
+          <>
+            <div className="mt-5 flex justify-center gap-4 sm:gap-8">
+              <BigTap dir="D" onPointerDown={tap("D")} />
+              <BigTap dir="U" onPointerDown={tap("U")} />
+            </div>
+            <p className="mt-2 text-center text-xs text-white/80">Keys: F or ↓ = down · J or ↑ = up</p>
+          </>
+        ) : null}
+        {opts.input === "mic" ? (
+          <div className="mt-4 flex flex-col items-center gap-1">
             <MicMeter barRef={levelBarRef} />
-            <p className="text-xs text-white/80">🔒 {NO_RECORDING_MIC}</p>
+            <p className="text-center text-xs text-white/80">🔒 {NO_RECORDING_MIC}</p>
           </div>
-        )}
-        {opts.input === "tap" ? <p className="mt-2 text-center text-xs text-white/80">Keys: F or ↓ = down · J or ↑ = up</p> : null}
+        ) : null}
       </div>
     );
   }
@@ -810,7 +850,9 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
         <Mascot mood="happy" size={96} />
         <div>
           <h3 className="text-2xl font-black text-violet-700 sm:text-3xl">Hi! I&apos;m Picky! 🎸</h3>
-          <p className="text-slate-700">I&apos;ll <strong>say a pattern out loud</strong> — like &quot;down, up, down, up&quot; — and show the arrows. Then you play it on your guitar in time with the click!</p>
+          <p className="text-slate-700">
+            I&apos;ll <strong>say what to play out loud</strong> — a picking pattern like &quot;down, up, down, up&quot;, or a chord like &quot;G major&quot;. Play it on your guitar at <strong>your own pace</strong> — no metronome — and I&apos;ll listen!
+          </p>
         </div>
       </div>
 
@@ -818,45 +860,38 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
         <Card title="1. What do you want to practise?">
           <div className="grid grid-cols-2 gap-3">
             <Choice active={opts.mode === "picking"} onClick={() => patch({ mode: "picking" })} emoji="🎵" title="Alternate Picking" sub="Single notes, down-up" testId="mode-picking" />
-            <Choice active={opts.mode === "chords"} onClick={() => patch({ mode: "chords" })} emoji="🎸" title="Chords & Strumming" sub="Chord + strum pattern" testId="mode-chords" />
+            <Choice active={opts.mode === "chords"} onClick={() => patch({ mode: "chords" })} emoji="🎸" title="Chords" sub="I listen for the chord" testId="mode-chords" />
           </div>
         </Card>
         <Card title="2. Pick your level">
           <div className="grid grid-cols-3 gap-2">
             {LEVELS[opts.mode].map((l) => (
-              <Choice key={l.id} active={opts.level === l.id} onClick={() => patch({ level: l.id })} emoji={l.emoji} title={l.label} sub={`${l.bpm.min}–${l.bpm.max} BPM`} testId={`level-${l.id}`} />
+              <Choice key={l.id} active={opts.level === l.id} onClick={() => patch({ level: l.id })} emoji={l.emoji} title={l.label} sub="" testId={`level-${l.id}`} />
             ))}
           </div>
           <p className="mt-2 text-sm text-slate-600">{info.blurb}</p>
         </Card>
-        <Card title={`3. Speed: ${bpm} BPM ${bpm <= info.bpm.min + (info.bpm.max - info.bpm.min) / 3 ? "🐢" : bpm >= info.bpm.max - (info.bpm.max - info.bpm.min) / 3 ? "🐇" : "🚶"}`}>
-          <input
-            type="range"
-            min={info.bpm.min}
-            max={info.bpm.max}
-            step={5}
-            value={bpm}
-            onChange={(e) => setBpm(Number(e.target.value))}
-            className="w-full accent-violet-600"
-            aria-label="Speed in beats per minute"
-            data-testid="bpm"
-          />
-          <div className="flex justify-between text-xs text-slate-500">
-            <span>🐢 {info.bpm.min}</span>
-            <span>{info.bpm.def} (normal)</span>
-            <span>{info.bpm.max} 🐇</span>
-          </div>
-        </Card>
-        <Card title="4. How will you play?">
+        <Card title="3. How will you play?">
           <div className="grid grid-cols-2 gap-3">
             <Choice active={opts.input === "mic"} onClick={() => patch({ input: "mic" })} emoji="🎤" title="Real guitar" sub="The mic listens" testId="input-mic" />
-            <Choice active={opts.input === "tap"} onClick={() => patch({ input: "tap" })} emoji="👆" title="Tap buttons" sub="↓ ↑ or F / J keys" testId="input-tap" />
+            <Choice
+              active={opts.input === "tap"}
+              onClick={() => patch({ input: "tap" })}
+              emoji="👆"
+              title={opts.mode === "chords" ? "No mic" : "Tap buttons"}
+              sub={opts.mode === "chords" ? "Tap ✓ when you've played it" : "↓ ↑ or F / J keys"}
+              testId="input-tap"
+            />
           </div>
           {opts.input === "mic" ? (
             <div className="mt-3 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-900 ring-1 ring-emerald-200" data-testid="mic-privacy">
               <p className="font-bold">🔒 {NO_RECORDING_MIC}</p>
-              <p className="mt-1">The mic hears <em>when</em> you strike the strings (it can&apos;t tell down from up), so it scores your timing. Wear headphones so it only hears your guitar.</p>
-              {mic === "on" ? (
+              <p className="mt-1">
+                {opts.mode === "chords"
+                  ? "I listen to the notes ringing and tell you which chord I hear. Strum and let it ring for a moment."
+                  : "I count every stroke I hear (I can't tell down from up by ear) and check which note rang. Wear headphones so I only hear your guitar."}
+              </p>
+              {mic === "on" && opts.mode === "picking" ? (
                 <label className="mt-2 block">
                   Mic sensitivity
                   <input
@@ -877,27 +912,19 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
               {mic === "asking" ? <p className="mt-1 font-semibold">Please allow the microphone in the box your browser shows. {NO_RECORDING_MIC}</p> : null}
             </div>
           ) : (
-            <p className="mt-2 text-sm text-slate-600">No guitar handy? Tap ↓ and ↑ (or press F and J) — direction counts too!</p>
+            <p className="mt-2 text-sm text-slate-600">
+              {opts.mode === "chords" ? "Without a mic I can't hear you, so tap ✓ after you play each chord." : "No guitar handy? Tap ↓ and ↑ (or press F and J) — direction counts too!"}
+            </p>
           )}
         </Card>
-      </div>
-
-      <div className="mt-4">
         <CameraOptIn cam={cam} enabled={camEnabled} setEnabled={setCamEnabled} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-slate-700">
         <label className="inline-flex items-center gap-2">
           <input type="checkbox" checked={opts.voice} onChange={(e) => patch({ voice: e.target.checked })} className="h-5 w-5 accent-violet-600" />
-          🗣️ Speak the patterns {speechSupported() ? "" : "(not supported in this browser)"}
+          🗣️ Speak to me {speechSupported() ? "" : "(not supported in this browser)"}
         </label>
-        <label className="inline-flex items-center gap-2">
-          <input type="checkbox" checked={opts.demo} onChange={(e) => patch({ demo: e.target.checked })} className="h-5 w-5 accent-violet-600" />
-          👂 Play a demo first
-        </label>
-        <button type="button" onClick={runCalibration} className="font-semibold text-violet-700 underline" data-testid="calibrate">
-          ⏱ Timing check {offsets[opts.input] ? `(${offsets[opts.input] > 0 ? "+" : ""}${offsets[opts.input]} ms)` : "(recommended once)"}
-        </button>
       </div>
 
       {notice ? <p className="mx-auto mt-3 max-w-xl rounded-2xl bg-amber-100 p-3 text-center text-sm font-semibold text-amber-900">{notice}</p> : null}
@@ -917,7 +944,7 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
         <div className="mt-6">
           <p className="text-center text-sm font-bold text-violet-700">Chords in {info.label}</p>
           <div className="mt-2 flex flex-wrap justify-center gap-2">
-            {[...new Set(roundExercises("chords", opts.level).flatMap((e) => e.chordTimeline.map((c) => c.name)))].map((n) => (
+            {[...new Set(roundExercises("chords", opts.level).flatMap((e) => chordSequence(e)))].map((n) => (
               <div key={n} className="rounded-2xl bg-white p-1 shadow-sm">
                 <ChordDiagram name={n} size={84} />
               </div>
@@ -932,13 +959,94 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       <details className="mx-auto mt-6 max-w-2xl rounded-2xl bg-white/80 p-4 text-sm text-slate-700 shadow-sm">
         <summary className="cursor-pointer text-base font-black text-violet-700">❓ How to play</summary>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
-          <li>Picky says the pattern out loud and shows it: <span className="font-bold text-blue-600">↓ blue = down</span>, <span className="font-bold text-pink-600">↑ pink = up</span>. Orange outline = play it louder.</li>
-          <li>Listen to the demo, then count in with the 4 clicks.</li>
-          <li>Play each arrow when it lights up. Dashed arrows are rests — keep your hand moving, but miss the strings.</li>
-          <li>Every stroke gets ⭐ Perfect, 👍 Good, or a miss. Get 3 stars to make the confetti fly!</li>
-          <li>Too fast? Slide the speed down. Too easy? Try Expert or Pro.</li>
+          <li>Picky says what to play. There&apos;s no metronome — take your time!</li>
+          <li>
+            <strong>Picking:</strong> play the arrows in order — <span className="font-bold text-blue-600">↓ blue = down</span>, <span className="font-bold text-pink-600">↑ pink = up</span>, orange outline = a bit louder, dashed = an air stroke (keep the hand moving, miss the strings). Each stroke I hear lights up the next arrow.
+          </li>
+          <li>
+            <strong>Chords:</strong> make the chord shape from the diagram and strum. When I hear the right chord ring for a moment, it turns green and we go to the next one. Stuck? Press ⏭ Skip.
+          </li>
+          <li>Press 🔊 Hear it to hear how it should sound.</li>
+          <li>Get 3 stars to make the confetti fly!</li>
         </ol>
       </details>
+    </div>
+  );
+}
+
+/** Suggested strum for a chord exercise (just a suggestion — never scored). */
+function patternHint(ex: Exercise) {
+  const words: string[] = [];
+  let group = -1;
+  let cur: string[] = [];
+  for (const s of ex.slots) {
+    if (s.beat >= ex.passBeats - 1e-9) break;
+    if (s.group !== group) {
+      if (cur.length) words.push(cur.join(" "));
+      cur = [];
+      group = s.group;
+    }
+    if (!s.rest) cur.push(s.dir === "D" ? "down" : "up");
+  }
+  if (cur.length) words.push(cur.join(" "));
+  return words.join(", ");
+}
+
+function ResultsView({ result, confetti, onPost, onAgain, onSetup }: { result: RoundResult; confetti: number; onPost: () => void; onAgain: () => void; onSetup: () => void }) {
+  const info = levelInfo(result.mode, result.level);
+  const rs = result.results;
+  const total = rs.reduce((n, r) => n + r.total, 0);
+  const done = rs.reduce((n, r) => n + r.done, 0);
+  const wrong = rs.reduce((n, r) => n + r.wrong, 0);
+  const skipped = rs.reduce((n, r) => n + r.skipped, 0);
+  const secs = rs.flatMap((r) => r.seconds);
+  const strOk = rs.reduce((n, r) => n + (r.stringOk ?? 0), 0);
+  const strChecked = rs.reduce((n, r) => n + (r.stringChecked ?? 0), 0);
+  const s = result.stars;
+  return (
+    <div className="pk-stage pk-sky relative rounded-3xl p-5 text-center text-white sm:p-8" data-testid="pick-results">
+      <Confetti burst={confetti} pieces={70} />
+      <div className="flex justify-center">
+        <Mascot mood={s >= 2 ? "wow" : "happy"} size={110} />
+      </div>
+      <h3 className="mt-2 text-3xl font-black">{s >= 3 ? "Superstar! 🌟" : s >= 2 ? "Great job! 🎉" : s >= 1 ? "Nice work! 👏" : "Keep practising! 💪"}</h3>
+      <div className="mt-2">
+        <Stars n={s} size="text-5xl" />
+      </div>
+      <p className="mt-2 text-white/90">
+        {info.emoji} {info.label} · {result.mode === "chords" ? "Chords" : "Alternate Picking"} · {result.input === "mic" ? "🎤 guitar" : "👆 tap"}
+      </p>
+      <div className="mx-auto mt-4 grid max-w-lg grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label={result.mode === "chords" ? "Chords" : "Strokes"} value={`${done}/${total}`} />
+        {result.mode === "chords" ? <Stat label="Avg time" value={secs.length ? `${Math.round((secs.reduce((a, b) => a + b, 0) / secs.length) * 10) / 10}s` : "—"} /> : <Stat label={result.input === "tap" ? "Wrong way" : "Right string"} value={result.input === "tap" ? String(wrong) : strChecked ? `${strOk}/${strChecked}` : "—"} />}
+        <Stat label="Skipped" value={String(skipped)} />
+        <Stat label="Score" value={String(result.boardScore)} />
+      </div>
+      {result.newBest ? <p className="pk-wiggle mt-3 inline-block rounded-full bg-yellow-300 px-4 py-1 font-black text-yellow-900">🏆 New personal best!</p> : null}
+      <ul className="mx-auto mt-4 max-w-md space-y-1 rounded-2xl bg-white/15 p-3 text-left text-sm">
+        {result.perExercise.map((e, i) => (
+          <li key={i} className="flex justify-between">
+            <span>{e.title}</span>
+            <span>{"⭐".repeat(e.stars) || "—"}</span>
+          </li>
+        ))}
+      </ul>
+      {result.cam ? (
+        <p className="mt-3 text-sm font-semibold text-white">
+          📷 Camera Coach saw {result.cam.right} strokes the right way, {result.cam.wrong} the other way, {result.cam.missed} missed and {result.cam.extra} extra.
+        </p>
+      ) : null}
+      <div className="mt-5 flex flex-wrap justify-center gap-3">
+        <button type="button" onClick={onPost} className="rounded-full bg-yellow-300 px-6 py-3 font-black text-yellow-900 shadow-lg" data-testid="post">
+          🏆 Save score &amp; leaderboard
+        </button>
+        <button type="button" onClick={onAgain} className="rounded-full bg-white px-6 py-3 font-black text-violet-700 shadow-lg">
+          🔁 Play again
+        </button>
+        <button type="button" onClick={onSetup} className="rounded-full bg-white/20 px-6 py-3 font-black">
+          ⚙️ Change level
+        </button>
+      </div>
     </div>
   );
 }
@@ -991,63 +1099,6 @@ function MicMeter({ barRef }: { barRef: React.RefObject<HTMLDivElement | null> }
   return (
     <div className="mx-auto mt-2 h-3 w-48 overflow-hidden rounded-full bg-white/30" aria-label="Microphone level">
       <div ref={barRef} className="h-full w-0 rounded-full transition-[width] duration-75" />
-    </div>
-  );
-}
-
-function ResultsView({ result, confetti, onPost, onAgain, onSetup }: { result: RoundResult; confetti: number; onPost: () => void; onAgain: () => void; onSetup: () => void }) {
-  const info = levelInfo(result.mode, result.level);
-  const s = result.summary;
-  return (
-    <div className="pk-stage pk-sky relative rounded-3xl p-5 text-center text-white sm:p-8" data-testid="pick-results">
-      <Confetti burst={confetti} pieces={70} />
-      <div className="flex justify-center">
-        <Mascot mood={s.stars >= 2 ? "wow" : "happy"} size={110} />
-      </div>
-      <h3 className="mt-2 text-3xl font-black">{s.stars >= 3 ? "Superstar! 🌟" : s.stars >= 2 ? "Great job! 🎉" : s.stars >= 1 ? "Nice work! 👏" : "Keep practising! 💪"}</h3>
-      <div className="mt-2">
-        <Stars n={s.stars} size="text-5xl" />
-      </div>
-      <p className="mt-2 text-white/90">
-        {info.emoji} {info.label} · {result.mode === "chords" ? "Chords & Strumming" : "Alternate Picking"} · {result.bpm} BPM · {result.input === "mic" ? "🎤 guitar" : "👆 tap"}
-      </p>
-      <div className="mx-auto mt-4 grid max-w-lg grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Accuracy" value={`${Math.round(s.accuracy * 100)}%`} />
-        <Stat label="Perfect" value={String(s.perfect)} />
-        <Stat label="Best streak" value={`🔥 ${s.maxStreak}`} />
-        <Stat label="Score" value={String(result.boardScore)} />
-      </div>
-      {result.newBest ? <p className="pk-wiggle mt-3 inline-block rounded-full bg-yellow-300 px-4 py-1 font-black text-yellow-900">🏆 New personal best!</p> : null}
-      <ul className="mx-auto mt-4 max-w-md space-y-1 rounded-2xl bg-white/15 p-3 text-left text-sm">
-        {result.perExercise.map((e, i) => (
-          <li key={i} className="flex justify-between">
-            <span>{e.title}</span>
-            <span>{"⭐".repeat(e.stars) || "—"}</span>
-          </li>
-        ))}
-      </ul>
-      {result.cam ? (
-        <p className="mt-3 text-sm font-semibold text-white">
-          📷 Camera Coach saw {result.cam.right} strokes the right way, {result.cam.wrong} the other way, {result.cam.missed} missed and {result.cam.extra} extra.
-        </p>
-      ) : null}
-      {s.avgMs !== null ? (
-        <p className="mt-3 text-sm text-white/90">
-          Timing: {Math.abs(s.avgMs) <= 20 ? "right on the beat 🎯" : s.avgMs > 0 ? `about ${s.avgMs} ms late` : `about ${-s.avgMs} ms early`}
-          {s.spreadMs !== null ? ` · evenness ±${s.spreadMs} ms` : ""}
-        </p>
-      ) : null}
-      <div className="mt-5 flex flex-wrap justify-center gap-3">
-        <button type="button" onClick={onPost} className="rounded-full bg-yellow-300 px-6 py-3 font-black text-yellow-900 shadow-lg" data-testid="post">
-          🏆 Save score &amp; leaderboard
-        </button>
-        <button type="button" onClick={onAgain} className="rounded-full bg-white px-6 py-3 font-black text-violet-700 shadow-lg">
-          🔁 Play again
-        </button>
-        <button type="button" onClick={onSetup} className="rounded-full bg-white/20 px-6 py-3 font-black">
-          ⚙️ Change level
-        </button>
-      </div>
     </div>
   );
 }
