@@ -24,6 +24,7 @@ export type GameKind =
   | "symbols"
   | "clap-trainer"
   | "piano-fall"
+  | "pick-coach"
   | "chess-puzzles"
   | "chess-play"
   | "chess-online";
@@ -43,7 +44,7 @@ export type GameDef = {
 
 export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; emoji: string }[] = [
   { id: "all", label: "All games", hint: "Everything in one colorful arcade", emoji: "🎮" },
-  { id: "guitar", label: "Guitar", hint: "Fretboard, chords, tabs and strumming", emoji: "🎸" },
+  { id: "guitar", label: "Guitar", hint: "Picking and strumming coach, fretboard, chords and tabs", emoji: "🎸" },
   { id: "piano", label: "Piano", hint: "Falling-notes songs, keys, staff reading and chords", emoji: "🎹" },
   { id: "vocals", label: "Vocals", hint: "Pitch, solfege and breath challenges", emoji: "🎤" },
   {
@@ -58,6 +59,19 @@ export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; 
 ];
 
 export const GAMES: GameDef[] = [
+  {
+    slug: "alternate-picking",
+    title: "Alternate Picking & Strumming Coach",
+    blurb: "Picky the guitar pick says a down-up pattern out loud — you play it on your guitar in time with the click. Single-note picking or chords and strum patterns, Beginner, Expert and Pro, scored by your microphone or the tap buttons.",
+    category: "guitar",
+    kind: "pick-coach",
+    minutes: "3–5 min",
+    accent: "#8b5cf6",
+    boards: [
+      { id: "picking", label: "Alternate Picking" },
+      { id: "chords", label: "Chords & Strumming" },
+    ],
+  },
   {
     slug: "fretboard-notes",
     title: "Fretboard Note Finder",
