@@ -58,23 +58,20 @@ export type LevelInfo = {
   label: string;
   emoji: string;
   blurb: string;
-  bpm: { min: number; max: number; def: number };
-  /** Timing window multiplier (beginners get a friendlier window). */
-  leniency: number;
   /** Leaderboard multiplier. */
   mult: number;
 };
 
 export const LEVELS: Record<Mode, LevelInfo[]> = {
   picking: [
-    { id: "beginner", label: "Beginner", emoji: "🐣", blurb: "Slow downs and down-ups on one string", bpm: { min: 50, max: 80, def: 60 }, leniency: 1.3, mult: 0.6 },
-    { id: "expert", label: "Expert", emoji: "🚀", blurb: "Triplets, accents, string crossing and first 16ths", bpm: { min: 70, max: 110, def: 90 }, leniency: 1.1, mult: 0.8 },
-    { id: "pro", label: "Pro", emoji: "🔥", blurb: "Fast 16ths, gallops, sextuplets and string skipping", bpm: { min: 100, max: 160, def: 120 }, leniency: 1, mult: 1 },
+    { id: "beginner", label: "Beginner", emoji: "🐣", blurb: "Downs and down-ups on one string", mult: 0.6 },
+    { id: "expert", label: "Expert", emoji: "🚀", blurb: "Triplets, accents, string crossing and first 16ths", mult: 0.8 },
+    { id: "pro", label: "Pro", emoji: "🔥", blurb: "Long 16th runs, gallops, sextuplets and string skipping", mult: 1 },
   ],
   chords: [
-    { id: "beginner", label: "Beginner", emoji: "🐣", blurb: "Open G, C, D, Em, Am — slow, simple strums", bpm: { min: 55, max: 85, def: 65 }, leniency: 1.3, mult: 0.6 },
-    { id: "expert", label: "Expert", emoji: "🚀", blurb: "More chords, 8th-note strums, a change every bar", bpm: { min: 75, max: 115, def: 90 }, leniency: 1.1, mult: 0.8 },
-    { id: "pro", label: "Pro", emoji: "🔥", blurb: "Barre chords, syncopated 16th strums, quick changes", bpm: { min: 85, max: 130, def: 100 }, leniency: 1, mult: 1 },
+    { id: "beginner", label: "Beginner", emoji: "🐣", blurb: "Open G, C, D, Em and Am — one or two chords at a time", mult: 0.6 },
+    { id: "expert", label: "Expert", emoji: "🚀", blurb: "Adds A, E, Dm and 7th chords, 4-chord changes", mult: 0.8 },
+    { id: "pro", label: "Pro", emoji: "🔥", blurb: "Barre chords (F, Bm, F#m, Bb, Cm, Gm) and quick changes", mult: 1 },
   ],
 };
 
@@ -149,8 +146,8 @@ export const STRUMS: Record<Level, StrumExercise[]> = {
     { id: "cb-em", title: "Easy Em", desc: "4 slow down strums on E minor", segs: [{ grid: 1, s: "dddd" }], chords: [["Em", 4]], reps: 2 },
     { id: "cb-c", title: "C Swing", desc: "Down, down up, down, down up", segs: [{ grid: 2, s: "d-dud-du" }], chords: [["C", 4]], reps: 2 },
     { id: "cb-d", title: "D Dance", desc: "Down, down up, down, down up", segs: [{ grid: 2, s: "d-dud-du" }], chords: [["D", 4]], reps: 2 },
-    { id: "cb-gc", title: "G to C", desc: "One bar of G, one bar of C", segs: [{ grid: 1, s: "dddd" }], chords: [["G", 4]], reps: 1 },
-    { id: "cb-ema", title: "Em to Am", desc: "Em for one bar, Am for one bar", segs: [{ grid: 2, s: "d-d-d-du" }], chords: [["Em", 4]], reps: 1 },
+    { id: "cb-gc", title: "G to C", desc: "One bar of G, one bar of C", segs: [{ grid: 1, s: "dddd" }], chords: [["G", 4], ["C", 4]], reps: 1 },
+    { id: "cb-ema", title: "Em to Am", desc: "Em for one bar, Am for one bar", segs: [{ grid: 2, s: "d-d-d-du" }], chords: [["Em", 4], ["Am", 4]], reps: 1 },
   ],
   expert: [
     { id: "ce-of", title: "Campfire Strum", desc: "Down, down up, up down up — on G then D", segs: [{ grid: 2, s: "d-du-udu" }], chords: [["G", 4], ["D", 4]], reps: 1 },
@@ -338,161 +335,64 @@ export function roundExercises(mode: Mode, level: Level) {
   return Array.from({ length: EXERCISES_PER_ROUND }, (_, i) => buildExercise(mode, level, i));
 }
 
-// ---------------------------------------------------------------- judging
+// ---------------------------------------------------------------- own-pace scoring
+
+/** Chords to play in an exercise, in order (repeats of the same chord merged). */
+export function chordSequence(ex: Exercise): string[] {
+  const out: string[] = [];
+  for (const c of ex.chordTimeline) if (out[out.length - 1] !== c.name) out.push(c.name);
+  return out;
+}
 
 export type Judgement = "perfect" | "good" | "wrong" | "miss";
 
-export type Windows = { perfect: number; good: number };
-
-/**
- * Timing windows (seconds) for a set of target times: never wider than half the
- * gap to the nearest neighbour, so one stroke can never be judged against two notes.
- */
-export function windowsFor(targets: number[], leniency = 1): Windows {
-  let gap = Infinity;
-  for (let i = 1; i < targets.length; i++) gap = Math.min(gap, targets[i] - targets[i - 1]);
-  if (!Number.isFinite(gap)) gap = 1;
-  const good = Math.min(0.12 * leniency, gap * 0.5);
-  const perfect = Math.min(0.05 * leniency, good * 0.55);
-  return { perfect, good };
-}
-
-export type TargetState = { t: number; dir: Dir; result: Judgement | null; offset: number | null };
-
-/** Live judge: feed inputs as they happen, call `expire(now)` every frame. */
-export class LiveJudge {
-  targets: TargetState[];
-  extra = 0;
-  streak = 0;
-  maxStreak = 0;
-  constructor(times: { t: number; dir: Dir }[], public win: Windows) {
-    this.targets = times.map((x) => ({ ...x, result: null, offset: null }));
-  }
-
-  /**
-   * Judge one stroke at time `t`. `dir` is known for tap/keyboard input; the mic can't
-   * tell down from up, so it passes undefined and only timing is judged.
-   */
-  input(t: number, dir?: Dir): { index: number; result: Judgement; offset: number } | null {
-    let best = -1;
-    let bestD = Infinity;
-    for (let i = 0; i < this.targets.length; i++) {
-      const g = this.targets[i];
-      if (g.result) continue;
-      const d = Math.abs(t - g.t);
-      if (d <= this.win.good && d < bestD) {
-        best = i;
-        bestD = d;
-      }
-    }
-    if (best < 0) {
-      this.extra++;
-      return null;
-    }
-    const g = this.targets[best];
-    const offset = t - g.t;
-    let result: Judgement = bestD <= this.win.perfect ? "perfect" : "good";
-    if (dir && dir !== g.dir) result = "wrong";
-    g.result = result;
-    g.offset = offset;
-    if (result === "wrong") this.streak = 0;
-    else {
-      this.streak++;
-      this.maxStreak = Math.max(this.maxStreak, this.streak);
-    }
-    return { index: best, result, offset };
-  }
-
-  /** Mark targets whose window has passed as missed; returns the newly missed indexes. */
-  expire(now: number) {
-    const out: number[] = [];
-    this.targets.forEach((g, i) => {
-      if (!g.result && now > g.t + this.win.good) {
-        g.result = "miss";
-        this.streak = 0;
-        out.push(i);
-      }
-    });
-    return out;
-  }
-
-  get done() {
-    return this.targets.every((g) => g.result);
-  }
-
-  summary() {
-    return summarize(this.targets, this.extra, this.maxStreak);
-  }
-}
-
-export type Summary = {
+export type ExerciseResult = {
+  mode: Mode;
+  /** Strokes (picking) or chords (chords mode) asked for. */
   total: number;
-  perfect: number;
-  good: number;
+  /** Strokes heard / chords recognised. */
+  done: number;
+  /** Strokes in the wrong direction (tap input only). */
   wrong: number;
-  miss: number;
-  extra: number;
-  maxStreak: number;
-  /** 0..1 */
-  accuracy: number;
-  stars: 0 | 1 | 2 | 3;
-  /** Average offset (ms, + = late) and spread of the strokes that were heard. */
-  avgMs: number | null;
-  spreadMs: number | null;
+  /** Chords skipped, or strokes left when the exercise was skipped. */
+  skipped: number;
+  /** Seconds to get each chord recognised (chords mode). */
+  seconds: number[];
+  /** Notes on the expected string (mic picking, approximate) / notes checked. */
+  stringOk?: number;
+  stringChecked?: number;
 };
 
-export function summarize(targets: TargetState[], extra: number, maxStreak: number): Summary {
-  const n = (r: Judgement) => targets.filter((g) => g.result === r).length;
-  const total = targets.length;
-  const perfect = n("perfect");
-  const good = n("good");
-  const wrong = n("wrong");
-  const miss = total - perfect - good - wrong;
-  const raw = total ? (perfect + good * 0.7 + wrong * 0.35) / total : 0;
-  const accuracy = Math.max(0, raw - (total ? (extra * 0.25) / total : 0));
-  const offs = targets.map((g) => g.offset).filter((o): o is number => o !== null);
-  const avg = offs.length ? offs.reduce((a, b) => a + b, 0) / offs.length : null;
-  const spread = offs.length > 1 && avg !== null ? Math.sqrt(offs.reduce((a, o) => a + (o - avg) ** 2, 0) / offs.length) : null;
-  const stars = accuracy >= 0.9 ? 3 : accuracy >= 0.7 ? 2 : accuracy >= 0.45 ? 1 : 0;
-  return {
-    total,
-    perfect,
-    good,
-    wrong,
-    miss,
-    extra,
-    maxStreak,
-    accuracy,
-    stars,
-    avgMs: avg === null ? null : Math.round(avg * 1000),
-    spreadMs: spread === null ? null : Math.round(spread * 1000),
-  };
+export function exerciseStars(r: ExerciseResult): 0 | 1 | 2 | 3 {
+  if (!r.total) return 0;
+  const good = (r.done - r.wrong) / r.total;
+  if (good >= 1 && r.skipped === 0) return 3;
+  if (good >= 0.8) return 2;
+  if (good >= 0.4) return 1;
+  return 0;
 }
 
-/** Leaderboard score (0–5000): accuracy × level × speed, plus a small streak bonus. */
-export function boardScore(accuracy: number, maxStreak: number, mode: Mode, level: Level, bpm: number) {
+/** Leaderboard score (0–5000): how much was played right × level, plus quick-change bonus. */
+export function boardScore(results: ExerciseResult[], mode: Mode, level: Level) {
   const info = levelInfo(mode, level);
-  const speed = Math.max(0.75, Math.min(1.25, bpm / info.bpm.def));
-  return Math.max(0, Math.min(5000, Math.round(accuracy * 4000 * info.mult * speed + Math.min(maxStreak, 120) * 4)));
+  const total = results.reduce((n, r) => n + r.total, 0);
+  if (!total) return 0;
+  const good = results.reduce((n, r) => n + Math.max(0, r.done - r.wrong), 0);
+  let bonus = 0;
+  for (const r of results) for (const t of r.seconds) bonus += Math.max(0, 1 - t / 10) * 40;
+  return Math.max(0, Math.min(5000, Math.round((good / total) * 4000 * info.mult + bonus)));
 }
 
-/** Friendly coaching line for an exercise result. */
-export function coachTip(s: Summary, usesDirection: boolean): string {
-  if (s.total && s.miss / s.total > 0.4) return "Keep your hand moving like a pendulum — even on the rests!";
-  if (usesDirection && s.wrong > 1) return "Watch the arrows: down ↓ and up ↑ take turns.";
-  if (s.extra > 2) return "A few extra strokes snuck in — play only the arrows you see.";
-  if (s.avgMs !== null && s.avgMs > 45) return "You're a tiny bit late — feel the click coming.";
-  if (s.avgMs !== null && s.avgMs < -45) return "You're rushing a little — let the click lead you.";
-  if (s.spreadMs !== null && s.spreadMs > 45) return "Try to make every stroke the same distance apart.";
-  return "Super steady timing!";
-}
-
-export function beatSeconds(bpm: number) {
-  return 60 / bpm;
-}
-
-/** Target times (seconds) of an exercise that starts at `start` (context time). */
-export function targetTimes(ex: Exercise, bpm: number, start: number) {
-  const spb = beatSeconds(bpm);
-  return ex.steps.map((s) => ({ t: start + s.beat * spb, dir: s.dir }));
+/** Friendly tip after an exercise. */
+export function coachTip(r: ExerciseResult, usesDirection: boolean): string {
+  if (r.mode === "chords") {
+    if (r.skipped) return "Skipped one? Press each finger just behind the fret, then strum all the strings in the chord.";
+    const slow = r.seconds.some((t) => t > 8);
+    if (slow) return "Changing chords takes practice — look at the diagram and place one finger at a time.";
+    return "Your chords ring out clearly!";
+  }
+  if (r.skipped) return "Take your time — play one stroke for every arrow.";
+  if (usesDirection && r.wrong > 1) return "Watch the arrows: down ↓ and up ↑ take turns.";
+  if (r.stringChecked && r.stringOk !== undefined && r.stringOk / r.stringChecked < 0.5) return "Check which string you're on — the card tells you.";
+  return "Lovely, steady picking!";
 }

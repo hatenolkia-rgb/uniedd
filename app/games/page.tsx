@@ -96,7 +96,7 @@ export default function GamesPage() {
             <Link href="/games/piano-falling-notes" className="font-semibold text-[var(--brand-blue)] hover:underline">
               falling-notes piano game
             </Link>
-            , learn to pick and strum in time with the{" "}
+            , learn chords and alternate picking at your own pace with the{" "}
             <Link href="/games/alternate-picking" className="font-semibold text-[var(--brand-blue)] hover:underline">
               alternate picking and strumming coach
             </Link>

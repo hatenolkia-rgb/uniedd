@@ -308,6 +308,7 @@ export class ClapEngine {
     const lat = Number(settings?.latency);
     this.inputLatency = Number.isFinite(lat) && lat > 0 && lat < 0.5 ? lat : 0;
     const src = this.ctx.createMediaStreamSource(this.stream);
+    this.micSource = src;
     // Claps are bright, broadband bursts — keep the highs, drop voice and hum
     const hp = this.ctx.createBiquadFilter();
     hp.type = "highpass";
@@ -341,6 +342,9 @@ export class ClapEngine {
   /** Render-clock time of the last detected onset (for diagnostics/tests). */
   lastOnsetRender = -1;
 
+  /** The raw microphone source node (for extra analysers, e.g. chord recognition). */
+  micSource: MediaStreamAudioSourceNode | null = null;
+
   setSensitivity(sens: number) {
     this.node?.port.postMessage({ sens });
   }
@@ -353,6 +357,7 @@ export class ClapEngine {
   stopMic() {
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
+    this.micSource = null;
     this.node?.disconnect();
     this.node = null;
   }

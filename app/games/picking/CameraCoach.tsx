@@ -4,14 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   NO_RECORDING_FULL,
   StrokeTracker,
-  camWindow,
   centerX,
   checkChordShape,
-  judgeCamera,
+  judgeCameraSequence,
   loadHandModel,
   pickStrummingHand,
   strumY,
-  type CamSlot,
   type CamStroke,
   type CamSummary,
   type HandModel,
@@ -24,10 +22,12 @@ export type CamStatus = "off" | "asking" | "loading" | "on" | "denied" | "error"
 export type CamLive = { dir: Dir; ok: boolean | null; key: number } | null;
 
 type Session = {
-  slots: CamSlot[];
+  /** Down/up order to compare with (null = just watch, e.g. Chords mode). */
+  expected: Dir[] | null;
   strokes: CamStroke[];
-  chordAt?: (t: number) => string | undefined;
-  win: number;
+  /** Live position in `expected`. */
+  idx: number;
+  chord?: () => string | undefined;
 };
 
 const CONNECTIONS: [number, number][] = [
@@ -35,11 +35,8 @@ const CONNECTIONS: [number, number][] = [
   [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17],
 ];
 
-/**
- * Webcam + on-device hand tracking. `heardAt(perf)` converts a performance.now()
- * time to the game's audio clock so strokes can be compared with the pattern.
- */
-export function useCameraCoach(heardAt: (perf: number) => number | null) {
+/** Webcam + on-device hand tracking for the picking & strumming game. */
+export function useCameraCoach() {
   const [status, setStatus] = useState<CamStatus>("off");
   const [live, setLive] = useState<CamLive>(null);
   const [shapeMsg, setShapeMsg] = useState<{ ok: boolean; message: string } | null>(null);
@@ -52,17 +49,12 @@ export function useCameraCoach(heardAt: (perf: number) => number | null) {
   const sessionRef = useRef<Session | null>(null);
   const trackerRef = useRef(new StrokeTracker());
   const historyRef = useRef<number[][]>([[], []]);
-  const offsetRef = useRef(0.06); // typical webcam delay; refined after every exercise
   const lastShapeRef = useRef(0);
   const keyRef = useRef(0);
   const seenRef = useRef(false);
-  const heardRef = useRef(heardAt);
   const strumSideRef = useRef<number | null>(null);
   const lastStrumXRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    heardRef.current = heardAt;
-  }, [heardAt]);
 
   const draw = useCallback((hands: Pt[][], strumIdx: number) => {
     const c = canvasRef.current;
@@ -147,34 +139,33 @@ export function useCameraCoach(heardAt: (perf: number) => number | null) {
           }
         }
       }
-      const heard = heardRef.current(perf);
-      if (heard === null) return;
-      // webcam frames are captured a little before we see them
-      const t = heard;
+      const t = perf / 1000;
       if (strum) {
         const s = trackerRef.current.push(t, strumY(strum));
         const sess = sessionRef.current;
         if (s && sess) {
           sess.strokes.push(s);
-          const tt = s.t - offsetRef.current;
-          let best: CamSlot | null = null;
-          let bestD = Infinity;
-          for (const slot of sess.slots) {
-            const d = Math.abs(slot.t - tt);
-            if (d < bestD) {
-              bestD = d;
-              best = slot;
+          let ok: boolean | null = null;
+          const exp = sess.expected;
+          if (exp && sess.idx < exp.length) {
+            if (s.dir === exp[sess.idx]) {
+              ok = true;
+              sess.idx++;
+            } else if (sess.idx === 0 || exp[sess.idx - 1] === exp[sess.idx]) {
+              ok = null; // wind-up / return swing between two same-way strokes
+            } else {
+              ok = false;
+              sess.idx++;
             }
           }
-          const ok = best && bestD <= sess.win ? best.dir === s.dir : null;
           keyRef.current++;
           setLive({ dir: s.dir, ok, key: keyRef.current });
         }
       }
       const sess = sessionRef.current;
-      if (sess?.chordAt && perf - lastShapeRef.current > 600) {
+      if (sess?.chord && perf - lastShapeRef.current > 600) {
         lastShapeRef.current = perf;
-        const chord = sess.chordAt(t);
+        const chord = sess.chord();
         if (chord) setShapeMsg(checkChordShape(chord, fret as Pt[] | null));
       }
     },
@@ -264,11 +255,11 @@ export function useCameraCoach(heardAt: (perf: number) => number | null) {
     return "on" as CamStatus;
   }, [loop]);
 
-  /** Start watching one exercise. `slots` = every grid slot (rests too) in audio-clock time. */
-  const begin = useCallback((slots: CamSlot[], chordAt?: (t: number) => string | undefined) => {
+  /** Start watching one exercise: `expected` = the down/up order (or null), `chord` = current chord getter. */
+  const begin = useCallback((expected: Dir[] | null, chord?: () => string | undefined) => {
     if (!runningRef.current) return;
     trackerRef.current.reset();
-    sessionRef.current = { slots, strokes: [], chordAt, win: camWindow(slots).win };
+    sessionRef.current = { expected, strokes: [], idx: 0, chord };
     setShapeMsg(null);
     setLive(null);
   }, []);
@@ -278,12 +269,7 @@ export function useCameraCoach(heardAt: (perf: number) => number | null) {
     const sess = sessionRef.current;
     sessionRef.current = null;
     if (!sess) return null;
-    const summary = judgeCamera(sess.slots, sess.strokes, offsetRef.current);
-    // self-calibrate the webcam delay from strokes that lined up with the pattern
-    if (summary.medianOffset !== null && summary.right + summary.wrong >= 4) {
-      offsetRef.current = Math.max(-0.1, Math.min(0.3, offsetRef.current * 0.5 + summary.medianOffset * 0.5));
-    }
-    return summary;
+    return judgeCameraSequence(sess.expected, sess.strokes);
   }, []);
 
   useEffect(
@@ -372,7 +358,7 @@ export function CameraOptIn({ cam, enabled, setEnabled }: { cam: CameraCoach; en
           </p>
           <ul className="list-disc space-y-0.5 pl-5 text-xs text-slate-600">
             <li>Sit so both hands and the guitar are in the picture. Good light helps!</li>
-            <li>Works best at slow and medium speeds — very fast 16ths are too quick for a camera.</li>
+            <li>Play at a comfortable speed — very fast strokes are hard for a camera to see.</li>
             <li>The hand model is downloaded once and then runs inside this page.</li>
           </ul>
           {cam.status === "on" || cam.status === "loading" ? null : (

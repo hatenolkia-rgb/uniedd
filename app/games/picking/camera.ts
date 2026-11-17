@@ -97,125 +97,86 @@ export class StrokeTracker {
   }
 }
 
-// ---------------------------------------------------------------- matching to the pattern
-
-export type CamSlot = { t: number; dir: Dir; rest: boolean };
+// ---------------------------------------------------------------- comparing with the pattern
 
 export type CamSummary = {
   /** Strokes the camera saw during the exercise. */
   seen: number;
-  /** Played (non-rest) slots with a stroke in the right direction. */
+  /** Pattern strokes played in the right direction. */
   right: number;
-  /** Played slots where the hand moved the other way. */
+  /** Pattern strokes played the other way. */
   wrong: number;
-  /** Played slots with no stroke seen. */
+  /** Pattern strokes the camera didn't see. */
   missed: number;
-  /** Strokes that didn't line up with any slot. */
+  /** Strokes beyond the pattern. */
   extra: number;
-  /** Total played slots. */
+  /** Strokes in the pattern (0 when there's no pattern to compare, e.g. Chords mode). */
   total: number;
-  /** Spread of stroke timing (ms) — big = uneven. */
+  /** Spread of the gaps between strokes (ms) — big = uneven. */
   spreadMs: number | null;
-  /** Median offset (s) of matched strokes, used to self-calibrate camera latency. */
-  medianOffset: number | null;
-  /** True when the pattern was too fast for the camera to judge direction. */
-  tooFast: boolean;
+  /** True when the gaps between strokes vary a lot. */
+  uneven: boolean;
 };
 
-/** Fastest stroke rate the camera can follow reliably (strokes per second). */
-export const CAMERA_MAX_RATE = 7;
-
-export function camWindow(slots: CamSlot[]) {
-  let gap = Infinity;
-  for (let i = 1; i < slots.length; i++) gap = Math.min(gap, slots[i].t - slots[i - 1].t);
-  if (!Number.isFinite(gap)) gap = 0.5;
-  return { win: Math.min(0.2, gap * 0.5), gap };
-}
-
 /**
- * Between two strokes in the same direction (e.g. down, down) the hand has to travel
- * back the other way without hitting the strings. Such a "return" swing is expected,
- * so it never counts as an extra stroke.
+ * Compare the order of down/up strokes with the spoken pattern (no tempo: the student
+ * plays at their own pace). Between two strokes in the same direction (down, down)
+ * the hand must swing back the other way without hitting the strings — that return
+ * swing is expected and never counts as a mistake; neither does a wind-up before the
+ * first stroke or one follow-through after the last.
  */
-function isReturnStroke(slots: CamSlot[], t: number, dir: Dir, gap: number) {
-  let prev: CamSlot | null = null;
-  let next: CamSlot | null = null;
-  for (const s of slots) {
-    if (s.t <= t) prev = s;
-    else {
-      next = s;
-      break;
-    }
-  }
-  // a wind-up just before the first stroke, or a follow-through just after the last
-  if (!prev) return !!next && next.dir !== dir && next.t - t <= gap * 1.5;
-  if (!next) return prev.dir !== dir && t - prev.t <= gap * 1.5;
-  return prev.dir !== dir && next.dir !== dir;
-}
-
-/**
- * Match camera strokes to every slot of the pattern (rests included — the hand still
- * moves on a rest, it just misses the strings), then count mistakes on played slots.
- */
-export function judgeCamera(slots: CamSlot[], strokes: CamStroke[], offset = 0): CamSummary {
-  const { win, gap } = camWindow(slots);
-  const tooFast = 1 / gap > CAMERA_MAX_RATE;
-  const used = new Array(slots.length).fill(false);
-  const hit: (CamStroke | null)[] = new Array(slots.length).fill(null);
-  const offs: number[] = [];
-  let extra = 0;
-  for (const s of [...strokes].sort((a, b) => a.t - b.t)) {
-    const t = s.t - offset;
-    let best = -1;
-    let bestD = Infinity;
-    for (let i = 0; i < slots.length; i++) {
-      if (used[i]) continue;
-      const d = Math.abs(t - slots[i].t);
-      // prefer a slot in the same direction when two are close
-      const score = d + (slots[i].dir === s.dir ? 0 : win * 0.6);
-      if (d <= win && score < bestD) {
-        bestD = score;
-        best = i;
-      }
-    }
-    if (best < 0) {
-      if (!isReturnStroke(slots, t, s.dir, gap)) extra++;
-      continue;
-    }
-    used[best] = true;
-    hit[best] = s;
-    offs.push(s.t - slots[best].t);
-  }
+export function judgeCameraSequence(expected: Dir[] | null, strokes: CamStroke[]): CamSummary {
+  const list = [...strokes].sort((a, b) => a.t - b.t);
+  const exp = expected ?? [];
+  let i = 0;
   let right = 0;
   let wrong = 0;
-  let missed = 0;
-  let total = 0;
-  slots.forEach((slot, i) => {
-    if (slot.rest) return;
-    total++;
-    const h = hit[i];
-    if (!h) missed++;
-    else if (h.dir === slot.dir) right++;
-    else wrong++;
-  });
-  const sorted = [...offs].sort((a, b) => a - b);
-  const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
-  let spread: number | null = null;
-  if (offs.length > 2) {
-    const avg = offs.reduce((a, b) => a + b, 0) / offs.length;
-    spread = Math.round(Math.sqrt(offs.reduce((a, o) => a + (o - avg) ** 2, 0) / offs.length) * 1000);
+  let extra = 0;
+  let followThrough = false;
+  const counted: number[] = [];
+  for (const s of list) {
+    if (!exp.length) {
+      counted.push(s.t);
+      continue;
+    }
+    if (i >= exp.length) {
+      if (!followThrough && s.dir !== exp[exp.length - 1]) followThrough = true;
+      else extra++;
+      continue;
+    }
+    if (s.dir === exp[i]) {
+      right++;
+      i++;
+      counted.push(s.t);
+    } else if (i === 0 || exp[i - 1] === exp[i]) {
+      // wind-up before the first stroke, or the return swing between two same-way strokes
+      continue;
+    } else {
+      wrong++;
+      i++;
+      counted.push(s.t);
+    }
   }
-  return { seen: strokes.length, right, wrong, missed, extra, total, spreadMs: spread, medianOffset: median, tooFast };
+  const missed = exp.length - i;
+  let spread: number | null = null;
+  let uneven = false;
+  if (counted.length >= 4) {
+    const gaps = counted.slice(1).map((t, k) => t - counted[k]);
+    const avg = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    const sd = Math.sqrt(gaps.reduce((a, g) => a + (g - avg) ** 2, 0) / gaps.length);
+    spread = Math.round(sd * 1000);
+    uneven = avg > 0 && sd / avg > 0.35;
+  }
+  return { seen: list.length, right, wrong, missed, extra, total: exp.length, spreadMs: spread, uneven };
 }
 
 export function cameraTip(s: CamSummary): string {
   if (s.seen === 0) return "I couldn't see your strumming hand — make sure it's in the camera picture.";
-  if (s.tooFast) return "That was too fast for my camera eyes — slow the speed down to check your directions.";
-  if (s.total && s.missed / s.total > 0.5) return "Keep your hand swinging down and up all the time, like a pendulum.";
-  if (s.wrong >= 2) return "Some strokes went the other way — down on the beat, up in between!";
+  if (s.total && s.missed / s.total > 0.5) return "I missed some strokes — swing from the wrist so I can see each one.";
+  if (s.wrong >= 2) return "Some strokes went the other way — follow the arrows: down, then up!";
   if (s.extra >= 3) return "A few extra swings — make each stroke match an arrow.";
-  if (s.spreadMs !== null && s.spreadMs > 70) return "Your strokes were a bit uneven — try to swing like a steady clock.";
-  return "Great hand motion — down and up just like the arrows!";
+  if (s.uneven) return "Your strokes were a bit uneven — try to swing like a steady clock.";
+  return s.total ? "Great hand motion — down and up just like the arrows!" : "Nice, smooth strumming!";
 }
 
 // ---------------------------------------------------------------- fretting hand (approximate)

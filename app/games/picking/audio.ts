@@ -7,10 +7,53 @@
 
 import { ClapEngine, midiFreq } from "../clap/engine";
 import { CHORDS, type Dir } from "./patterns";
+import { chromaFromSpectrum } from "./chroma";
 
 const OPEN_STRINGS = [40, 45, 50, 55, 59, 64]; // E2 A2 D3 G3 B3 E4
 
 export class PickEngine extends ClapEngine {
+  private analyser: AnalyserNode | null = null;
+  private spec: Float32Array<ArrayBuffer> | null = null;
+  private wave: Float32Array<ArrayBuffer> | null = null;
+  private floor = 0.002;
+
+  /** Listen to the mic for chords/notes (needs startMic first). */
+  ensureAnalyser() {
+    if (this.analyser || !this.micSource) return !!this.analyser;
+    const a = this.ctx.createAnalyser();
+    a.fftSize = 16384;
+    a.smoothingTimeConstant = 0.25;
+    this.micSource.connect(a);
+    this.analyser = a;
+    this.spec = new Float32Array(new ArrayBuffer(a.frequencyBinCount * 4));
+    this.wave = new Float32Array(new ArrayBuffer(2048 * 4));
+    return true;
+  }
+
+  /**
+   * Current pitch-class profile from the mic plus a loudness gate: `loud` is true when
+   * the input clearly stands above the room's noise floor (so silence never "matches").
+   */
+  readChroma(): { chroma: number[]; loud: boolean; rms: number } | null {
+    const a = this.analyser;
+    if (!a || !this.spec || !this.wave) return null;
+    a.getFloatTimeDomainData(this.wave);
+    let sum = 0;
+    for (let i = 0; i < this.wave.length; i++) sum += this.wave[i] * this.wave[i];
+    const rms = Math.sqrt(sum / this.wave.length);
+    // slow-rising, fast-falling noise floor
+    this.floor = rms < this.floor ? this.floor * 0.8 + rms * 0.2 : this.floor * 0.998 + rms * 0.002;
+    a.getFloatFrequencyData(this.spec);
+    const { chroma } = chromaFromSpectrum(this.spec, this.ctx.sampleRate, a.fftSize);
+    return { chroma, loud: rms > Math.max(0.004, this.floor * 2.5), rms };
+  }
+
+  stopMic() {
+    this.analyser?.disconnect();
+    this.analyser = null;
+    super.stopMic();
+  }
+
   /** One plucked guitar-like note (demo only — the mic is ignored while the demo plays). */
   pluck(at: number, midi: number, vol = 0.32, accent = false) {
     const ctx = this.ctx;
