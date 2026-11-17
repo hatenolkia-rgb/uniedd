@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 // Black Friday 2026. Edit the offer here; everything hides itself after END.
 // Before START, add ?bf=preview to any page address to see it.
 export const BLACK_FRIDAY = {
-  start: Date.parse("2026-11-20T00:00:00+05:30"),
+  start: Date.parse("2026-11-17T00:00:00+05:30"),
   end: Date.parse("2026-11-30T23:59:59+05:30"),
   offer: "20% off your first month",
   earlyBird: "Enrol by 27 Nov and get 2 extra classes free",
