@@ -345,6 +345,11 @@ export class ClapEngine {
     this.node?.port.postMessage({ sens });
   }
 
+  /** Minimum time between two detected onsets (seconds). */
+  setDebounce(seconds: number) {
+    this.node?.port.postMessage({ debounce: seconds });
+  }
+
   stopMic() {
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;

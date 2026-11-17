@@ -99,6 +99,40 @@ type GameSeo = {
 };
 
 const OVERRIDES: Record<string, Partial<GameSeo>> = {
+  "alternate-picking": {
+    title: "Alternate Picking & Strumming Game for Kids – Free Online Guitar Practice | UniEDD",
+    description:
+      "Free guitar practice game: a friendly coach says a down-up picking or strumming pattern out loud, shows the arrows and chord diagram, then scores you in time with a click. Alternate picking or chords (G, C, D, Em, Am up to barre chords), Beginner, Expert and Pro speeds. Play a real guitar into the microphone, or tap.",
+    h1: "Alternate Picking & Strumming Coach – Guitar Practice Game",
+    intro:
+      "The Alternate Picking & Strumming Coach is a free guitar practice game for children and beginners. Picky, a cheerful guitar pick, says each pattern out loud — \u201cdown, up, down, up\u201d or \u201cG major: down, down, up, up, down, up\u201d — and shows it as big blue down arrows and pink up arrows. After a demo and a four-click count-in you play along with the metronome, and every stroke is scored Perfect, Good or Miss with stars, streaks and confetti. It runs in your web browser, with nothing to download.",
+    howTo: [
+      "Choose Alternate Picking (single notes) or Chords & Strumming, then Beginner, Expert or Pro, and set the speed with the slider.",
+      "Choose Real guitar to let the microphone listen to your strokes, or Tap buttons to play with the on-screen \u2193 and \u2191 buttons or the F and J keys. The microphone is never recorded, saved or uploaded — it is checked live on your device.",
+      "Run the one-time Timing check so your device's audio delay is corrected.",
+      "Listen to Picky say the pattern and play the demo, count in with the four clicks, then play each arrow as it lights up. Dashed arrows are rests: keep the hand moving but miss the strings.",
+      "After each exercise you get up to three stars and a tip. Try again or go on to the next one; six exercises make a round, and you can save your score to the leaderboard.",
+    ],
+    goodFor:
+      "Children and beginners learning to pick and strum evenly, guitar students building speed with a metronome, and teachers who want a fun right-hand warm-up for class.",
+    extra: [
+      {
+        heading: "Levels and speeds",
+        body: [
+          "Alternate Picking — Beginner (50–80 BPM): steady down strokes and down-up 8th notes on one open string, with simple rests, string hops and accents. Expert (70–110 BPM): triplets, accents that move between down and up strokes, string crossing and first 16th-note bursts. Pro (100–160 BPM): continuous 16th notes, shifting accents, gallops, sextuplets and string skipping.",
+          "Chords & Strumming — Beginner (55–85 BPM): open G, C, D, E minor and A minor with slow, simple strums and one chord change every two bars. Expert (75–115 BPM): adds A, E, D minor and seventh chords, 8th-note strums like the campfire strum and a change every bar or half bar. Pro (85–130 BPM): barre chords such as F, B minor, F sharp minor, B flat, C minor and G minor, syncopated 16th-note strums and a chord change every two beats.",
+        ],
+      },
+      {
+        heading: "Microphone or tap?",
+        body: [
+          "With a real guitar the microphone hears when each pick stroke or strum hits the strings and scores your timing and the number of strokes. It cannot tell a down stroke from an up stroke, so follow the arrows yourself. Headphones help it hear only your guitar.",
+          "With the tap buttons or the F and J keys the game also checks the direction of every stroke, so it is a good way to learn a new pattern before picking up the guitar.",
+        ],
+      },
+    ],
+    genre: ["Music", "Educational", "Rhythm"],
+  },
   "clap-rhythm": {
     title: "Clap Rhythm Game – Free Online Rhythm Trainer for Kids | UniEDD",
     description:
@@ -273,7 +307,7 @@ export function gameSeo(game: GameDef): GameSeo {
 }
 
 export const GAMES_HUB_SEO = {
-  title: "Free Online Music Games & Chess Puzzles for Kids – Piano, Rhythm, Ear Training, Guitar | UniEDD",
+  title: "Free Online Music Games & Chess Puzzles for Kids – Piano, Guitar, Rhythm, Ear Training | UniEDD",
   description:
-    "Play free online games in your browser: a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
+    "Play free online games in your browser: a guitar picking and strumming coach that speaks each pattern, a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
 };
