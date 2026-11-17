@@ -18,6 +18,18 @@ type CategorySeo = {
 };
 
 export const CATEGORY_SEO: Record<CategoryId, CategorySeo> = {
+  karaoke: {
+    noun: "Karaoke Maker",
+    genre: ["Music", "Educational", "Karaoke"],
+    intro:
+      "A free online karaoke maker from UniEDD. It runs in your web browser on a phone, tablet or computer, and your song never leaves your device.",
+    howTo: [
+      "Choose a song file from your device.",
+      "Remove the vocals with AI mode or Quick mode.",
+      "Change the key in half steps or whole steps, listen, and download your karaoke track.",
+    ],
+    goodFor: "Singers and music students who want a backing track in a key that suits their voice.",
+  },
   guitar: {
     noun: "Guitar Game",
     genre: ["Educational", "Music", "Quiz"],
@@ -99,6 +111,39 @@ type GameSeo = {
 };
 
 const OVERRIDES: Record<string, Partial<GameSeo>> = {
+  "karaoke-maker": {
+    title: "Karaoke Maker – Free Online Vocal Remover & Key Changer | UniEDD",
+    description:
+      "Free online karaoke maker: upload any song, remove the vocals with an AI vocal remover, and change the key up or down by half steps or whole steps (−12 to +12) without changing the speed. Compare original vs karaoke, keep a quiet guide vocal, and download MP3 or WAV. Runs in your browser — your song is never uploaded.",
+    h1: "Karaoke Maker – Remove Vocals & Change the Key",
+    intro:
+      "Karaoke Maker turns a song into a sing-along backing track right in your web browser. Pick a song file, let the AI vocal remover lift out the singer's voice, then move the music up or down to a key that suits your voice — a +2 shift is one whole step up, −1 is a half step down — while the tempo stays exactly the same. Your song stays on your device; nothing is uploaded or saved.",
+    howTo: [
+      "Tap the song box and pick an MP3, WAV, M4A, AAC, OGG or FLAC file from your phone or computer. Please only use songs you own or have permission to use.",
+      "Choose AI mode (best quality; a one-time download of about 166 MB that stays in your browser for next time) or Quick mode (instant, best for studio songs with the singer in the middle), then press Remove vocals.",
+      "Change the key with the − and + buttons, the slider, or the half-step and whole-step buttons. The label tells you how far you moved, for example \u201c+2 = 1 whole step up\u201d, and the new key is shown when it can be detected.",
+      "Press Play and switch between A (original) and B (karaoke) to compare. Use the voice volume slider to keep a quiet guide vocal if you like.",
+      "Choose MP3 or WAV and press Make my file, then download your karaoke track.",
+    ],
+    goodFor:
+      "Singers and vocal students practising songs in a comfortable key, guitar and keyboard players who want a backing track to play along with, and teachers preparing karaoke tracks for class.",
+    extra: [
+      {
+        heading: "Private by design",
+        body: [
+          "Everything happens inside your browser. Your song is never uploaded to a server and nothing is saved — when you close the page it's gone. The only thing downloaded is the AI helper itself (an open-source music separation model), which your browser keeps so the next song starts faster.",
+        ],
+      },
+      {
+        heading: "How good is the vocal removal?",
+        body: [
+          "AI mode uses a music source separation model trained to find the singing voice, so it removes lead and backing vocals while keeping drums, bass and instruments. Some songs leave a faint voice or reverb behind, and heavily effected vocals are harder. Quick mode cancels whatever is mixed in the centre of a stereo song, so it is instant but also softens centre instruments, and it can't work on mono recordings.",
+          "Changing the key uses a time-preserving pitch shifter, so the speed and length of the song stay the same. Small shifts of one or two whole steps sound most natural; very large shifts (close to an octave) sound more processed.",
+        ],
+      },
+    ],
+    genre: ["Music", "Educational", "Karaoke"],
+  },
   "alternate-picking": {
     title: "Guitar Chord & Alternate Picking Game for Kids – Free Online Practice | UniEDD",
     description:
@@ -315,7 +360,7 @@ export function gameSeo(game: GameDef): GameSeo {
 }
 
 export const GAMES_HUB_SEO = {
-  title: "Free Online Music Games & Chess Puzzles for Kids – Piano, Guitar, Rhythm, Ear Training | UniEDD",
+  title: "Free Online Music Games, Karaoke Maker & Chess Puzzles for Kids – Piano, Guitar, Rhythm | UniEDD",
   description:
-    "Play free online games in your browser: a guitar picking and strumming coach that speaks each pattern, a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
+    "Play free online games in your browser: a karaoke maker that removes vocals and changes the key of any song, a guitar picking and strumming coach that speaks each pattern, a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
 };

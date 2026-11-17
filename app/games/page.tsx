@@ -88,7 +88,12 @@ export default function GamesPage() {
             All music games by topic
           </h2>
           <p className="mt-3 max-w-3xl text-[var(--muted)] leading-relaxed">
-            Every game is free and plays in your web browser on a phone, tablet or computer. Try the{" "}
+            Every game is free and plays in your web browser on a phone, tablet or computer. Turn any song into a
+            sing-along backing track in your own key with the{" "}
+            <Link href="/games/karaoke-maker" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              Karaoke Maker
+            </Link>{" "}
+            (it removes the vocals and changes the key, and your song never leaves your device). Try the{" "}
             <Link href="/games/clap-rhythm" className="font-semibold text-[var(--brand-blue)] hover:underline">
               Clap Rhythm game
             </Link>{" "}
