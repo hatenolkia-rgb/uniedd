@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { GAMES } from "../games/catalog";
-import { BLACK_FRIDAY, pad, useBlackFriday } from "../lib/blackFriday";
+import { pad, useBlackFriday } from "../lib/blackFriday";
+import BlackFridayOffers from "./BlackFridayOffers";
 
-const COURSES = ["🎸 Guitar", "🎹 Keyboard", "🎤 Vocals", "🥁 Tabla", "💃 Dance", "🎙️ Public Speaking", "♟️ Chess"];
 const NOTES = [
   { n: "♪", c: "left-[6%] top-[18%] text-3xl", d: "0s" },
   { n: "♫", c: "left-[22%] bottom-[10%] text-2xl", d: "1.2s" },
@@ -13,7 +13,7 @@ const NOTES = [
   { n: "♪", c: "left-[48%] top-[6%] text-xl", d: "2.4s" },
 ];
 
-// Black Friday sale section: live classes first, then free music games, then
+// Black Friday sale section: live-class offers first (a slider), then free music games, then
 // the other free tools. Shows only during the sale (or with ?bf=preview).
 // `first` adds room for the fixed navbar when it's the top of the page.
 export default function BlackFridaySale({ first = false }: { first?: boolean }) {
@@ -79,33 +79,8 @@ export default function BlackFridaySale({ first = false }: { first?: boolean }) 
         </div>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-3">
-          {/* 1. Live classes: the offer */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#ffb347] via-[var(--brand-orange)] to-[#c4560f] p-6 text-[#1d0f02] shadow-[0_20px_60px_-15px_rgba(232,150,46,0.6)] sm:p-8 lg:col-span-2 lg:row-span-2">
-            <span className="absolute -right-6 top-6 rotate-12 rounded-xl border-4 border-[#1d0f02] px-4 py-1 text-xl font-black tracking-wider sm:right-6 sm:text-2xl">
-              SALE
-            </span>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#1d0f02]/70">1 · Live 1:1 classes</p>
-            <p className="mt-3 max-w-md text-4xl font-black leading-tight sm:text-5xl">{BLACK_FRIDAY.offer}</p>
-            <p className="mt-3 max-w-md text-base font-medium text-[#1d0f02]/80">
-              With a real teacher, live online, at a time that suits you. Kids and adults welcome.
-            </p>
-            <p className="mt-4 inline-block rounded-full bg-[#1d0f02] px-4 py-2 text-sm font-semibold text-[#ffcf6b]">
-              🎁 Early bird: {BLACK_FRIDAY.earlyBird.replace(/^Enrol/, "enrol")}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              {COURSES.map((c) => (
-                <span key={c} className="rounded-full bg-white/35 px-3 py-1 text-sm font-semibold backdrop-blur">
-                  {c}
-                </span>
-              ))}
-            </div>
-            <Link
-              href={BLACK_FRIDAY.demoLink}
-              className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#1d0f02] px-7 py-3.5 text-base font-bold text-white transition hover:scale-[1.03]"
-            >
-              Book a free 30-min demo <span aria-hidden="true">→</span>
-            </Link>
-          </div>
+          {/* 1. Live classes: the Black Friday offers, as a slider */}
+          <BlackFridayOffers />
 
           {/* 2. Free music games */}
           <Link

@@ -57,7 +57,7 @@ export default function BlackFridayToast() {
           Black Friday sale is live
         </p>
         <p className="mt-1.5 text-lg font-bold leading-snug">
-          {BLACK_FRIDAY.offer} on live 1:1 classes 🎸🎹🎤
+          {BLACK_FRIDAY.offer}, $9 lessons or a FREE guitar 🎸🎹
         </p>
         <p className="mt-1 text-xs text-white/60 tabular-nums">
           Ends in {left.d}d {pad(left.h)}h {pad(left.m)}m {pad(left.s)}s
