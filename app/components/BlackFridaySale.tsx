@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { GAMES } from "../games/catalog";
-import { pad, useBlackFriday } from "../lib/blackFriday";
+import { BLACK_FRIDAY, pad, useBlackFriday } from "../lib/blackFriday";
 import BlackFridayOffers from "./BlackFridayOffers";
 
+const COURSES = ["🎸 Guitar", "🎹 Piano", "🎤 Singing"];
 const NOTES = [
   { n: "♪", c: "left-[6%] top-[18%] text-3xl", d: "0s" },
   { n: "♫", c: "left-[22%] bottom-[10%] text-2xl", d: "1.2s" },
@@ -13,8 +14,8 @@ const NOTES = [
   { n: "♪", c: "left-[48%] top-[6%] text-xl", d: "2.4s" },
 ];
 
-// Black Friday sale section: live-class offers first (a slider), then free music games, then
-// the other free tools. Shows only during the sale (or with ?bf=preview).
+// Black Friday sale section: the 40% offer and free music games and tools,
+// then a slider with the other offers. Shows only during the sale (or with ?bf=preview).
 // `first` adds room for the fixed navbar when it's the top of the page.
 export default function BlackFridaySale({ first = false }: { first?: boolean }) {
   const left = useBlackFriday();
@@ -79,8 +80,36 @@ export default function BlackFridaySale({ first = false }: { first?: boolean }) 
         </div>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-3">
-          {/* 1. Live classes: the Black Friday offers, as a slider */}
-          <BlackFridayOffers />
+          {/* 1. The main offer: 40% off the first two classes */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#ffb347] via-[var(--brand-orange)] to-[#c4560f] p-6 text-[#1d0f02] shadow-[0_20px_60px_-15px_rgba(232,150,46,0.6)] sm:p-8 lg:col-span-2 lg:row-span-2">
+            <span className="absolute -right-6 top-6 rotate-12 rounded-xl border-4 border-[#1d0f02] px-4 py-1 text-xl font-black tracking-wider sm:right-6 sm:text-2xl">
+              40%
+            </span>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#1d0f02]/70">1 · Parents, don&apos;t miss this</p>
+            <p className="mt-3 max-w-md text-4xl font-black leading-tight sm:text-5xl">
+              40% off your child&apos;s{" "}
+              <span className="italic" style={{ fontFamily: "var(--font-playfair), serif" }}>first two</span> music classes
+            </p>
+            <p className="mt-3 max-w-md text-base font-medium text-[#1d0f02]/80">
+              Live 1:1 online guitar, piano &amp; singing classes for kids 3–19, at a time that suits you.
+            </p>
+            <p className="mt-4 inline-block rounded-full bg-[#1d0f02] px-4 py-2 text-sm font-semibold text-[#ffcf6b]">
+              🎁 Black Friday offer · ends 30 November
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {COURSES.map((c) => (
+                <span key={c} className="rounded-full bg-white/35 px-3 py-1 text-sm font-semibold backdrop-blur">
+                  {c}
+                </span>
+              ))}
+            </div>
+            <Link
+              href={BLACK_FRIDAY.demoLink}
+              className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#1d0f02] px-7 py-3.5 text-base font-bold text-white transition hover:scale-[1.03]"
+            >
+              Book a free 30-min demo <span aria-hidden="true">→</span>
+            </Link>
+          </div>
 
           {/* 2. Free music games */}
           <Link
@@ -108,6 +137,11 @@ export default function BlackFridaySale({ first = false }: { first?: boolean }) 
               <p className="mt-1 text-xs text-white/60">Free tuner, metronome & backing tracks</p>
             </Link>
           </div>
+        </div>
+
+        {/* More offers: $9 lessons and a free guitar, as a slider */}
+        <div className="mt-4">
+          <BlackFridayOffers />
         </div>
       </div>
     </section>
