@@ -7,7 +7,6 @@ import { SITE_NAME, SITE_URL } from "../lib/site";
 import GamesHub from "./GamesHub";
 import Link from "next/link";
 import { CATEGORIES, GAMES } from "./catalog";
-import BlackFridaySale from "../components/BlackFridaySale";
 import { GAMES_HUB_SEO } from "./seo";
 
 const title = GAMES_HUB_SEO.title;
@@ -77,7 +76,6 @@ export default function GamesPage() {
         </div>
       </section>
 
-      <BlackFridaySale />
       <section className="px-4 sm:px-6 pb-24 bg-white">
         <div className="mx-auto max-w-7xl">
           <GamesHub />

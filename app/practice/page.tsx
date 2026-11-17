@@ -13,7 +13,6 @@ import Footer from "../components/Footer";
 import Breadcrumbs from "../components/Breadcrumbs";
 import JsonLd from "../components/JsonLd";
 import { SITE_NAME, SITE_URL } from "../lib/site";
-import BlackFridaySale from "../components/BlackFridaySale";
 import PracticeCta from "./PracticeCta";
 
 const title = "Practice Live | Free AI practice feedback | UniEDD";
@@ -94,7 +93,6 @@ export default function PracticePage() {
         </div>
       </section>
 
-      <BlackFridaySale />
       <section className="px-6 py-20 bg-white">
         <div className="mx-auto max-w-7xl">
           <p className="text-sm tracking-widest uppercase text-[var(--brand-blue)] mb-3 font-medium">
