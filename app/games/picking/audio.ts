@@ -8,6 +8,31 @@
 import { ClapEngine, midiFreq } from "../clap/engine";
 import { CHORDS, type Dir } from "./patterns";
 import { chromaFromSpectrum } from "./chroma";
+import { OnsetTracker, STRUM_MERGE_S, analyzeOnset, type PluckKind, type PluckVerdict } from "./pluck";
+
+/** Copies raw mic samples to the main thread in 1024-sample blocks with their frame index. */
+const TAP_WORKLET = `
+class UniPluckTap extends AudioWorkletProcessor {
+  constructor() { super(); this.buf = new Float32Array(1024); this.n = 0; }
+  process(inputs) {
+    const ch = inputs[0] && inputs[0][0];
+    if (!ch) return true;
+    for (let i = 0; i < ch.length; i++) {
+      this.buf[this.n++] = ch[i];
+      if (this.n === 1024) {
+        this.port.postMessage({ frame: currentFrame + i + 1 - 1024, data: this.buf.slice(0) });
+        this.n = 0;
+      }
+    }
+    return true;
+  }
+}
+registerProcessor("uniedd-pluck-tap-v1", UniPluckTap);
+`;
+
+const RING = 1 << 16; // ~1.4 s of raw audio
+const PRE_S = 0.1; // analysis window: 100 ms before the onset …
+const POST_S = 0.3; // … to 300 ms after it
 
 const OPEN_STRINGS = [40, 45, 50, 55, 59, 64]; // E2 A2 D3 G3 B3 E4
 
@@ -16,6 +41,95 @@ export class PickEngine extends ClapEngine {
   private spec: Float32Array<ArrayBuffer> | null = null;
   private wave: Float32Array<ArrayBuffer> | null = null;
   private floor = 0.002;
+
+  // ---- "is it a guitar string?" listener: raw samples → onsets → analysis
+  private tapNode: AudioWorkletNode | null = null;
+  private tapReady = false;
+  private ring = new Float32Array(RING);
+  private ringEnd = -1; // absolute frame just after the newest sample
+  private tracker: OnsetTracker | null = null;
+  private trackerStart = 0;
+  private pending: number[] = [];
+  private lastOnset = -1e12;
+  /** Single picked notes or strums — decides which checks `analyzeOnset` uses. */
+  pluckKind: PluckKind = "note";
+  /** Every onset heard, once it has been analysed (frame = absolute input frame). */
+  onPluck: ((verdict: PluckVerdict, frame: number) => void) | null = null;
+  private pluckSens = 0.6;
+
+  /** Start the onset listener on the mic (needs startMic first). */
+  async startPluckListener() {
+    if (this.tapNode || !this.micSource) return !!this.tapNode;
+    if (!this.tapReady) {
+      const url = URL.createObjectURL(new Blob([TAP_WORKLET], { type: "application/javascript" }));
+      await this.ctx.audioWorklet.addModule(url);
+      URL.revokeObjectURL(url);
+      this.tapReady = true;
+    }
+    if (!this.micSource) return false;
+    const node = new AudioWorkletNode(this.ctx, "uniedd-pluck-tap-v1", { numberOfInputs: 1, numberOfOutputs: 1 });
+    node.port.onmessage = (e: MessageEvent) => this.onRaw(e.data as { frame: number; data: Float32Array });
+    const mute = this.ctx.createGain();
+    mute.gain.value = 0;
+    this.micSource.connect(node).connect(mute).connect(this.ctx.destination);
+    this.tapNode = node;
+    this.tracker = null;
+    this.pending = [];
+    this.ringEnd = -1;
+    return true;
+  }
+
+  setPluckSensitivity(s: number) {
+    this.pluckSens = s;
+    this.tracker?.setSensitivity(s);
+  }
+
+  /** Copy of raw input frames [from, to), or null if no longer (or not yet) buffered. */
+  rawRange(from: number, to: number) {
+    if (to > this.ringEnd || from < this.ringEnd - RING || to <= from) return null;
+    const out = new Float32Array(to - from);
+    for (let i = 0; i < out.length; i++) out[i] = this.ring[(from + i) & (RING - 1)];
+    return out;
+  }
+
+  private onRaw(msg: { frame: number; data: Float32Array }) {
+    const { frame, data } = msg;
+    if (this.ringEnd >= 0 && frame !== this.ringEnd) {
+      // a gap (tab was asleep): start over
+      this.tracker = null;
+      this.pending = [];
+    }
+    for (let i = 0; i < data.length; i++) this.ring[(frame + i) & (RING - 1)] = data[i];
+    this.ringEnd = frame + data.length;
+    if (!this.tracker) {
+      this.tracker = new OnsetTracker(this.ctx.sampleRate);
+      this.tracker.setSensitivity(this.pluckSens);
+      this.trackerStart = frame;
+    }
+    for (const rel of this.tracker.push(data)) {
+      const at = this.trackerStart + rel;
+      // in a strum the strings sound one after another: keep only the first onset
+      if (this.pluckKind === "strum" && at - this.lastOnset < STRUM_MERGE_S * this.ctx.sampleRate) continue;
+      this.lastOnset = at;
+      this.pending.push(at);
+    }
+    const sr = this.ctx.sampleRate;
+    const post = Math.round(POST_S * sr);
+    const pre = Math.round(PRE_S * sr);
+    while (this.pending.length && this.ringEnd >= this.pending[0] + post) {
+      const at = this.pending.shift()!;
+      const next = this.pending[0];
+      const buf = this.rawRange(at - pre, at + post);
+      if (!buf) continue;
+      const verdict = analyzeOnset(buf, sr, pre, {
+        kind: this.pluckKind,
+        end: next !== undefined && next < at + post ? pre + (next - at) : undefined,
+      });
+      const dbgV = (globalThis as unknown as { __uniPickDebug?: { verdicts?: unknown[] } }).__uniPickDebug;
+      if (dbgV) (dbgV.verdicts = [...(dbgV.verdicts ?? []).slice(-49), { at, ...verdict }]);
+      this.onPluck?.(verdict, at);
+    }
+  }
 
   /** Listen to the mic for chords/notes (needs startMic first). */
   ensureAnalyser() {
@@ -51,6 +165,10 @@ export class PickEngine extends ClapEngine {
   stopMic() {
     this.analyser?.disconnect();
     this.analyser = null;
+    this.tapNode?.disconnect();
+    this.tapNode = null;
+    this.tracker = null;
+    this.pending = [];
     super.stopMic();
   }
 

@@ -127,7 +127,8 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
         heading: "How the listening works",
         body: [
           "For chords, the game looks at which notes are ringing (a pitch-class profile of the sound) and compares it with every major, minor and seventh chord, so normal guitar voicings and a bit of room noise are fine. A seventh chord also passes as its plain major chord.",
-          "For picking, the microphone counts each pick stroke and checks roughly which open string rang; it cannot tell a down stroke from an up stroke by ear, so follow the arrows yourself (tap mode and Camera Coach do check the direction).",
+          "For chords, a chord only counts after the game hears a real strum (a sharp attack that then rings and fades), so singing or humming the chord notes does not count.",
+          "For picking, a stroke only counts when the game hears the string it asked for ring at the right pitch (within half a semitone, in the right octave) — talking, singing (even the right note), claps and taps are ignored, and nothing is judged while the coach itself is speaking. It cannot tell a down stroke from an up stroke by ear, so follow the arrows yourself (tap mode and Camera Coach do check the direction).",
         ],
       },
       {

@@ -19,7 +19,8 @@ import {
   type Level,
   type Mode,
 } from "./patterns";
-import { SustainMeter, bestNote, chordSpoken, frameMatches, parseChord } from "./chroma";
+import { SustainMeter, chordSpoken, frameMatches, parseChord } from "./chroma";
+import { matchTarget, noteLabel, rejectLabel, stringName, type PluckVerdict } from "./pluck";
 import { ChordDiagram, Confetti, FingerLegend, Mascot, PatternLane, Stars, type Mood } from "./visuals";
 import { CameraOptIn, CameraPreview, useCameraCoach } from "./CameraCoach";
 import { cameraTip, type CamSummary } from "./camera";
@@ -140,6 +141,10 @@ type Progress = {
   skipped: number;
   meter: SustainMeter;
   finish: (skipped: boolean) => void;
+  /** AudioContext time of the last strum that sounded like a real guitar strum (chords + mic). */
+  strumAt: number;
+  /** Last sound that was ignored (voice, clap…), for the readout. */
+  ignored: { label: string; at: number } | null;
 };
 
 /** Label for the live "hearing" readout, e.g. "G major". */
@@ -162,6 +167,8 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
   const progRef = useRef<Progress | null>(null);
   const listeningRef = useRef(false);
   const pausedUntilRef = useRef(0);
+  /** AudioContext-time windows when the game itself was talking or playing (mic input ignored). */
+  const gatesRef = useRef<{ from: number; to: number }[]>([]);
   const choiceRef = useRef<((c: "next" | "retry") => void) | null>(null);
   const levelBarRef = useRef<HTMLDivElement | null>(null);
   const optsRef = useRef(opts);
@@ -188,6 +195,14 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
   }, []);
 
   const paused = () => performance.now() < pausedUntilRef.current;
+  const ctxNow = () => engineRef.current?.ctx.currentTime ?? 0;
+  /** Was the game's own voice or demo sounding at input time `t` (AudioContext seconds)? */
+  const gated = (t: number) => gatesRef.current.some((g) => t >= g.from - 0.05 && t <= g.to);
+  const addGate = (from: number, to: number) => {
+    const now = ctxNow();
+    gatesRef.current = [...gatesRef.current.filter((g) => g.to > now - 5), { from, to }];
+    return gatesRef.current[gatesRef.current.length - 1];
+  };
 
   // ------------------------------------------------------------ picking: one stroke heard / tapped
 
@@ -201,18 +216,6 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       const wrongWay = source === "tap" && dir !== undefined && dir !== expected;
       if (wrongWay) prog.wrong++;
       prog.step++;
-      // Mic: a moment after the pick attack, check which note rang (approximate string check)
-      if (source === "mic") {
-        const want = ((prog.ex.demoMidi[i] % 12) + 12) % 12;
-        window.setTimeout(() => {
-          const r = engineRef.current?.readChroma();
-          if (!r || !r.loud || progRef.current !== prog) return;
-          const n = bestNote(r.chroma);
-          if (!n || n.score < 0.6) return;
-          prog.stringChecked++;
-          if (n.pc === want) prog.stringOk++;
-        }, 110);
-      }
       const res: Judgement = wrongWay ? "wrong" : "perfect";
       const done = prog.step >= prog.ex.steps.length;
       patchLive((l) => {
@@ -232,10 +235,64 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
     [patchLive],
   );
 
+  // ------------------------------------------------------------ mic: a sound was heard and analysed
+
+  const handlePluckRef = useRef<(v: PluckVerdict, frame: number) => void>(() => undefined);
+  const handlePluck = (v: PluckVerdict, frame: number) => {
+    const prog = progRef.current;
+    const e = engineRef.current;
+    if (!prog || !e || !listeningRef.current || optsRef.current.input !== "mic") return;
+    const t = frame / e.ctx.sampleRate;
+    if (gated(t) || paused()) return; // the game's own voice / demo
+    if (!v.ok) {
+      const label = rejectLabel(v.reason);
+      if (label) {
+        prog.ignored = { label, at: performance.now() };
+        if (prog.ex.mode === "picking") patchLive({ hearing: `🤫 Ignored — ${label}` });
+      }
+      return;
+    }
+    if (prog.ex.mode === "chords") {
+      prog.strumAt = t;
+      return;
+    }
+    const i = prog.step;
+    if (i >= prog.ex.steps.length || v.f0 === null || v.midi === null) return;
+    const target = prog.ex.demoMidi[i];
+    const m = matchTarget(v.f0, target);
+    const heard = noteLabel(v.midi);
+    prog.stringChecked++;
+    if (m.ok) {
+      prog.stringOk++;
+      patchLive({ hearing: `${heard} ✓` });
+      handleStroke(undefined, "mic");
+      return;
+    }
+    const hint = m.octaveOff
+      ? "Right note, wrong octave"
+      : m.samePc
+        ? Math.abs(m.cents) <= 100
+          ? m.cents > 0
+            ? "A bit sharp — tune down"
+            : "A bit flat — tune up"
+          : `Play the ${stringName(target)} string`
+        : `Play the ${stringName(target)} string`;
+    patchLive((l) => ({
+      hearing: `${heard} ✗`,
+      mood: "oops",
+      bounce: l.bounce + 1,
+      pop: { text: hint, color: "#9333ea", key: l.bounce + 1 },
+    }));
+  };
+  useEffect(() => {
+    handlePluckRef.current = handlePluck;
+  });
+
   const ensureEngine = useCallback(async () => {
     if (!engineRef.current) {
       const e = new PickEngine();
-      e.onClap = () => handleStroke(undefined, "mic");
+      e.onClap = null;
+      e.onPluck = (v, frame) => handlePluckRef.current(v, frame);
       e.onLevel = (rms, thr) => {
         const el = levelBarRef.current;
         if (el) {
@@ -247,7 +304,7 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
     }
     await engineRef.current.resume();
     return engineRef.current;
-  }, [handleStroke]);
+  }, []);
 
   useEffect(
     () => () => {
@@ -294,10 +351,12 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
   const say = async (text: string, token: number) => {
     if (!optsRef.current.voice) return;
     pausedUntilRef.current = Infinity;
+    const gate = addGate(ctxNow(), Infinity);
     try {
       await speak(text);
     } finally {
-      pausedUntilRef.current = performance.now() + 450;
+      pausedUntilRef.current = performance.now() + 600;
+      gate.to = ctxNow() + 0.6;
     }
     if (token !== tokenRef.current) throw new Aborted();
   };
@@ -322,6 +381,8 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       length = prog.ex.passBeats * spb + 1.2;
     }
     pausedUntilRef.current = Math.max(pausedUntilRef.current, performance.now() + length * 1000);
+    const now = e.ctx.currentTime;
+    gatesRef.current = [...gatesRef.current.filter((g) => g.to > now - 5), { from: now, to: now + length + 0.1 }];
   }, []);
 
   // ------------------------------------------------------------ mic
@@ -335,6 +396,8 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       e.setSensitivity(optsRef.current.sensitivity);
       e.setDebounce(0.07);
       e.ensureAnalyser();
+      e.setPluckSensitivity(optsRef.current.sensitivity);
+      await e.startPluckListener();
     } else {
       setNotice(
         status === "denied"
@@ -369,11 +432,13 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       const r = e.readChroma();
       let match = false;
       let hearing = "";
-      if (r && r.loud) {
+      // Only listen to the chord after a real strum: talking, singing or humming never counts.
+      const strummed = e.ctx.currentTime - prog.strumAt < 3;
+      if (r && r.loud && strummed) {
         const m = frameMatches(r.chroma, target);
         match = m.match;
         if (m.guess && m.guess.score >= 0.7) hearing = m.match ? hearingLabel(target) : hearingLabel(m.guess.name);
-      }
+      } else if (prog.ignored && performance.now() - prog.ignored.at < 1500) hearing = `🤫 Ignored — ${prog.ignored.label}`;
       const ok = prog.meter.update(match, dt);
       const meter = Math.round(prog.meter.progress * 20) / 20;
       if (hearing !== lastHearing || meter !== lastMeter) {
@@ -385,27 +450,6 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
     }, 60);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, opts.mode, opts.input, patchLive]);
-
-  // picking + mic: live "hearing: A" note readout
-  useEffect(() => {
-    if (view !== "play" || opts.mode !== "picking" || opts.input !== "mic") return;
-    let lastNote = "";
-    const id = window.setInterval(() => {
-      const e = engineRef.current;
-      if (!e || !listeningRef.current || paused()) return;
-      const r = e.readChroma();
-      let note = "";
-      if (r && r.loud) {
-        const n = bestNote(r.chroma);
-        if (n && n.score > 0.6) note = n.name;
-      }
-      if (note !== lastNote) {
-        lastNote = note;
-        patchLive({ hearing: note });
-      }
-    }, 120);
-    return () => window.clearInterval(id);
   }, [view, opts.mode, opts.input, patchLive]);
 
   /** A chord was recognised (or skipped / confirmed by tap): move to the next one. */
@@ -467,6 +511,8 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       skipped: 0,
       meter: new SustainMeter(0.6),
       finish: (s) => finishFn(s),
+      strumAt: -10,
+      ignored: null,
     };
     progRef.current = prog;
     patchLive({
@@ -547,7 +593,11 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
       const st = await startMic();
       if (st !== "on") return;
     }
-    if (o.input === "mic") engine.ensureAnalyser();
+    if (o.input === "mic") {
+      engine.ensureAnalyser();
+      engine.pluckKind = o.mode === "chords" ? "strum" : "note";
+      await engine.startPluckListener();
+    }
     const token = ++tokenRef.current;
     const list = roundExercises(o.mode, o.level);
     setExercises(list);
@@ -668,6 +718,7 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
     const seq = ex.mode === "chords" ? chordSequence(ex) : [];
     const currentChord = seq[Math.min(live.chordIdx, seq.length - 1)];
     const nextChord = seq[live.chordIdx + 1];
+    const targetMidi = ex.mode === "picking" ? (ex.demoMidi[Math.min(live.step, ex.demoMidi.length - 1)] ?? null) : null;
     // slot index of the next stroke to play (picking)
     let nextSlot = -1;
     if (ex.mode === "picking" && live.phase === "listen") {
@@ -768,11 +819,24 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
             </>
           ) : (
             <>
+              {targetMidi !== null ? (
+                <p className="mx-auto mb-2 w-fit rounded-full bg-white px-4 py-1.5 text-center text-base font-black text-violet-700 shadow sm:text-lg" data-testid="target">
+                  🎯 Play the {stringName(targetMidi)} string <span className="text-sm font-bold text-slate-500">({noteLabel(targetMidi)})</span>
+                </p>
+              ) : null}
               <PatternLane ex={ex} active={nextSlot} results={live.results} />
               <p className="mt-3 text-center text-sm font-bold text-white/90" data-testid="stroke-count">
-                {live.step}/{ex.steps.length} strokes {opts.input === "mic" ? "heard" : ""}
-                {opts.input === "mic" && live.hearing ? ` · 👂 hearing ${live.hearing}` : ""}
+                {live.step}/{ex.steps.length} notes {opts.input === "mic" ? "heard" : ""}
               </p>
+              {opts.input === "mic" ? (
+                <div className="mx-auto mt-2 max-w-xs rounded-2xl bg-white/90 px-3 py-2 text-center text-slate-800 shadow" data-testid="hearing-box">
+                  <p className="text-xs font-bold text-slate-500">👂 Hearing</p>
+                  <p className={`text-xl font-black ${live.hearing.endsWith("✓") ? "text-green-600" : live.hearing.endsWith("✗") ? "text-rose-600" : "text-slate-500"}`} data-testid="hearing">
+                    {live.hearing || (listening ? "…" : "")}
+                  </p>
+                  <p className="text-[11px] text-slate-500">Only guitar strings count — voices, claps and taps are ignored.</p>
+                </div>
+              ) : null}
             </>
           )}
           {live.phase === "intro" ? <p className="pk-pulse mt-3 text-center text-lg font-black">🗣️ Listen…</p> : null}
@@ -785,7 +849,7 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
             <p className="text-sm text-slate-600">
               {live.result.mode === "chords"
                 ? `🎸 ${live.result.done}/${live.result.total} chords heard${live.result.skipped ? ` · ${live.result.skipped} skipped` : ""}${live.result.seconds.length ? ` · ${Math.round((live.result.seconds.reduce((a, b) => a + b, 0) / live.result.seconds.length) * 10) / 10} s each` : ""}`
-                : `✓ ${live.result.done}/${live.result.total} strokes${opts.input === "tap" ? ` · ↻ ${live.result.wrong} wrong way` : ""}${live.result.stringChecked ? ` · 🎯 ${live.result.stringOk}/${live.result.stringChecked} on the right string (approx.)` : ""}${live.result.skipped ? ` · ${live.result.skipped} skipped` : ""}`}
+                : `✓ ${live.result.done}/${live.result.total} strokes${opts.input === "tap" ? ` · ↻ ${live.result.wrong} wrong way` : ""}${live.result.stringChecked ? ` · 🎯 ${live.result.stringOk}/${live.result.stringChecked} played on the right string` : ""}${live.result.skipped ? ` · ${live.result.skipped} skipped` : ""}`}
             </p>
             <p className="mt-1 font-semibold">💡 {live.tip}</p>
             {live.cam ? (
@@ -888,10 +952,10 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
               <p className="font-bold">🔒 {NO_RECORDING_MIC}</p>
               <p className="mt-1">
                 {opts.mode === "chords"
-                  ? "I listen to the notes ringing and tell you which chord I hear. Strum and let it ring for a moment."
-                  : "I count every stroke I hear (I can't tell down from up by ear) and check which note rang. Wear headphones so I only hear your guitar."}
+                  ? "After each strum I listen to the notes ringing and tell you which chord I hear. Talking, singing or humming never counts. Strum and let it ring for a moment."
+                  : "A note only counts when I hear the right guitar string ring — voices, claps and taps are ignored. (I can't tell down from up by ear.) Headphones help me hear only your guitar."}
               </p>
-              {mic === "on" && opts.mode === "picking" ? (
+              {mic === "on" ? (
                 <label className="mt-2 block">
                   Mic sensitivity
                   <input
@@ -904,6 +968,7 @@ export function PickingGame({ onFinish }: { onFinish: (score: number, board?: st
                       const v = Number(e.target.value);
                       patch({ sensitivity: v });
                       engineRef.current?.setSensitivity(v);
+                      engineRef.current?.setPluckSensitivity(v);
                     }}
                     className="w-full accent-emerald-600"
                   />
