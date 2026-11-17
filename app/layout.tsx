@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
-import Script from "next/script";
 import { FaWhatsapp } from "react-icons/fa";
 import StickyBookBar from "./components/StickyBookBar";
 import { PROGRAMS, programPath } from "./lib/programs";
 import { SOCIAL_LINKS, PHONE_NUMBERS } from "./lib/site";
 import MetaPixel from "./components/MetaPixel";
+import BlackFridayToast from "./components/BlackFridayToast";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -125,8 +125,8 @@ export default function RootLayout({
         </div>
         <StickyBookBar />
         <MetaPixel />
-        {/* Black Friday 2026 banners (20–30 Nov, hides itself after). Edit the offer in public/black-friday.js. */}
-        <Script src="/black-friday.js" strategy="afterInteractive" />
+        {/* Black Friday 2026 (20–30 Nov): "sale is live" notification. Offer text in app/lib/blackFriday.ts. */}
+        <BlackFridayToast />
       </body>
     </html>
   );

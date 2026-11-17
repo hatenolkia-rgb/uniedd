@@ -10,11 +10,13 @@ import Testimonials from "./components/Testimonials";
 import { TESTIMONIALS } from "./lib/testimonials";
 import CTA from "./components/CTA";
 import Footer from "./components/Footer";
+import BlackFridaySale from "./components/BlackFridaySale";
 
 export default function Home() {
   return (
     <main>
       <Navbar />
+      <BlackFridaySale first />
       <Hero />
       <Features />
       <MusicJourney />

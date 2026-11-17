@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
+import BlackFridaySale from "../components/BlackFridaySale";
 import Footer from "../components/Footer";
 
 const pricingTitle = "Pricing | UniEDD";
@@ -31,6 +32,7 @@ export default function PricingPage() {
   return (
     <main>
       <Navbar />
+      <BlackFridaySale first />
 
       <section className="px-6 pb-20 pt-32 sm:pt-40">
         <div className="mx-auto max-w-5xl text-center">
