@@ -93,7 +93,11 @@ export default function GamesPage() {
             <Link href="/games/karaoke-maker" className="font-semibold text-[var(--brand-blue)] hover:underline">
               Karaoke Maker
             </Link>{" "}
-            (it removes the vocals and changes the key, and your song never leaves your device). Try the{" "}
+            (it removes the vocals and changes the key, and your song never leaves your device). Practise singing and riyaz with the{" "}
+            <Link href="/games/tanpura-tabla" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              Tanpura &amp; Tabla
+            </Link>{" "}
+            studio — a tanpura drone in any key with tabla in Teentaal, Keherwa, Dadra, Rupak, Jhaptaal, Ektaal and more. Try the{" "}
             <Link href="/games/clap-rhythm" className="font-semibold text-[var(--brand-blue)] hover:underline">
               Clap Rhythm game
             </Link>{" "}

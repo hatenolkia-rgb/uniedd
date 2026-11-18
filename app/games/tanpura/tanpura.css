@@ -1,0 +1,43 @@
+/* Tanpura & Tabla studio — playful animations (prefix: tt-) */
+.tt-sky {
+  background:
+    radial-gradient(circle at 12% 18%, #fff8 0 4px, transparent 5px),
+    radial-gradient(circle at 82% 22%, #fff6 0 3px, transparent 4px),
+    radial-gradient(circle at 55% 8%, #fff5 0 3px, transparent 4px),
+    linear-gradient(135deg, #f59e0b 0%, #e8962e 30%, #c026d3 70%, #1a9fd4 100%);
+}
+.tt-string {
+  transform-origin: center;
+  transition: stroke .3s ease;
+}
+.tt-string.tt-pluck { animation: tt-vibrate 1.4s ease-out; stroke: #fde68a; }
+@keyframes tt-vibrate {
+  0% { transform: scaleX(1); }
+  4% { transform: translateX(3px); }
+  8% { transform: translateX(-3px); }
+  12% { transform: translateX(2.5px); }
+  16% { transform: translateX(-2.5px); }
+  22% { transform: translateX(2px); }
+  30% { transform: translateX(-1.6px); }
+  40% { transform: translateX(1.2px); }
+  55% { transform: translateX(-.8px); }
+  70% { transform: translateX(.5px); }
+  100% { transform: translateX(0); }
+}
+.tt-glow { animation: tt-glow 1.4s ease-out; }
+@keyframes tt-glow { 0% { opacity: 1; } 100% { opacity: 0; } }
+.tt-drum { transition: transform .08s ease; }
+.tt-hit { animation: tt-hit .28s cubic-bezier(.3,1.8,.5,1); }
+@keyframes tt-hit { 0% { transform: scale(1); } 35% { transform: scale(1.1); } 100% { transform: scale(1); } }
+.tt-ring { animation: tt-ring .5s ease-out forwards; }
+@keyframes tt-ring { 0% { transform: scale(.7); opacity: .9; } 100% { transform: scale(1.5); opacity: 0; } }
+.tt-float { animation: tt-float 3.2s ease-in-out infinite; }
+@keyframes tt-float { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+.tt-matra { transition: transform .12s ease, background-color .12s ease, box-shadow .12s ease; }
+.tt-matra-on { transform: scale(1.08); box-shadow: 0 6px 18px -6px rgba(192, 38, 211, .55); }
+.tt-range { accent-color: #c026d3; width: 100%; }
+.tt-pop { animation: tt-pop .35s cubic-bezier(.3,1.8,.5,1); }
+@keyframes tt-pop { 0% { transform: scale(.7); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .tt-string.tt-pluck, .tt-hit, .tt-ring, .tt-float, .tt-pop, .tt-glow { animation: none; }
+}
