@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useStoredValue } from "../lib/useStoredValue";
 import { FaTimes, FaArrowRight, FaWhatsapp } from "react-icons/fa";
 
@@ -13,12 +14,26 @@ const BOOK_URL = "/#contact";
 const WHATSAPP_URL = "https://wa.me/918383857710";
 
 export default function StickyBookBar() {
+  const pathname = usePathname();
   const [dismissed, setDismissed] = useStoredValue("sessionStorage", DISMISS_KEY);
 
   const handleDismiss = () => setDismissed("1");
 
+  // Only on the home page — it was irritating when it followed people
+  // around every other page (games, programs, blog, and so on).
+  if (pathname !== "/") return null;
+
   return (
     <>
+      {/* In-flow spacer so content isn't hidden behind the fixed bar.
+          Lives here (not on <body>) so other pages don't keep a leftover gap. */}
+      <div
+        className="sm:hidden h-20"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        aria-hidden
+      />
+      {dismissed !== "1" && <div className="hidden sm:block h-20" aria-hidden />}
+
       {/* Phones: an app-style action bar that always stays. It also carries
           WhatsApp, because the floating WhatsApp bubble (layout.tsx) is hidden
           on small screens to keep content clear. */}
