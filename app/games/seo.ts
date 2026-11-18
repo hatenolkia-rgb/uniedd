@@ -126,14 +126,14 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
   "tanpura-tabla": {
     title: "Online Tanpura & Tabla – Free Electronic Tanpura with Taal Player | UNIEDD",
     description:
-      "Free online tanpura and tabla for riyaz: a tanpura drone in all 12 keys with Pa, Ma, Ni or Sa tuning, male or female, 4, 5 or 6 strings, fine tuning in cents and A4 432–445 Hz, jawari and reverb — plus tabla thekas in Teentaal, Keherwa, Dadra, Rupak, Jhaptaal, Ektaal, Deepchandi, Tilwada, Jhoomra, Dhamar and Chautaal from 30 to 300 BPM with sam and khali shown. Runs in your browser.",
+      "Free online tanpura and tabla for riyaz: a real recorded tanpura drone in all 12 keys with Pa, Ma or Ni tuning (plus a synth tanpura with Sa and komal Ni), male or female, 4, 5 or 6 strings, fine tuning in cents and A4 432–445 Hz, jawari and reverb — plus tabla thekas in Teentaal, Keherwa, Dadra, Rupak, Jhaptaal, Ektaal, Deepchandi, Tilwada, Jhoomra, Dhamar and Chautaal from 30 to 300 BPM with sam and khali shown. Runs in your browser.",
     h1: "Tanpura & Tabla – Online Tanpura Drone with Taal Player",
     intro:
-      "Tanpura & Tabla is a free electronic tanpura and tabla machine for singing and instrument practice (riyaz). The tanpura is created live in your browser, so every key and tuning is exactly in tune, and the tabla plays real recorded strokes arranged into the traditional theka of each taal. Set your Sa, choose a taal and tempo, and practise along on a phone, tablet or computer.",
+      "Tanpura & Tabla is a free electronic tanpura and tabla machine for singing and instrument practice (riyaz). The tanpura is a real recorded 4-string tanpura, carefully tuned to each of the 12 keys and looped seamlessly — or switch to the synth tanpura for every string and tuning control — and the tabla plays real recorded strokes arranged into the traditional theka of each taal. Set your Sa, choose a taal and tempo, and practise along on a phone, tablet or computer.",
     howTo: [
-      "Choose your key — the note that is your Sa — and pick Male or Female tanpura. Use Lower or Higher to move a whole octave, Fine tune to adjust in cents, and A4 reference (432–445 Hz) to match another instrument.",
+      "Choose your key — the note that is your Sa. Use Fine tune to adjust in cents and A4 reference (432–445 Hz) to match another instrument.",
       "Pick the first string: Pa for most ragas, Ma for ragas without Pa, Ni (or komal Ni) for ragas without Pa and Ma, or Sa. Choose 4, 5 or 6 strings, and open the String mixer to change any string's note, volume or fine tuning.",
-      "Set the speed of the plucking, the jawari (the buzzing shimmer of the strings), reverb and volume. Turn on Swarmandal shimmer for a sparkling harp-like sweep in the notes of a raga.",
+      "Choose Recorded (a real tanpura, the default) or Synth. With Synth you can also set the plucking speed, the jawari (the buzzing shimmer of the strings), male or female, and 4, 5 or 6 strings. Adjust reverb and volume for either. Turn on Swarmandal shimmer for a sparkling harp-like sweep in the notes of a raga.",
       "Choose a taal and a tempo from 30 BPM (very slow vilambit) to 300 BPM (ati-drut) — or tap the tempo. The matra grid lights up each beat and shows the sam (X), the claps (tali) and the wave (khali).",
       "Press Play both (or start the tanpura and tabla separately). The tabla is tuned to your Sa automatically, or to Pa if you prefer. Save your favourite set-ups as presets and use the timer to stop after your practice time.",
     ],
@@ -149,7 +149,7 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
       {
         heading: "Good to know",
         body: [
-          "Natural tuning uses the pure intervals of a real tanpura; Keyboard tuning matches a harmonium or keyboard. On iPhone and iPad the sound stops if you leave the page, so keep it open while you practise. Nothing is recorded — all the sound is made on your device.",
+          "Natural tuning uses the pure intervals of a real tanpura; Keyboard tuning matches a harmonium or keyboard. On iPhone and iPad the sound stops if you leave the page, so keep it open while you practise. Nothing is recorded from you — all the sound plays on your device.",
         ],
       },
     ],

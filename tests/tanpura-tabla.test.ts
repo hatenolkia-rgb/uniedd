@@ -190,3 +190,67 @@ describe("catalog", () => {
     expect(GAMES.find((g) => g.slug === "tanpura-tabla")).toBeDefined();
   });
 });
+
+import { readFileSync, statSync } from "node:fs";
+import { crossfadeCurves, tanpuraFrequencies, usesRecording, type RecManifest, type TanpuraSettings } from "../app/games/tanpura/engine";
+import { REC_SHIFT, recordedSaHz } from "../app/games/tanpura/theory";
+
+describe("recorded tanpura", () => {
+  const man = JSON.parse(readFileSync("public/tanpura-rec/manifest.json", "utf8")) as RecManifest;
+  const base: TanpuraSettings = {
+    source: "recorded", key: 0, voice: "male", octaveShift: 0, cents: 0, a4: 440, temperament: "just", first: "P", count: 4,
+    strings: defaultStrings(4, "P"), cycle: 5, jawari: 0.6, reverb: 0.3, volume: 0.8, shimmer: false, shimmerScale: "sapa", shimmerVolume: 0.5,
+  };
+
+  it("has a seamless-loop file for every key with Pa, Ma and Ni", () => {
+    for (const t of ["P", "m", "N"]) {
+      for (let k = 0; k < 12; k++) {
+        const f = man.files[t][KEYS[k]];
+        expect(f, `${t} ${KEYS[k]}`).toBeDefined();
+        expect(f.saHz).toBeCloseTo(recordedSaHz(k), 2);
+        expect(f.loop).toBeGreaterThanOrEqual(12);
+        expect(f.duration).toBeCloseTo(f.loop + man.crossfade, 2);
+        expect(f.onsets.length).toBeGreaterThan(3);
+        for (const ext of ["ogg", "m4a"]) {
+          const size = statSync(`public/tanpura-rec/${f.id}.${ext}`).size;
+          expect(size).toBeGreaterThan(50_000);
+          expect(size).toBeLessThan(450_000);
+        }
+      }
+    }
+  });
+
+  it("keeps the recordings within −5…+6 semitones of the master and in a G2–F♯3 register", () => {
+    expect(Math.min(...REC_SHIFT)).toBe(-5);
+    expect(Math.max(...REC_SHIFT)).toBe(6);
+    for (let k = 0; k < 12; k++) {
+      expect(recordedSaHz(k)).toBeGreaterThan(97);
+      expect(recordedSaHz(k)).toBeLessThan(186);
+      expect(noteName(recordedSaHz(k)).slice(0, -1)).toBe(KEYS[k]);
+    }
+    expect(recordedSaHz(9, { a4: 432 }) / recordedSaHz(9)).toBeCloseTo(432 / 440, 9);
+  });
+
+  it("uses the recording for Pa, Ma and Ni and the synth for Sa and komal Ni", () => {
+    expect(usesRecording({ source: "recorded", first: "P" })).toBe(true);
+    expect(usesRecording({ source: "recorded", first: "m" })).toBe(true);
+    expect(usesRecording({ source: "recorded", first: "N" })).toBe(true);
+    expect(usesRecording({ source: "recorded", first: "S" })).toBe(false);
+    expect(usesRecording({ source: "recorded", first: "n" })).toBe(false);
+    expect(usesRecording({ source: "synth", first: "P" })).toBe(false);
+    expect(tanpuraFrequencies({ ...base, key: 1, cents: 10 }).sa).toBeCloseTo(recordedSaHz(1, { cents: 10 }), 9);
+    expect(tanpuraFrequencies({ ...base, key: 1, first: "S" }).sa).toBeCloseTo(saHz(1, "male"), 9);
+  });
+
+  it("crossfades with constant expected power for any seam correlation", () => {
+    for (const rho of [0, 0.3, 0.6, 0.9]) {
+      const { fin, fout } = crossfadeCurves(rho, 65);
+      expect(fin[0]).toBeCloseTo(0, 9);
+      expect(fout[64]).toBeCloseTo(0, 6);
+      for (let i = 0; i < 65; i++) {
+        const p = fin[i] ** 2 + fout[i] ** 2 + 2 * rho * fin[i] * fout[i];
+        expect(p).toBeCloseTo(1, 5);
+      }
+    }
+  });
+});
