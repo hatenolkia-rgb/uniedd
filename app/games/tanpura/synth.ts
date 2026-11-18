@@ -1,7 +1,7 @@
 // Tanpura string synthesis — pure JS so every key and tuning is exact.
 // Additive model of a jawari-bridge string: harmonic partials whose energy
 // "blooms" upward then settles (the jawari sweep), slow beating between two
-// string polarisations, a gentle saturating "buzz" and a soft finger pluck.
+// string polarisations, a one-sided bridge-contact buzz and a soft finger pluck.
 // The waveform stays strictly periodic, so the pitch is exactly `freq`.
 
 export type PluckOpts = {
@@ -114,12 +114,27 @@ export function renderPluck(freq: number, o: PluckOpts): Float32Array {
   const norm = peak > 0 ? 1 / peak : 1;
   const tn = Math.tanh(drive);
   const fadeLen = Math.min(n, Math.round(0.4 * sr));
+  // One-sided bridge contact: when the string swings past the curved jawari bridge it
+  // grazes it, clipping that side of the wave. The clipped part (differentiated, i.e.
+  // its sharp edges) is the characteristic buzz. It depends on the string's amplitude,
+  // so the buzz evolves and thins out as the note decays, as on a real tanpura.
+  // It is a memoryless function of a periodic signal (+ a first difference), so the pitch stays exact.
+  const theta = 0.16;
+  const buzzAmt = 2.4 * J;
+  let prevC = 0;
   for (let i = 0; i < n; i++) {
-    let x = Math.tanh(out[i] * norm * drive) / tn;
+    const v = out[i] * norm;
+    const contact = v > theta ? v - theta : 0;
+    const buzz = (contact - prevC) * buzzAmt * 4;
+    prevC = contact;
+    let x = Math.tanh((v - contact * 0.7 * J) * drive) / tn + buzz;
     if (i < attack) x *= 0.5 - 0.5 * Math.cos((Math.PI * i) / attack);
     if (i >= n - fadeLen) x *= 0.5 + 0.5 * Math.cos((Math.PI * (i - (n - fadeLen))) / fadeLen);
     out[i] = x * 0.9;
   }
+  let pk2 = 0;
+  for (let i = 0; i < n; i++) pk2 = Math.max(pk2, Math.abs(out[i]));
+  if (pk2 > 0.9) for (let i = 0; i < n; i++) out[i] *= 0.9 / pk2;
   return out;
 }
 

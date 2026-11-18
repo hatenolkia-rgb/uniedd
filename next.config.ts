@@ -62,6 +62,11 @@ const nextConfig: NextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" }],
       },
       {
+        // Tanpura & Tabla: recorded tanpura loops (rebuilt only by scripts/build-tanpura-recordings.py).
+        source: "/tanpura-rec/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" }],
+      },
+      {
         // The vocal-remover worker and its onnxruntime-web files.
         source: "/karaoke/:path*",
         headers: [

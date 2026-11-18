@@ -5,7 +5,10 @@
 
 import { mulberry32, renderPluck, renderSwarmandal } from "./synth";
 import {
+  REC_TUNINGS,
   SWARMANDAL_SCALES,
+  defaultStrings,
+  recordedSaHz,
   pluckOffsets,
   saHz,
   stringHz,
@@ -21,6 +24,8 @@ import { TAALS, cycleEvents, pickLayer, type StrokeId, type Taal, type TablaEven
 export const ASSET_BASE = "/tanpura-tabla";
 
 export type TanpuraSettings = {
+  /** Real recorded tanpura (default) or the synthesised one. */
+  source: "recorded" | "synth";
   key: number;
   voice: Voice;
   octaveShift: -1 | 0 | 1;
@@ -59,9 +64,40 @@ export type LoopInfo = { id: string; bpm: number; beats: number; duration: numbe
 const DAYAN: StrokeId[] = ["na", "tin", "tun", "ti"];
 const DAMPS: Partial<Record<StrokeId, "dayan" | "bayan">> = { ti: "dayan", ke: "bayan", gem: "bayan" };
 
+export const REC_BASE = "/tanpura-rec";
+
+export type RecFile = { id: string; saHz: number; loop: number; duration: number; rho: number; onsets: number[]; shift: number };
+export type RecManifest = { crossfade: number; sampleRate: number; files: Record<string, Record<string, RecFile>> };
+
+/** True when the recorded tanpura plays for these settings (Pa, Ma and Ni tunings have recordings). */
+export function usesRecording(s: Pick<TanpuraSettings, "source" | "first">) {
+  return s.source === "recorded" && REC_TUNINGS.includes(s.first);
+}
+
 export function tanpuraFrequencies(s: TanpuraSettings) {
+  if (usesRecording(s)) {
+    const sa = recordedSaHz(s.key, { a4: s.a4, cents: s.cents });
+    return { sa, strings: defaultStrings(4, s.first).map((st) => stringHz(sa, st, "just")) };
+  }
   const sa = saHz(s.key, s.voice, { a4: s.a4, cents: s.cents, octaveShift: s.octaveShift });
   return { sa, strings: s.strings.map((st) => stringHz(sa, st, s.temperament)) };
+}
+
+const KEY_FILE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+/** Correlation-aware equal-power crossfade curves (keeps loudness steady across the loop seam). */
+export function crossfadeCurves(rho: number, n = 128) {
+  const fin = new Float32Array(n);
+  const fout = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / (n - 1);
+    const a = Math.sin((t * Math.PI) / 2);
+    const b = Math.cos((t * Math.PI) / 2);
+    const g = Math.sqrt(1 + 2 * rho * a * b);
+    fin[i] = a / g;
+    fout[i] = b / g;
+  }
+  return { fin, fout };
 }
 
 /** Pick the compressed format this browser decodes (Opus, else AAC). */
@@ -125,6 +161,7 @@ export class TanpuraTablaEngine {
   private offline: boolean;
   private master!: GainNode;
   private tanBus!: GainNode;
+  private recBus!: GainNode;
   private tabBus!: GainNode;
   private dayanBus!: GainNode;
   private bayanBus!: GainNode;
@@ -140,6 +177,21 @@ export class TanpuraTablaEngine {
   tablaOn = false;
 
   private pluckCache = new Map<string, AudioBuffer>();
+  private recManifest: Promise<RecManifest> | null = null;
+  private recBuffers = new Map<string, Promise<AudioBuffer>>();
+  private rec: {
+    info: RecFile;
+    buf: AudioBuffer;
+    rate: number;
+    xf: number;
+    next: number;
+    first: boolean;
+    voices: { src: AudioBufferSourceNode; g: GainNode; end: number }[];
+  } | null = null;
+  private recSig = "";
+  private recRestart: ReturnType<typeof setTimeout> | null = null;
+  /** Message for the UI when the recording couldn't load and the synth took over. */
+  recError: string | null = null;
   private lastPluck: ({ src: AudioBufferSourceNode; g: GainNode } | null)[] = [];
   private nextCycle = 0;
   private cycleCount = 0;
@@ -184,6 +236,9 @@ export class TanpuraTablaEngine {
     this.tanBus = ctx.createGain();
     this.tanBus.connect(this.master);
     this.tanBus.connect(this.wet);
+    this.recBus = ctx.createGain();
+    this.recBus.gain.value = 2.9; // recordings sit at −21 dBFS RMS; match the synth's loudness
+    this.recBus.connect(this.tanBus);
     this.wet.connect(this.conv);
     this.tabBus = ctx.createGain();
     this.tabBus.connect(this.master);
@@ -224,6 +279,20 @@ export class TanpuraTablaEngine {
   }
 
   setTanpura(s: TanpuraSettings) {
+    const wasRec = usesRecording(this.tanpura);
+    const isRec = usesRecording(s);
+    if (this.tanpuraOn && (wasRec || isRec) && this.recSignature(s) !== this.recSig) {
+      // switch file / retune the recording: crossfade to a new voice chain (debounced for sliders)
+      this.tanpura = s;
+      this.applyMix();
+      if (this.recRestart) clearTimeout(this.recRestart);
+      this.recRestart = setTimeout(() => {
+        this.recRestart = null;
+        void this.restartTanpura();
+      }, this.offline ? 0 : 160);
+      if (this.tablaOn && this.tabla.mode === "strokes") this.updateTablaRate();
+      return;
+    }
     const pitchChanged =
       JSON.stringify(tanpuraFrequencies(s)) !== JSON.stringify(tanpuraFrequencies(this.tanpura)) ||
       s.jawari !== this.tanpura.jawari || s.voice !== this.tanpura.voice;
@@ -339,7 +408,144 @@ export class TanpuraTablaEngine {
     });
   }
 
+  private recSignature(s: TanpuraSettings) {
+    if (!usesRecording(s)) return `synth`;
+    return `${s.first}|${s.key}|${s.a4}|${s.cents}`;
+  }
+
+  loadRecManifest() {
+    if (!this.recManifest) {
+      this.recManifest = fetch(`${REC_BASE}/manifest.json`)
+        .then((r) => {
+          if (!r.ok) throw new Error(`manifest ${r.status}`);
+          return r.json() as Promise<RecManifest>;
+        })
+        .catch((e) => {
+          this.recManifest = null;
+          throw e;
+        });
+    }
+    return this.recManifest;
+  }
+
+  private loadRecBuffer(info: RecFile) {
+    let p = this.recBuffers.get(info.id);
+    if (!p) {
+      const ctx = this.ctx!;
+      p = fetch(`${REC_BASE}/${info.id}.${audioExt()}`)
+        .then((r) => {
+          if (!r.ok) throw new Error(`tanpura ${r.status}`);
+          return r.arrayBuffer();
+        })
+        .then((raw) => ctx.decodeAudioData(raw));
+      p.catch(() => this.recBuffers.delete(info.id));
+      if (this.recBuffers.size > 6) this.recBuffers.delete(this.recBuffers.keys().next().value as string);
+      this.recBuffers.set(info.id, p);
+    }
+    return p;
+  }
+
+  /** Load the recording for the current settings (null if this tuning has none). */
+  async prepareRecording() {
+    const s = this.tanpura;
+    if (!usesRecording(s)) return null;
+    const man = await this.loadRecManifest();
+    const info = man.files[s.first]?.[KEY_FILE[s.key]];
+    if (!info) return null;
+    const buf = await this.loadRecBuffer(info);
+    const sa = recordedSaHz(s.key, { a4: s.a4, cents: s.cents });
+    return { info, buf, rate: sa / info.saHz, xf: man.crossfade };
+  }
+
+  private fadeOutRec(t: number, tc = 0.12) {
+    if (!this.rec) return;
+    for (const v of this.rec.voices) {
+      try {
+        v.g.gain.cancelScheduledValues(t);
+        v.g.gain.setTargetAtTime(0, t, tc);
+        v.src.stop(t + tc * 8);
+      } catch {}
+    }
+    this.rec = null;
+  }
+
+  private scheduleRecorded(until: number) {
+    const r = this.rec;
+    if (!r) return;
+    const ctx = this.ctx!;
+    const { fin, fout } = crossfadeCurves(r.info.rho);
+    while (r.next < until) {
+      const t = r.next;
+      const loopDur = r.info.loop / r.rate;
+      const xf = r.xf / r.rate;
+      const src = ctx.createBufferSource();
+      src.buffer = r.buf;
+      src.playbackRate.value = r.rate;
+      const g = ctx.createGain();
+      src.connect(g).connect(this.recBus);
+      if (r.first) {
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(1, t + 0.5);
+      } else g.gain.setValueCurveAtTime(fin, t, xf);
+      g.gain.setValueCurveAtTime(fout, t + loopDur, xf);
+      src.start(t, 0);
+      const end = t + loopDur + xf + 0.05;
+      src.stop(end);
+      r.voices = r.voices.filter((v) => v.end > ctx.currentTime);
+      r.voices.push({ src, g, end });
+      r.info.onsets.forEach((o, i) => this.visuals.push({ kind: "pluck", time: t + o / r.rate, string: i % 4 }));
+      r.first = false;
+      r.next = t + loopDur;
+    }
+  }
+
+  private async restartTanpura() {
+    if (!this.tanpuraOn || !this.ctx) return;
+    const ctx = this.ctx;
+    const sig = this.recSignature(this.tanpura);
+    this.recSig = sig;
+    let prepared: Awaited<ReturnType<TanpuraTablaEngine["prepareRecording"]>> = null;
+    if (usesRecording(this.tanpura)) {
+      try {
+        prepared = await this.prepareRecording();
+        this.recError = null;
+      } catch (e) {
+        this.recError = `Couldn't load the recorded tanpura (${(e as Error)?.message ?? e}); playing the synth tanpura instead.`;
+      }
+      if (this.recSig !== sig || !this.tanpuraOn) return; // settings moved on while loading
+    }
+    const t = ctx.currentTime + 0.05;
+    this.fadeOutRec(t, 0.15);
+    // stop synth strings
+    for (const p of this.lastPluck) {
+      if (!p) continue;
+      try {
+        p.g.gain.setTargetAtTime(0, t, 0.2);
+        p.src.stop(t + 1.5);
+      } catch {}
+    }
+    this.lastPluck = this.tanpura.strings.map(() => null);
+    this.visuals = this.visuals.filter((v) => v.kind !== "pluck");
+    if (prepared) {
+      this.rec = { ...prepared, next: t, first: true, voices: [] };
+    } else {
+      await this.prerender();
+    }
+    this.nextCycle = t;
+    this.cycleCount = 0;
+  }
+
   private scheduleTanpura(until: number) {
+    if (this.rec) {
+      this.scheduleRecorded(until);
+      // swarmandal shimmer keeps its own clock (every ~10 s) over the recording
+      while (this.nextCycle < until) {
+        if (this.tanpura.shimmer && this.cycleCount % 2 === 1) this.scheduleShimmer(this.nextCycle + 0.6, tanpuraFrequencies(this.tanpura).sa);
+        this.cycleCount++;
+        this.nextCycle += 5;
+      }
+      return;
+    }
     const s = this.tanpura;
     const { sa, strings } = tanpuraFrequencies(s);
     const offs = pluckOffsets(s.strings.length);
@@ -358,10 +564,22 @@ export class TanpuraTablaEngine {
 
   async startTanpura(at?: number) {
     const ctx = this.offline ? this.ctx! : await this.ensureContext();
-    await this.prerender();
+    this.recSig = this.recSignature(this.tanpura);
+    let prepared: Awaited<ReturnType<TanpuraTablaEngine["prepareRecording"]>> = null;
+    if (usesRecording(this.tanpura)) {
+      try {
+        prepared = await this.prepareRecording();
+        this.recError = null;
+      } catch (e) {
+        this.recError = `Couldn't load the recorded tanpura (${(e as Error)?.message ?? e}); playing the synth tanpura instead.`;
+      }
+    }
+    if (!prepared) await this.prerender();
     this.tanpuraOn = true;
     this.lastPluck = this.tanpura.strings.map(() => null);
-    this.nextCycle = at ?? ctx.currentTime + 0.08;
+    const t0 = at ?? ctx.currentTime + 0.08;
+    this.rec = prepared ? { ...prepared, next: t0, first: true, voices: [] } : null;
+    this.nextCycle = t0;
     this.cycleCount = 0;
     this.applyMix();
     this.loop();
@@ -370,6 +588,9 @@ export class TanpuraTablaEngine {
   stopTanpura() {
     this.tanpuraOn = false;
     const t = this.ctx?.currentTime ?? 0;
+    if (this.recRestart) clearTimeout(this.recRestart);
+    this.recRestart = null;
+    this.fadeOutRec(t, 0.25);
     for (const p of this.lastPluck) {
       if (!p) continue;
       try {
@@ -417,6 +638,11 @@ export class TanpuraTablaEngine {
       throw e;
     });
     return this.kitPromise;
+  }
+
+  /** The recording now playing (QA). */
+  get recInfo() {
+    return this.rec ? { id: this.rec.info.id, rate: this.rec.rate, loop: this.rec.info.loop, xf: this.rec.xf, saHz: this.rec.info.saHz * this.rec.rate } : null;
   }
 
   /** Codec lead time detected when the kit was decoded (for QA). */
@@ -777,5 +1003,5 @@ export async function renderOffline(opts: {
   await eng.scheduleOffline(opts.seconds);
   const visuals = eng.drainVisuals();
   const buf = await ctx.startRendering();
-  return { buffer: buf, visuals, kitLead: eng.kitLead, dayanHz: eng.dayanHz };
+  return { buffer: buf, visuals, kitLead: eng.kitLead, dayanHz: eng.dayanHz, rec: eng.recInfo };
 }

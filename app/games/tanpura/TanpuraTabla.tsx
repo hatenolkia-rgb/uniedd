@@ -14,7 +14,7 @@ import {
   type SwarId,
 } from "./theory";
 import { MAX_BPM, MIN_BPM, TAALS, bolLabel, clampBpm, laya, matraInfo } from "./taals";
-import { TanpuraTablaEngine, renderOffline, tanpuraFrequencies, type LoopInfo, type TablaSettings, type TanpuraSettings } from "./engine";
+import { TanpuraTablaEngine, renderOffline, tanpuraFrequencies, usesRecording, type LoopInfo, type TablaSettings, type TanpuraSettings } from "./engine";
 import { estimatePitch } from "./synth";
 import "./tanpura.css";
 
@@ -25,6 +25,7 @@ type Saved = { tanpura: TanpuraSettings; tabla: TablaSettings };
 type Preset = Saved & { name: string };
 
 const DEFAULT_TANPURA: TanpuraSettings = {
+  source: "recorded",
   key: 1,
   voice: "male",
   octaveShift: 0,
@@ -113,6 +114,7 @@ export default function TanpuraTabla() {
   const [loops, setLoops] = useState<LoopInfo[]>([]);
   const [showMixer, setShowMixer] = useState(false);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
+  const [tanpuraErr, setTanpuraErr] = useState<string | null>(null);
 
   const engineRef = useRef<TanpuraTablaEngine | null>(null);
   const stringEls = useRef<(SVGLineElement | null)[]>([]);
@@ -205,7 +207,7 @@ export default function TanpuraTabla() {
       eng.tanpura = tanpura;
       eng.tabla = tabla;
       try {
-        setBusy(what === "tabla" ? "Getting the tabla ready…" : "Tuning the tanpura…");
+        setBusy(what === "tabla" ? "Getting the tabla ready…" : usesRecording(tanpura) ? "Loading the tanpura recording…" : "Tuning the tanpura…");
         const ctx = await eng.ensureContext();
         eng.setTanpura(tanpura);
         eng.setTabla(tabla);
@@ -216,6 +218,7 @@ export default function TanpuraTabla() {
         await Promise.all(jobs);
         setTanOn(eng.tanpuraOn);
         setTabOn(eng.tablaOn);
+        setTanpuraErr(eng.recError);
       } catch (e) {
         setError(`Sorry, audio couldn't start: ${(e as Error)?.message ?? e}`);
       } finally {
@@ -332,7 +335,10 @@ export default function TanpuraTabla() {
   };
 
   const remaining = timerEnd ? Math.max(0, Math.round((timerEnd - now) / 1000)) : 0;
-  const nStr = tanpura.strings.length;
+  const rec = usesRecording(tanpura);
+  const recWanted = tanpura.source === "recorded";
+  const shownStrings = rec ? defaultStrings(4, tanpura.first) : tanpura.strings;
+  const nStr = shownStrings.length;
 
   return (
     <div className="space-y-6" data-testid="tanpura-tabla">
@@ -352,7 +358,7 @@ export default function TanpuraTabla() {
                 Sa = {noteName(freqs.sa, tanpura.a4 === 440 ? 440 : tanpura.a4)} · {freqs.sa.toFixed(1)} Hz
               </span>
               <span className="rounded-full bg-white/20 px-3 py-1">
-                {tanpura.voice === "male" ? "Male" : "Female"} · {nStr} strings · {FIRST_STRING.find((f) => f.id === tanpura.first)?.label}
+                {rec ? "Real recording" : tanpura.voice === "male" ? "Male · synth" : "Female · synth"} · {nStr} strings · {FIRST_STRING.find((f) => f.id === tanpura.first)?.label}
               </span>
               {tabOn && tabla.mode === "strokes" ? (
                 <span className="rounded-full bg-white/20 px-3 py-1">
@@ -422,7 +428,7 @@ export default function TanpuraTabla() {
               <ellipse cx="70" cy="178" rx="62" ry="48" fill="url(#tt-wood)" />
               <ellipse cx="70" cy="178" rx="50" ry="38" fill="#92400e" opacity="0.55" />
               <rect x="44" y="196" width="52" height="8" rx="3" fill="#fef3c7" opacity="0.9" />
-              {tanpura.strings.map((s, i) => {
+              {shownStrings.map((s, i) => {
                 const x = 70 + (i - (nStr - 1) / 2) * (nStr > 4 ? 6.5 : 8);
                 return (
                   <g key={i}>
@@ -485,6 +491,20 @@ export default function TanpuraTabla() {
           <h3 id="tt-tanpura" className="text-lg font-bold">
             🪕 Tanpura
           </h3>
+          <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Tanpura sound">
+            <Chip on={recWanted} onClick={() => updT({ source: "recorded" })} title="A real tanpura, recorded">
+              🎙 Recorded (real)
+            </Chip>
+            <Chip on={!recWanted} onClick={() => updT({ source: "synth" })} title="Made live in your browser — every control works">
+              🎛 Synth
+            </Chip>
+          </div>
+          {recWanted && !rec ? (
+            <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900" data-testid="rec-fallback">
+              There&apos;s no real recording for the {FIRST_STRING.find((f) => f.id === tanpura.first)?.label} tuning yet, so the synth tanpura plays. Choose Pa, Ma or Ni for the real one.
+            </p>
+          ) : null}
+          {tanpuraErr ? <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{tanpuraErr}</p> : null}
 
           <p className="mt-4 text-sm font-semibold">Key (your Sa)</p>
           <div className="mt-2 grid grid-cols-6 gap-1.5">
@@ -504,6 +524,13 @@ export default function TanpuraTabla() {
             ))}
           </div>
 
+          {rec ? (
+            <p className="mt-3 text-xs text-[var(--muted)]" data-testid="rec-register">
+              A real 4-string tanpura, tuned to your key. It sounds in its natural register (Sa = {noteName(freqs.sa, tanpura.a4)}), which suits
+              men&apos;s and women&apos;s voices alike — for women it is the same Sa an octave lower. For a higher tanpura, switch to Synth and choose Female.
+            </p>
+          ) : null}
+          {!rec ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-sm font-semibold">Tanpura</p>
@@ -526,6 +553,7 @@ export default function TanpuraTabla() {
               </div>
             </div>
           </div>
+          ) : null}
 
           <p className="mt-4 text-sm font-semibold">First string</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
@@ -537,6 +565,7 @@ export default function TanpuraTabla() {
           </div>
           <p className="mt-1 text-xs text-[var(--muted)]">{FIRST_STRING.find((f) => f.id === tanpura.first)?.hint}</p>
 
+          {!rec ? (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <p className="text-sm font-semibold">Strings</p>
@@ -560,12 +589,17 @@ export default function TanpuraTabla() {
               </div>
             </div>
           </div>
+          ) : null}
 
           <div className="mt-4 space-y-3">
             <Slider label="Fine tune" value={tanpura.cents} min={-50} max={50} step={1} fmt={(v) => `${v > 0 ? "+" : ""}${v} cents`} onChange={(v) => updT({ cents: v })} />
             <Slider label="A4 reference" value={tanpura.a4} min={432} max={445} step={0.5} fmt={(v) => `${v} Hz`} onChange={(v) => updT({ a4: v })} />
+            {!rec ? (
+              <>
             <Slider label="Speed" value={11 - tanpura.cycle} min={1} max={8.5} step={0.25} fmt={() => `${tanpura.cycle.toFixed(1)} s per round`} onChange={(v) => updT({ cycle: Math.round((11 - v) * 100) / 100 })} />
             <Slider label="Jawari (buzz)" value={tanpura.jawari} min={0} max={1} step={0.01} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => updT({ jawari: v })} />
+              </>
+            ) : null}
             <Slider label="Reverb" value={tanpura.reverb} min={0} max={1} step={0.01} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => updT({ reverb: v })} />
             <Slider label="Tanpura volume" value={tanpura.volume} min={0} max={1} step={0.01} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => updT({ volume: v })} />
           </div>
@@ -594,6 +628,8 @@ export default function TanpuraTabla() {
             ) : null}
           </div>
 
+          {!rec ? (
+          <>
           <button type="button" onClick={() => setShowMixer((v) => !v)} className="mt-4 text-sm font-semibold text-[var(--brand-blue)] hover:underline" aria-expanded={showMixer}>
             {showMixer ? "▾" : "▸"} String mixer (each string&apos;s note, volume and fine tune)
           </button>
@@ -641,6 +677,12 @@ export default function TanpuraTabla() {
           <p className="mt-3 text-xs text-[var(--muted)]">
             Strings: {tanpura.strings.map((s) => `${swar(s.swar).short} (${octaveWord(s.octave)})`).join(" · ")}
           </p>
+          </>
+          ) : (
+            <p className="mt-3 text-xs text-[var(--muted)]">
+              Strings: {shownStrings.map((s) => `${swar(s.swar).short} (${octaveWord(s.octave)})`).join(" · ")} · natural plucking speed
+            </p>
+          )}
         </section>
 
         {/* ---------- tabla ---------- */}

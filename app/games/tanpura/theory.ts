@@ -121,3 +121,14 @@ export const SWARMANDAL_SCALES: { id: string; label: string; notes: SwarId[] }[]
   { id: "bhairav", label: "Bhairav", notes: ["S", "r", "G", "m", "P", "d", "N"] },
   { id: "malkauns", label: "Malkauns", notes: ["S", "g", "m", "d", "n"] },
 ];
+
+/** Recorded tanpura: semitones from the C3 master for each key (keeps pitch shifts within −5…+6). */
+export const REC_SHIFT = [0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1];
+/** First-string tunings that have real recordings. */
+export const REC_TUNINGS: SwarId[] = ["P", "m", "N"];
+
+/** Sa of the recorded tanpura (its natural register: G2 … F♯3). */
+export function recordedSaHz(keyIndex: number, opts: { a4?: number; cents?: number } = {}) {
+  const { a4 = 440, cents = 0 } = opts;
+  return midiToHz(48 + REC_SHIFT[keyIndex], a4) * Math.pow(2, cents / 1200);
+}
