@@ -57,6 +57,11 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Tanpura & Tabla: compressed tabla strokes and grooves (rebuilt only by scripts/build-tabla-samples.py).
+        source: "/tanpura-tabla/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" }],
+      },
+      {
         // The vocal-remover worker and its onnxruntime-web files.
         source: "/karaoke/:path*",
         headers: [

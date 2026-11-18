@@ -1,4 +1,4 @@
-export type CategoryId = "karaoke" | "guitar" | "piano" | "vocals" | "theory" | "rhythm" | "chess" | "other";
+export type CategoryId = "karaoke" | "tanpura" | "guitar" | "piano" | "vocals" | "theory" | "rhythm" | "chess" | "other";
 
 export type GameKind =
   | "quiz"
@@ -26,6 +26,7 @@ export type GameKind =
   | "piano-fall"
   | "pick-coach"
   | "karaoke-maker"
+  | "tanpura-tabla"
   | "chess-puzzles"
   | "chess-play"
   | "chess-online";
@@ -51,6 +52,12 @@ export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; 
     hint: "Upload any song, remove the vocals and change the key — all on your device",
     emoji: "🎤",
   },
+  {
+    id: "tanpura",
+    label: "Tanpura & Tabla",
+    hint: "An electronic tanpura in any key with tabla in 11 taals — for singing and riyaz",
+    emoji: "🪕",
+  },
   { id: "guitar", label: "Guitar", hint: "Picking and strumming coach, fretboard, chords and tabs", emoji: "🎸" },
   { id: "piano", label: "Piano", hint: "Falling-notes songs, keys, staff reading and chords", emoji: "🎹" },
   { id: "vocals", label: "Vocals", hint: "Pitch, solfege and breath challenges", emoji: "🎤" },
@@ -74,6 +81,15 @@ export const GAMES: GameDef[] = [
     kind: "karaoke-maker",
     minutes: "Any song",
     accent: "#7c5cff",
+  },
+  {
+    slug: "tanpura-tabla",
+    title: "Tanpura & Tabla",
+    blurb: "A tanpura drone in any key (Pa, Ma, Ni or Sa tuning, male or female, 4–6 strings) with tabla in Teentaal, Keherwa, Dadra, Rupak, Jhaptaal, Ektaal and more — any tempo from 30 to 300 BPM, sam and khali shown on every matra. Perfect for singing and instrument riyaz.",
+    category: "tanpura",
+    kind: "tanpura-tabla",
+    minutes: "Riyaz",
+    accent: "#c026d3",
   },
   {
     slug: "alternate-picking",

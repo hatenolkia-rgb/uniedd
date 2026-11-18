@@ -30,6 +30,18 @@ export const CATEGORY_SEO: Record<CategoryId, CategorySeo> = {
     ],
     goodFor: "Singers and music students who want a backing track in a key that suits their voice.",
   },
+  tanpura: {
+    noun: "Tanpura & Tabla App",
+    genre: ["Music", "Educational"],
+    intro:
+      "A free online tanpura and tabla player from UNIEDD for singing and instrument practice. It runs in your web browser on a phone, tablet or computer, with nothing to install.",
+    howTo: [
+      "Choose your key (Sa), male or female tanpura and the first-string tuning.",
+      "Pick a taal and tempo for the tabla.",
+      "Press Play both and practise along.",
+    ],
+    goodFor: "Indian classical, semi-classical and devotional singers and instrumentalists doing daily riyaz.",
+  },
   guitar: {
     noun: "Guitar Game",
     genre: ["Educational", "Music", "Quiz"],
@@ -111,6 +123,38 @@ type GameSeo = {
 };
 
 const OVERRIDES: Record<string, Partial<GameSeo>> = {
+  "tanpura-tabla": {
+    title: "Online Tanpura & Tabla – Free Electronic Tanpura with Taal Player | UNIEDD",
+    description:
+      "Free online tanpura and tabla for riyaz: a tanpura drone in all 12 keys with Pa, Ma, Ni or Sa tuning, male or female, 4, 5 or 6 strings, fine tuning in cents and A4 432–445 Hz, jawari and reverb — plus tabla thekas in Teentaal, Keherwa, Dadra, Rupak, Jhaptaal, Ektaal, Deepchandi, Tilwada, Jhoomra, Dhamar and Chautaal from 30 to 300 BPM with sam and khali shown. Runs in your browser.",
+    h1: "Tanpura & Tabla – Online Tanpura Drone with Taal Player",
+    intro:
+      "Tanpura & Tabla is a free electronic tanpura and tabla machine for singing and instrument practice (riyaz). The tanpura is created live in your browser, so every key and tuning is exactly in tune, and the tabla plays real recorded strokes arranged into the traditional theka of each taal. Set your Sa, choose a taal and tempo, and practise along on a phone, tablet or computer.",
+    howTo: [
+      "Choose your key — the note that is your Sa — and pick Male or Female tanpura. Use Lower or Higher to move a whole octave, Fine tune to adjust in cents, and A4 reference (432–445 Hz) to match another instrument.",
+      "Pick the first string: Pa for most ragas, Ma for ragas without Pa, Ni (or komal Ni) for ragas without Pa and Ma, or Sa. Choose 4, 5 or 6 strings, and open the String mixer to change any string's note, volume or fine tuning.",
+      "Set the speed of the plucking, the jawari (the buzzing shimmer of the strings), reverb and volume. Turn on Swarmandal shimmer for a sparkling harp-like sweep in the notes of a raga.",
+      "Choose a taal and a tempo from 30 BPM (very slow vilambit) to 300 BPM (ati-drut) — or tap the tempo. The matra grid lights up each beat and shows the sam (X), the claps (tali) and the wave (khali).",
+      "Press Play both (or start the tanpura and tabla separately). The tabla is tuned to your Sa automatically, or to Pa if you prefer. Save your favourite set-ups as presets and use the timer to stop after your practice time.",
+    ],
+    goodFor: "Hindustani classical and light-music singers, harmonium, flute, sitar and violin students, and anyone who wants a steady drone and taal for daily riyaz.",
+    extra: [
+      {
+        heading: "Taals included",
+        body: [
+          "Teentaal (16 matras), Keherwa (8), Dadra (6), Rupak (7), Jhaptaal (10), Ektaal (12), Deepchandi (14), Tilwada (16), Jhoomra (14), Dhamar (14) and Chautaal (12). Each plays its traditional theka, with the bayan (bass drum) dropping out in the khali section just like a real tabla player.",
+          "You can also pick a real recorded tabla groove (8 or 16 beats) played by a tabla player at 60 to 100 BPM.",
+        ],
+      },
+      {
+        heading: "Good to know",
+        body: [
+          "Natural tuning uses the pure intervals of a real tanpura; Keyboard tuning matches a harmonium or keyboard. On iPhone and iPad the sound stops if you leave the page, so keep it open while you practise. Nothing is recorded — all the sound is made on your device.",
+        ],
+      },
+    ],
+    genre: ["Music", "Educational"],
+  },
   "karaoke-maker": {
     title: "Karaoke Maker – Free Online Vocal Remover & Key Changer | UniEDD",
     description:
@@ -362,5 +406,5 @@ export function gameSeo(game: GameDef): GameSeo {
 export const GAMES_HUB_SEO = {
   title: "Free Online Music Games, Karaoke Maker & Chess Puzzles for Kids – Piano, Guitar, Rhythm | UniEDD",
   description:
-    "Play free online games in your browser: a karaoke maker that removes vocals and changes the key of any song, a guitar picking and strumming coach that speaks each pattern, a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
+    "Play free online games in your browser: a karaoke maker that removes vocals and changes the key of any song, an online tanpura and tabla player for riyaz in any key and taal, a guitar picking and strumming coach that speaks each pattern, a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
 };
