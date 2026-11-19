@@ -52,6 +52,13 @@ synth + mic clap detector, `highway.ts` canvas renderer, `ClapTrainer.tsx` UI).
 - **Live updates:** Supabase Realtime on `chess_games` when `SUPABASE_ANON_KEY` is set, plus a heartbeat that
   doubles as polling. Waiting players not seen for 15 s are never matched; an opponent silent for 15 s shows a
   "disconnected" notice and after 45 s the other player can claim the win.
+- **Private teacher lobbies** (`supabase/chess_teacher_lobby.sql`): a teacher presses *Create private lobby* and
+  gets a 6-character code plus a link (`/games/chess-online?room=CODE`); one student joins with it. Rooms are never
+  matched from the public waiting room. The teacher can take back the last move, approve or decline a student's
+  take-back request, allow free student take-backs, reset the board, pick or swap colours, and use demo mode
+  (move both sides). Teacher actions are checked against the creator's secret in the API and again in
+  `chess_room_update()`, and every change must quote `chess_games.version`, so stale actions are rejected. The room
+  code and secrets live in the server-only `chess_rooms` table, never in `chess_games`.
 - **Local dev:** without Supabase env vars, `npm run dev` uses an in-memory store with the same rules, so you can
   play yourself in two browser windows. Production never uses the memory store.
 - **Emoji reactions:** players tap one of 10 allowlisted emoji (`app/games/chess/reactions.ts`); only the id is
@@ -104,6 +111,7 @@ The WhatsApp templates must be approved in Meta WhatsApp Manager. `app/lib/whats
 
 - Run `supabase/lead_digest_queue.sql` in the Supabase SQL editor.
 - Run `supabase/chess_multiplayer.sql` in the Supabase SQL editor (online chess; safe to re-run).
+- Then run `supabase/chess_teacher_lobby.sql` (private teacher lobbies; safe to re-run).
 
 ## Tracking
 

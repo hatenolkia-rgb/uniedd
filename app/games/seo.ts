@@ -367,6 +367,7 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
       "When you are matched you get White or Black at random. White moves first.",
       "Drag a piece, or tap it and tap the target square. The game ends with checkmate, stalemate, a draw or a resignation.",
       "If your opponent disconnects you will see a notice, and after a short wait you can claim the win. Press Play again to go back to the waiting room.",
+      "Teachers: choose Private lobby → Create private lobby and share the code or link. You can take moves back, approve a student's take-back request, reset the board, swap colours and demonstrate moves for both sides.",
     ],
     goodFor: "Students who want to practise against real opponents, friends playing each other from different devices, and anyone who wants a quick live game.",
   },
