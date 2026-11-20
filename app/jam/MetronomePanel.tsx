@@ -1,19 +1,34 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-
-type BeatState = "accent" | "normal" | "mute";
-type Subdivision = 1 | 2 | 3 | 4;
-type SoundKit = "click" | "woodblock" | "beep" | "cowbell" | "hihat" | "drumstick";
+import { MetronomeEngine, type EngineSettings, type VoiceId } from "./metronome/engine";
+import { SOUND_KITS, type SoundKit } from "./metronome/sounds";
+import {
+  clampBpm,
+  MAX_BPM,
+  MIN_BPM,
+  MIN_SPOKEN_SUB_GAP,
+  secondsPerTick,
+  tapTempo,
+  type BeatState,
+  type Subdivision,
+} from "./metronome/timeline";
 
 const TIME_SIGS = [
-  { beats: 2, note: 4, label: "2/4" },
-  { beats: 3, note: 4, label: "3/4" },
-  { beats: 4, note: 4, label: "4/4" },
-  { beats: 5, note: 4, label: "5/4" },
-  { beats: 6, note: 8, label: "6/8" },
-  { beats: 7, note: 8, label: "7/8" },
+  { beats: 2, label: "2/4" },
+  { beats: 3, label: "3/4" },
+  { beats: 4, label: "4/4" },
+  { beats: 5, label: "5/4" },
+  { beats: 6, label: "6/8" },
+  { beats: 7, label: "7/8" },
 ] as const;
+
+const SUBDIVISIONS: { value: Subdivision; label: string; spoken: string }[] = [
+  { value: 1, label: "Quarter notes", spoken: "1 2 3 4" },
+  { value: 2, label: "Eighth notes", spoken: "1 and 2 and" },
+  { value: 3, label: "Triplets", spoken: "1 trip-let 2 trip-let" },
+  { value: 4, label: "Sixteenth notes", spoken: "1 e and a" },
+];
 
 const TEMPO_NAMES: { max: number; name: string }[] = [
   { max: 40, name: "Grave" },
@@ -26,252 +41,164 @@ const TEMPO_NAMES: { max: number; name: string }[] = [
   { max: 120, name: "Allegretto" },
   { max: 168, name: "Allegro" },
   { max: 200, name: "Presto" },
-  { max: 300, name: "Prestissimo" },
 ];
+const tempoName = (bpm: number) => TEMPO_NAMES.find((t) => bpm <= t.max)?.name ?? "Prestissimo";
 
-function tempoName(bpm: number): string {
-  for (const t of TEMPO_NAMES) if (bpm <= t.max) return t.name;
-  return "Prestissimo";
+const STORAGE_KEY = "uniedd-metronome-v2";
+
+interface Saved {
+  bpm: number;
+  sigIdx: number;
+  subdivision: Subdivision;
+  beats: BeatState[];
+  accent: boolean;
+  kit: SoundKit;
+  clickOn: boolean;
+  clickVolume: number;
+  voiceOn: boolean;
+  voiceVolume: number;
+  voice: VoiceId;
+  voiceSubdivisions: boolean;
 }
 
-const SOUND_KITS: { id: SoundKit; label: string }[] = [
-  { id: "click", label: "Click" },
-  { id: "woodblock", label: "Woodblock" },
-  { id: "beep", label: "Beep" },
-  { id: "cowbell", label: "Cowbell" },
-  { id: "hihat", label: "Hi-hat" },
-  { id: "drumstick", label: "Drumstick" },
-];
+const DEFAULTS: Saved = {
+  bpm: 100,
+  sigIdx: 2,
+  subdivision: 1,
+  beats: ["accent", "normal", "normal", "normal"],
+  accent: true,
+  kit: "click",
+  clickOn: true,
+  clickVolume: 0.8,
+  voiceOn: false,
+  voiceVolume: 0.85,
+  voice: "female",
+  voiceSubdivisions: true,
+};
 
-const COUNT_WORDS = ["one", "two", "three", "four", "five", "six", "seven", "eight"];
-
-function kitFreq(kit: SoundKit, accent: boolean, sub: boolean): { f: number; type: OscillatorType; dur: number; noise?: boolean } {
-  if (kit === "hihat" || kit === "drumstick") {
-    return { f: accent ? 8000 : sub ? 6000 : 7000, type: "square", dur: accent ? 0.05 : 0.03, noise: true };
-  }
-  const table: Record<Exclude<SoundKit, "hihat" | "drumstick">, [number, number, OscillatorType]> = {
-    click: [1800, 1200, "square"],
-    woodblock: [980, 720, "triangle"],
-    beep: [880, 660, "sine"],
-    cowbell: [740, 540, "square"],
-  };
-  const [hi, lo, type] = table[kit as Exclude<SoundKit, "hihat" | "drumstick">] ?? [1200, 900, "square"];
-  return { f: accent ? hi : sub ? lo * 0.85 : lo, type, dur: accent ? 0.06 : 0.04 };
+function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={() => onChange(!on)}
+      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition ${
+        on ? "bg-[var(--brand-blue)]" : "bg-[var(--border)]"
+      }`}
+    >
+      <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition ${on ? "translate-x-6" : "translate-x-1"}`} />
+    </button>
+  );
 }
 
 export default function MetronomePanel() {
-  const [bpm, setBpm] = useState(100);
+  const [s, setS] = useState<Saved>(DEFAULTS);
+  const [loaded, setLoaded] = useState(false);
   const [playing, setPlaying] = useState(false);
-  const [sigIdx, setSigIdx] = useState(2);
-  const [subdivision, setSubdivision] = useState<Subdivision>(1);
-  const [kit, setKit] = useState<SoundKit>("click");
-  const [volume, setVolume] = useState(0.7);
-  const [voiceCount, setVoiceCount] = useState(false);
-  const [flash, setFlash] = useState(false);
-  const [activeBeat, setActiveBeat] = useState(0);
-  const [beats, setBeats] = useState<BeatState[]>(["accent", "normal", "normal", "normal"]);
+  const [activeBeat, setActiveBeat] = useState(-1);
+  const [pulse, setPulse] = useState(0);
+  const [voiceState, setVoiceState] = useState<"idle" | "loading" | "ready" | "error">("idle");
 
-  const audioRef = useRef<AudioContext | null>(null);
-  const nextNoteTime = useRef(0);
-  const currentBeat = useRef(0);
-  const currentSub = useRef(0);
-  const timerId = useRef<number | null>(null);
-  const scheduleRef = useRef<() => void>(() => {});
-  const playingRef = useRef(false);
+  const engineRef = useRef<MetronomeEngine | null>(null);
   const tapTimes = useRef<number[]>([]);
-  const voiceBuffers = useRef<Map<string, AudioBuffer>>(new Map());
-  const settingsRef = useRef({ bpm, beats, subdivision, kit, volume, voiceCount, sigBeats: 4 });
 
-  const sig = TIME_SIGS[sigIdx];
+  const sig = TIME_SIGS[s.sigIdx] ?? TIME_SIGS[2];
 
-  const resizeBeats = (count: number) => {
-    setBeats((prev) => {
-      const next: BeatState[] = Array.from({ length: count }, (_, i) =>
-        i < prev.length ? prev[i] : i === 0 ? "accent" : "normal",
-      );
-      if (next[0] === "mute") next[0] = "accent";
-      return next;
-    });
-    currentBeat.current = 0;
-    currentSub.current = 0;
-    setActiveBeat(0);
-  };
+  const engineSettings = (v: Saved): EngineSettings => ({
+    bpm: v.bpm,
+    beats: v.beats,
+    subdivision: v.subdivision,
+    accent: v.accent,
+    voiceSubdivisions: v.voiceSubdivisions,
+    kit: v.kit,
+    clickOn: v.clickOn,
+    clickVolume: v.clickVolume,
+    voiceOn: v.voiceOn,
+    voiceVolume: v.voiceVolume,
+    voice: v.voice,
+  });
 
+  const getEngine = useCallback(() => {
+    if (!engineRef.current) {
+      engineRef.current = new MetronomeEngine(engineSettings(s));
+      engineRef.current.onVoiceState = setVoiceState;
+    }
+    return engineRef.current;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // restore saved settings after mount (keeps server and client HTML identical)
   useEffect(() => {
-    settingsRef.current = {
-      bpm,
-      beats,
-      subdivision,
-      kit,
-      volume,
-      voiceCount,
-      sigBeats: sig.beats,
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const v = { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Saved>) };
+        v.bpm = clampBpm(v.bpm);
+        const n = (TIME_SIGS[v.sigIdx] ?? TIME_SIGS[2]).beats;
+        if (!Array.isArray(v.beats) || v.beats.length !== n) v.beats = DEFAULTS.beats.slice(0, 1).concat(Array(n - 1).fill("normal"));
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setS(v);
+      }
+    } catch {
+      /* ignore bad storage */
+    }
+    setLoaded(true);
+  }, []);
+
+  // push every change to the engine (applies from the next tick; volumes glide in 12 ms) and save it
+  useEffect(() => {
+    engineRef.current?.update(engineSettings(s));
+    if (loaded) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+      } catch {
+        /* private mode */
+      }
+    }
+  }, [s, loaded]);
+
+  const set = <K extends keyof Saved>(key: K, value: Saved[K]) => setS((p) => ({ ...p, [key]: value }));
+
+  // beat indicator follows what is actually heard (AudioContext clock, latency compensated)
+  useEffect(() => {
+    if (!playing) return;
+    let raf = 0;
+    const loop = () => {
+      const t = engineRef.current?.currentVisualTick();
+      if (t) {
+        setActiveBeat(t.beat);
+        setPulse((p) => p + 1);
+      }
+      raf = requestAnimationFrame(loop);
     };
-  }, [bpm, beats, subdivision, kit, volume, voiceCount, sig.beats]);
-
-  const ensureAudio = useCallback(async () => {
-    if (!audioRef.current) {
-      audioRef.current = new AudioContext();
-    }
-    if (audioRef.current.state === "suspended") await audioRef.current.resume();
-    return audioRef.current;
-  }, []);
-
-  const loadVoice = useCallback(async (ctx: AudioContext, word: string) => {
-    if (voiceBuffers.current.has(word)) return voiceBuffers.current.get(word)!;
-    // Prefer speechSynthesis → MediaRecorder capture is heavy; use oscillator-free
-    // speechSynthesis utterance timed separately. For Web Audio scheduling we
-    // synthesize a short "spoken" blip + trigger speechSynthesis as soft fallback.
-    // Pre-generate a tiny placeholder buffer so scheduling stays sample-accurate;
-    // actual word is spoken via speechSynthesis near the beat when available.
-    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.05), ctx.sampleRate);
-    voiceBuffers.current.set(word, buf);
-    return buf;
-  }, []);
-
-  const playClick = useCallback(
-    (ctx: AudioContext, time: number, accent: boolean, isSub: boolean, beatIndex: number) => {
-      const { kit: k, volume: vol, voiceCount: vc } = settingsRef.current;
-      const spec = kitFreq(k, accent, isSub);
-      const master = ctx.createGain();
-      master.gain.value = vol * (accent ? 1 : isSub ? 0.35 : 0.65);
-      master.connect(ctx.destination);
-
-      if (spec.noise) {
-        const len = Math.floor(ctx.sampleRate * spec.dur);
-        const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-        const bp = ctx.createBiquadFilter();
-        bp.type = "highpass";
-        bp.frequency.value = accent ? 5000 : 3500;
-        src.connect(bp);
-        bp.connect(master);
-        src.start(time);
-        src.stop(time + spec.dur);
-      } else {
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = spec.type;
-        osc.frequency.setValueAtTime(spec.f, time);
-        g.gain.setValueAtTime(1, time);
-        g.gain.exponentialRampToValueAtTime(0.001, time + spec.dur);
-        osc.connect(g);
-        g.connect(master);
-        osc.start(time);
-        osc.stop(time + spec.dur + 0.01);
-      }
-
-      if (vc && !isSub && typeof window !== "undefined" && window.speechSynthesis) {
-        const delayMs = Math.max(0, (time - ctx.currentTime) * 1000);
-        const word = COUNT_WORDS[beatIndex] ?? String(beatIndex + 1);
-        window.setTimeout(() => {
-          try {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(word);
-            u.rate = 1.25;
-            u.pitch = accent ? 1.15 : 1;
-            u.volume = Math.min(1, vol);
-            window.speechSynthesis.speak(u);
-          } catch {
-            /* ignore */
-          }
-        }, delayMs);
-      }
-
-      void loadVoice(ctx, COUNT_WORDS[beatIndex] ?? "one");
-    },
-    [loadVoice],
-  );
-
-  const schedule = useCallback(() => {
-    const ctx = audioRef.current;
-    if (!ctx || !playingRef.current) return;
-    const lookAhead = 0.1;
-    const scheduleAhead = 0.25;
-
-    while (nextNoteTime.current < ctx.currentTime + scheduleAhead) {
-      const { bpm: b, beats: bt, subdivision: sub, sigBeats } = settingsRef.current;
-      const secondsPerBeat = 60.0 / b;
-      const secondsPerSub = secondsPerBeat / sub;
-      const beatIdx = currentBeat.current;
-      const subIdx = currentSub.current;
-      const state = bt[beatIdx] ?? "normal";
-      const isSub = subIdx > 0;
-
-      if (state !== "mute" || isSub) {
-        if (!(state === "mute" && !isSub)) {
-          if (!isSub || state !== "mute") {
-            const accent = !isSub && state === "accent";
-            if (!(isSub && state === "mute")) {
-              playClick(ctx, nextNoteTime.current, accent, isSub, beatIdx);
-            }
-          }
-        }
-      }
-
-      if (!isSub) {
-        const t = nextNoteTime.current;
-        const delay = Math.max(0, (t - ctx.currentTime) * 1000);
-        window.setTimeout(() => {
-          if (!playingRef.current) return;
-          setActiveBeat(beatIdx);
-          setFlash(true);
-          window.setTimeout(() => setFlash(false), 80);
-        }, delay);
-      }
-
-      nextNoteTime.current += secondsPerSub;
-      currentSub.current += 1;
-      if (currentSub.current >= sub) {
-        currentSub.current = 0;
-        currentBeat.current = (beatIdx + 1) % sigBeats;
-      }
-    }
-
-    timerId.current = window.setTimeout(() => scheduleRef.current(), lookAhead * 1000);
-  }, [playClick]);
-
-  useEffect(() => {
-    scheduleRef.current = schedule;
-  }, [schedule]);
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [playing]);
 
   const stop = useCallback(() => {
-    playingRef.current = false;
+    engineRef.current?.stop();
     setPlaying(false);
-    if (timerId.current != null) {
-      window.clearTimeout(timerId.current);
-      timerId.current = null;
-    }
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    setActiveBeat(-1);
   }, []);
 
-  const start = useCallback(async () => {
-    const ctx = await ensureAudio();
-    currentBeat.current = 0;
-    currentSub.current = 0;
-    nextNoteTime.current = ctx.currentTime + 0.05;
-    playingRef.current = true;
+  const start = useCallback(() => {
+    getEngine().start(); // called inside the tap/key gesture: unlocks audio on iOS
     setPlaying(true);
-    setActiveBeat(0);
-    scheduleRef.current();
-  }, [ensureAudio]);
+  }, [getEngine]);
 
   const toggle = useCallback(() => {
-    if (playingRef.current) stop();
-    else void start();
+    if (engineRef.current?.isRunning) stop();
+    else start();
   }, [start, stop]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== "Space") return;
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement)?.isContentEditable)
-        return;
+      const el = e.target as HTMLElement | null;
+      const tag = el?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || el?.isContentEditable) return;
       e.preventDefault();
       toggle();
     };
@@ -279,50 +206,83 @@ export default function MetronomePanel() {
     return () => window.removeEventListener("keydown", onKey);
   }, [toggle]);
 
-  useEffect(() => () => stop(), [stop]);
+  useEffect(
+    () => () => {
+      engineRef.current?.dispose();
+      engineRef.current = null;
+    },
+    [],
+  );
 
-  const nudge = (d: number) => setBpm((v) => Math.min(300, Math.max(30, v + d)));
+  const setVoiceOn = (on: boolean) => {
+    set("voiceOn", on);
+    if (on) {
+      // inside the gesture: unlock audio and start fetching the voice right away
+      const e = getEngine();
+      e.unlock();
+      e.update({ voiceOn: true });
+      void e.loadVoice(s.voice);
+    }
+  };
+
+  const setVoice = (v: VoiceId) => {
+    set("voice", v);
+    if (s.voiceOn && engineRef.current?.ctx) void engineRef.current.loadVoice(v);
+  };
+
+  const setBpm = (v: number) => set("bpm", clampBpm(v));
+  const nudge = (d: number) => setS((p) => ({ ...p, bpm: clampBpm(p.bpm + d) }));
 
   const onTap = () => {
     const now = performance.now();
-    const taps = tapTimes.current.filter((t) => now - t < 3000);
+    const taps = tapTimes.current.filter((t) => now - t < 2500);
     taps.push(now);
     tapTimes.current = taps;
-    if (taps.length < 2) return;
-    const intervals: number[] = [];
-    for (let i = 1; i < taps.length; i++) intervals.push(taps[i] - taps[i - 1]);
-    const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-    setBpm(Math.min(300, Math.max(30, Math.round(60000 / avg))));
+    const bpm = tapTempo(taps);
+    if (bpm) setBpm(bpm);
+  };
+
+  const setSig = (idx: number) => {
+    const n = TIME_SIGS[idx].beats;
+    setS((p) => ({
+      ...p,
+      sigIdx: idx,
+      beats: Array.from({ length: n }, (_, i) => (i < p.beats.length ? p.beats[i] : i === 0 ? "accent" : "normal")),
+    }));
   };
 
   const cycleBeat = (i: number) => {
-    setBeats((prev) => {
-      const next = [...prev];
+    setS((p) => {
       const order: BeatState[] = ["accent", "normal", "mute"];
-      const cur = order.indexOf(next[i]);
-      next[i] = order[(cur + 1) % order.length];
-      return next;
+      const beats = [...p.beats];
+      beats[i] = order[(order.indexOf(beats[i]) + 1) % order.length];
+      return { ...p, beats };
     });
   };
 
-  const pct = ((bpm - 30) / (300 - 30)) * 100;
+  const pct = ((s.bpm - MIN_BPM) / (MAX_BPM - MIN_BPM)) * 100;
+  const subsTooFast = s.subdivision > 1 && secondsPerTick(s) < MIN_SPOKEN_SUB_GAP;
+  const spoken = s.voiceSubdivisions
+    ? SUBDIVISIONS.find((x) => x.value === s.subdivision)!.spoken
+    : Array.from({ length: Math.min(4, sig.beats) }, (_, i) => i + 1).join(" ");
+  const cardCls = "rounded-2xl border border-[var(--border)] bg-white p-4";
+  const labelCls = "text-xs font-medium uppercase tracking-wide text-[var(--muted)]";
+  const selectCls = "mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm";
 
   return (
     <div className="space-y-6">
-      <div
-        className={`relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-[#0b1c2c] to-[#132a40] p-6 sm:p-8 text-white shadow-lg transition-shadow ${
-          flash ? "shadow-[0_0_40px_rgba(232,150,46,0.45)]" : ""
-        }`}
-      >
-        <div
-          className={`pointer-events-none absolute inset-0 bg-[var(--brand-orange)]/20 transition-opacity duration-75 ${
-            flash ? "opacity-100" : "opacity-0"
-          }`}
-          aria-hidden
-        />
+      <div className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-b from-[#0b1c2c] to-[#132a40] p-6 sm:p-8 text-white shadow-lg">
+        {playing && (
+          <div
+            key={pulse}
+            className="pointer-events-none absolute inset-0 bg-[var(--brand-orange)]/20 animate-[metroflash_160ms_ease-out_forwards]"
+            aria-hidden
+          />
+        )}
+        <style>{`@keyframes metroflash{from{opacity:${activeBeat === 0 ? 1 : 0.6}}to{opacity:0}}`}</style>
 
         <div className="relative flex flex-col items-center gap-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-white/50">{tempoName(bpm)}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-white/50">{tempoName(s.bpm)}</p>
           <div className="flex items-end gap-3">
             <button
               type="button"
@@ -333,7 +293,7 @@ export default function MetronomePanel() {
               −
             </button>
             <div className="text-center min-w-[8rem]">
-              <div className="text-7xl sm:text-8xl font-bold tabular-nums leading-none tracking-tight">{bpm}</div>
+              <div className="text-7xl sm:text-8xl font-bold tabular-nums leading-none tracking-tight">{s.bpm}</div>
               <div className="mt-1 text-sm text-white/60">BPM</div>
             </div>
             <button
@@ -348,9 +308,9 @@ export default function MetronomePanel() {
 
           <input
             type="range"
-            min={30}
-            max={300}
-            value={bpm}
+            min={MIN_BPM}
+            max={MAX_BPM}
+            value={s.bpm}
             onChange={(e) => setBpm(Number(e.target.value))}
             className="mt-4 w-full max-w-md accent-[var(--brand-orange)]"
             aria-label="Tempo"
@@ -381,16 +341,16 @@ export default function MetronomePanel() {
         </div>
 
         <div className="relative mt-8 flex flex-wrap items-center justify-center gap-3">
-          {beats.map((state, i) => (
+          {s.beats.map((state, i) => (
             <button
               key={i}
               type="button"
               onClick={() => cycleBeat(i)}
               aria-label={`Beat ${i + 1}: ${state}. Tap to change.`}
-              className={`flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full border-2 text-lg font-semibold transition-all ${
+              className={`flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full border-2 text-lg font-semibold transition-all duration-75 ${
                 activeBeat === i && playing
                   ? "scale-110 border-[var(--brand-orange)] bg-[var(--brand-orange)] text-white shadow-lg shadow-[var(--brand-orange)]/40"
-                  : state === "accent"
+                  : state === "accent" && s.accent
                     ? "border-[var(--brand-blue)] bg-[var(--brand-blue)]/30 text-white"
                     : state === "mute"
                       ? "border-white/20 bg-transparent text-white/30 line-through"
@@ -402,84 +362,130 @@ export default function MetronomePanel() {
           ))}
         </div>
         <p className="relative mt-3 text-center text-xs text-white/40">
-          Tap a beat: accent → normal → mute
+          Tap a beat: accent → normal → mute (mutes the click only; the voice still counts)
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <label className="rounded-2xl border border-[var(--border)] bg-white p-4">
-          <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Time signature</span>
-          <select
-            className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm"
-            value={sigIdx}
-            onChange={(e) => {
-              const idx = Number(e.target.value);
-              setSigIdx(idx);
-              resizeBeats(TIME_SIGS[idx].beats);
-            }}
-          >
-            {TIME_SIGS.map((s, i) => (
-              <option key={s.label} value={i}>
-                {s.label}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className={cardCls}>
+          <span className={labelCls}>Time signature</span>
+          <select className={selectCls} value={s.sigIdx} onChange={(e) => setSig(Number(e.target.value))}>
+            {TIME_SIGS.map((t, i) => (
+              <option key={t.label} value={i}>
+                {t.label}
               </option>
             ))}
           </select>
         </label>
 
-        <label className="rounded-2xl border border-[var(--border)] bg-white p-4">
-          <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Subdivision</span>
+        <label className={cardCls}>
+          <span className={labelCls}>Subdivision</span>
           <select
-            className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm"
-            value={subdivision}
-            onChange={(e) => setSubdivision(Number(e.target.value) as Subdivision)}
+            className={selectCls}
+            value={s.subdivision}
+            onChange={(e) => set("subdivision", Number(e.target.value) as Subdivision)}
           >
-            <option value={1}>Quarter notes</option>
-            <option value={2}>Eighth notes</option>
-            <option value={3}>Triplets</option>
-            <option value={4}>Sixteenth notes</option>
-          </select>
-        </label>
-
-        <label className="rounded-2xl border border-[var(--border)] bg-white p-4">
-          <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Sound</span>
-          <select
-            className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm"
-            value={kit}
-            onChange={(e) => setKit(e.target.value as SoundKit)}
-          >
-            {SOUND_KITS.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.label}
+            {SUBDIVISIONS.map((x) => (
+              <option key={x.value} value={x.value}>
+                {x.label}
               </option>
             ))}
           </select>
         </label>
+      </div>
 
-        <label className="rounded-2xl border border-[var(--border)] bg-white p-4">
-          <span className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">Volume</span>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            className="mt-4 w-full accent-[var(--brand-blue)]"
-          />
-        </label>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* CLICK layer */}
+        <section className={`${cardCls} space-y-4`} aria-label="Click">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Click</h3>
+              <p className="text-xs text-[var(--muted)]">The metronome tick</p>
+            </div>
+            <Toggle on={s.clickOn} onChange={(v) => set("clickOn", v)} label="Click on or off" />
+          </div>
+          <label className="block">
+            <span className={labelCls}>Click volume</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={s.clickVolume}
+              disabled={!s.clickOn}
+              onChange={(e) => set("clickVolume", Number(e.target.value))}
+              className="mt-3 w-full accent-[var(--brand-blue)] disabled:opacity-40"
+              aria-label="Click volume"
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className={labelCls}>Sound</span>
+              <select className={selectCls} value={s.kit} onChange={(e) => set("kit", e.target.value as SoundKit)}>
+                {SOUND_KITS.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-end justify-between gap-3 rounded-xl border border-[var(--border)] px-3 py-2.5">
+              <span className="text-sm">Accent beat 1</span>
+              <Toggle on={s.accent} onChange={(v) => set("accent", v)} label="Accent on or off" />
+            </div>
+          </div>
+        </section>
 
-        <label className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-white p-4 cursor-pointer sm:col-span-2 lg:col-span-2">
-          <input
-            type="checkbox"
-            checked={voiceCount}
-            onChange={(e) => setVoiceCount(e.target.checked)}
-            className="h-5 w-5 accent-[var(--brand-blue)]"
-          />
-          <span>
-            <span className="block text-sm font-medium">Voice counting</span>
-            <span className="block text-xs text-[var(--muted)]">Says “one, two, three…” on each beat</span>
-          </span>
-        </label>
+        {/* VOICE layer */}
+        <section className={`${cardCls} space-y-4`} aria-label="Voice counting">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Voice counting</h3>
+              <p className="text-xs text-[var(--muted)]">
+                Says “{spoken}…” on the beat — works with the click on or off
+              </p>
+            </div>
+            <Toggle on={s.voiceOn} onChange={setVoiceOn} label="Voice counting on or off" />
+          </div>
+          <label className="block">
+            <span className={labelCls}>Voice volume</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={s.voiceVolume}
+              disabled={!s.voiceOn}
+              onChange={(e) => set("voiceVolume", Number(e.target.value))}
+              className="mt-3 w-full accent-[var(--brand-blue)] disabled:opacity-40"
+              aria-label="Voice volume"
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className={labelCls}>Voice</span>
+              <select className={selectCls} value={s.voice} onChange={(e) => setVoice(e.target.value as VoiceId)}>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+              </select>
+            </label>
+            <div className="flex items-end justify-between gap-3 rounded-xl border border-[var(--border)] px-3 py-2.5">
+              <span className="text-sm">Count subdivisions</span>
+              <Toggle
+                on={s.voiceSubdivisions}
+                onChange={(v) => set("voiceSubdivisions", v)}
+                label="Count subdivisions on or off"
+              />
+            </div>
+          </div>
+          {s.voiceOn && voiceState === "loading" && <p className="text-xs text-[var(--muted)]">Loading voice…</p>}
+          {s.voiceOn && voiceState === "error" && (
+            <p className="text-xs text-red-600">Couldn’t load the voice. Check your connection and toggle it again.</p>
+          )}
+          {s.voiceOn && s.voiceSubdivisions && subsTooFast && (
+            <p className="text-xs text-[var(--muted)]">Too fast to speak every subdivision — counting beats only.</p>
+          )}
+        </section>
       </div>
     </div>
   );
