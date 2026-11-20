@@ -8,6 +8,7 @@ import { PROGRAMS, programPath } from "./lib/programs";
 import { SOCIAL_LINKS, PHONE_NUMBERS } from "./lib/site";
 import MetaPixel from "./components/MetaPixel";
 import GoogleTagManager from "./components/GoogleTagManager";
+import { GOOGLE_TAG_INLINE, GTM_ID } from "./lib/googleTag";
 import BlackFridayToast from "./components/BlackFridayToast";
 
 const inter = Inter({
@@ -101,8 +102,14 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${playfair.variable} antialiased`}
     >
+      <head>
+        {/* Google tag for container GTM-N9VM35P9 (Google's snippet), at the top of <head> on every page.
+            Consent Mode is set first: no Google cookies until "Accept" on the cookie banner. */}
+        <script dangerouslySetInnerHTML={{ __html: GOOGLE_TAG_INLINE }} />
+        <script async src={`https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`} />
+      </head>
       <body className="min-h-screen">
-        {/* Google Tag Manager (GTM-N9VM35P9), cookies only after "Accept" on the cookie banner. */}
+        {/* Passes the cookie-banner choice on to Google Consent Mode. */}
         <GoogleTagManager />
         <script
           type="application/ld+json"
