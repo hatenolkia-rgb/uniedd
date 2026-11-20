@@ -41,7 +41,7 @@ export default function MetaPixel() {
       className="fixed z-50 bottom-24 left-3 right-3 sm:left-4 sm:right-auto sm:max-w-sm rounded-2xl border border-[var(--border)] bg-white p-4 shadow-xl"
     >
       <p className="text-xs leading-relaxed text-[var(--foreground)]">
-        We&rsquo;d like to use Meta Pixel cookies to measure our ads. Nothing is loaded unless you accept.{" "}
+        We&rsquo;d like to use cookies from Meta and Google to measure our ads and visits. None are set unless you accept.{" "}
         <Link href="/privacy#tracking" className="text-[var(--brand-blue)] hover:underline">
           Learn more
         </Link>

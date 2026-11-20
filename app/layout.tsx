@@ -7,6 +7,7 @@ import StickyBookBar from "./components/StickyBookBar";
 import { PROGRAMS, programPath } from "./lib/programs";
 import { SOCIAL_LINKS, PHONE_NUMBERS } from "./lib/site";
 import MetaPixel from "./components/MetaPixel";
+import GoogleTagManager from "./components/GoogleTagManager";
 import BlackFridayToast from "./components/BlackFridayToast";
 
 const inter = Inter({
@@ -101,6 +102,8 @@ export default function RootLayout({
       className={`${inter.variable} ${playfair.variable} antialiased`}
     >
       <body className="min-h-screen">
+        {/* Google Tag Manager (GTM-N9VM35P9), cookies only after "Accept" on the cookie banner. */}
+        <GoogleTagManager />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}

@@ -160,6 +160,12 @@ export default function PrivacyPage() {
                 in your browser, and you can reset it at any time by clearing this site&rsquo;s data in your browser
                 settings. Meta&rsquo;s own use of this data is governed by Meta&rsquo;s Privacy Policy.
               </p>
+              <p className="mt-3">
+                We also use Google Tag Manager to manage measurement tags on this site. Until you select
+                &ldquo;Accept&rdquo;, Google is told not to store cookies or use your visit for ads (Google Consent Mode);
+                after you accept, Google may measure visits and ad results. Google&rsquo;s use of this data is governed
+                by Google&rsquo;s Privacy Policy.
+              </p>
             </div>
 
             <div>
