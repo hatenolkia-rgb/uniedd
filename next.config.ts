@@ -24,6 +24,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        // Android APKs (~130 MB) are too big for git/Vercel, so they are hosted as GitHub
+        // Release assets; this keeps the public URL www.uniedd.com/app/uniedd-<ver>.apk.
+        // The in-app updater verifies the SHA-256 from public/app/latest.json.
+        source: "/app/uniedd-:ver(\\d+\\.\\d+\\.\\d+).apk",
+        destination: "https://github.com/hatenolkia-rgb/uniedd-android-releases/releases/download/v:ver/uniedd-:ver.apk",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
