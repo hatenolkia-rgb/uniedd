@@ -6,9 +6,9 @@ import Footer from "../../components/Footer";
 import Breadcrumbs from "../../components/Breadcrumbs";
 import JsonLd from "../../components/JsonLd";
 import { SITE_NAME, SITE_URL } from "../../lib/site";
-import { GAMES, getGame } from "../catalog";
+import { GAMES, LEVEL_LABEL, categoryPath, getGame, relatedGames } from "../catalog";
 import { GameScreen } from "../components/GameScreen";
-import { categoryLabel, gameSeo } from "../seo";
+import { categoryLabel, faqJsonLd, gameSeo, videoGameJsonLd } from "../seo";
 import ChessGame from "../chess/ChessGame";
 import KaraokeMaker from "../karaoke/KaraokeMaker";
 import TanpuraTabla from "../tanpura/TanpuraTabla";
@@ -26,6 +26,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!game) return { title: "Game not found | UniEDD" };
   const seo = gameSeo(game);
   const url = `${SITE_URL}/games/${game.slug}`;
+  const ogImage = `${url}/opengraph-image`;
+  const twitterImage = `${url}/twitter-image`;
   return {
     title: seo.title,
     description: seo.description,
@@ -37,8 +39,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       siteName: SITE_NAME,
       locale: "en_IN",
       type: "website",
+      images: [{ url: ogImage, width: 1200, height: 630, alt: seo.h1 }],
     },
-    twitter: { card: "summary_large_image", title: seo.title, description: seo.description },
+    twitter: {
+      card: "summary_large_image",
+      title: seo.title,
+      description: seo.description,
+      images: [twitterImage],
+    },
   };
 }
 
@@ -47,39 +55,37 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
   const game = getGame(slug);
   if (!game) notFound();
   const seo = gameSeo(game);
-  const url = `${SITE_URL}/games/${game.slug}`;
-  const related = GAMES.filter((g) => g.category === game.category && g.slug !== game.slug).slice(0, 6);
+  const related = relatedGames(game, 6);
   const isChess = game.category === "chess";
   const isClap = game.kind === "clap-trainer" || game.kind === "piano-fall" || game.kind === "pick-coach" || game.kind === "karaoke-maker" || game.kind === "tanpura-tabla" || game.kind === "lumenfall" || isChess;
 
   return (
     <main>
       <Navbar />
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": ["VideoGame", "WebApplication"],
-          name: game.title,
-          description: seo.description,
-          url,
-          image: `${url}/opengraph-image`,
-          genre: seo.genre,
-          gamePlatform: "Web browser",
-          applicationCategory: "GameApplication",
-          operatingSystem: "Any (web browser)",
-          inLanguage: "en",
-          isAccessibleForFree: true,
-          audience: { "@type": "EducationalAudience", educationalRole: "student" },
-          offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
-          publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
-        }}
-      />
+      <JsonLd data={videoGameJsonLd(game)} />
+      <JsonLd data={faqJsonLd(seo.faq)} />
       <section className="px-6 pt-32 pb-10 sm:pt-40 bg-gradient-to-b from-[#fff6ea] to-white">
         <div className={`mx-auto ${isClap ? "max-w-6xl" : "max-w-4xl"}`}>
-          <Breadcrumbs items={[{ name: "Games", href: "/games" }, { name: game.title, href: `/games/${game.slug}` }]} />
+          <Breadcrumbs
+            items={[
+              { name: "Games", href: "/games" },
+              { name: categoryLabel(game.category), href: categoryPath(game.category) },
+              { name: game.title, href: `/games/${game.slug}` },
+            ]}
+          />
           <h1 className="text-3xl sm:text-4xl font-bold" style={{ fontFamily: "var(--font-playfair), serif" }}>
             {seo.h1}
           </h1>
+          <p className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <Link href={categoryPath(game.category)} className="rounded-full border border-[var(--border)] bg-white px-3 py-1 hover:border-[var(--brand-blue)]">
+              {categoryLabel(game.category)}
+            </Link>
+            {game.level ? (
+              <span className="rounded-full border border-[var(--border)] bg-[#fff6ea] px-3 py-1 font-semibold">
+                {LEVEL_LABEL[game.level]}
+              </span>
+            ) : null}
+          </p>
           <p className="mt-3 max-w-2xl text-[var(--muted)]">{game.blurb}</p>
         </div>
       </section>
@@ -112,9 +118,29 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
               ))}
             </div>
           ))}
+          {seo.faq.length ? (
+            <>
+              <h3 id="faq" className="mt-8 text-lg font-semibold">Frequently asked questions</h3>
+              <dl className="mt-2 divide-y divide-[var(--border)]">
+                {seo.faq.map((item) => (
+                  <div key={item.question} className="py-3">
+                    <dt className="font-medium">{item.question}</dt>
+                    <dd className="mt-1 text-[var(--muted)] leading-relaxed">{item.answer}</dd>
+                  </div>
+                ))}
+              </dl>
+            </>
+          ) : null}
           {related.length ? (
             <>
-              <h3 className="mt-8 text-lg font-semibold">More {categoryLabel(game.category).toLowerCase()} games</h3>
+              <h3 className="mt-8 text-lg font-semibold">More games to play</h3>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                See all{" "}
+                <Link href={categoryPath(game.category)} className="font-semibold text-[var(--brand-blue)] hover:underline">
+                  {categoryLabel(game.category).toLowerCase()} games
+                </Link>
+                , or try a related game:
+              </p>
               <ul className="mt-2 flex flex-wrap gap-2">
                 {related.map((g) => (
                   <li key={g.slug}>
@@ -135,8 +161,18 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
                 Want a coach? See UniEDD&apos;s{" "}
                 <Link href="/programs/chess" className="font-semibold text-[var(--brand-blue)] hover:underline">online chess classes for kids and adults</Link>.{" "}
               </>
+            ) : game.category === "piano" || game.category === "adventure" ? (
+              <>
+                Want piano lessons? See UniEDD&apos;s{" "}
+                <Link href="/programs/keyboard" className="font-semibold text-[var(--brand-blue)] hover:underline">online keyboard classes</Link>.{" "}
+              </>
+            ) : game.category === "guitar" ? (
+              <>
+                Want a guitar coach? See UniEDD&apos;s{" "}
+                <Link href="/programs/guitar" className="font-semibold text-[var(--brand-blue)] hover:underline">online guitar classes</Link>.{" "}
+              </>
             ) : null}
-            Explore all <Link href="/games" className="font-semibold text-[var(--brand-blue)] hover:underline">free games</Link>{" "}
+            Explore all <Link href="/games" className="font-semibold text-[var(--brand-blue)] hover:underline">free online games</Link>{" "}
             or practise with the free{" "}
             <Link href="/jam" className="font-semibold text-[var(--brand-blue)] hover:underline">metronome, tuner and backing tracks</Link>.
           </p>

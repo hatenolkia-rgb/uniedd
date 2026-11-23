@@ -1,4 +1,6 @@
-export type CategoryId = "karaoke" | "tanpura" | "guitar" | "piano" | "vocals" | "theory" | "rhythm" | "chess" | "other";
+export type CategoryId = "adventure" | "karaoke" | "tanpura" | "guitar" | "piano" | "vocals" | "theory" | "rhythm" | "chess" | "other";
+
+export type GameLevel = "beginner" | "intermediate" | "advanced";
 
 export type GameKind =
   | "quiz"
@@ -40,6 +42,8 @@ export type GameDef = {
   kind: GameKind;
   minutes: string;
   accent: string;
+  /** Shown as a badge and used for the Beginner games section. */
+  level?: GameLevel;
   quizBank?: string;
   /** Separate leaderboards inside one game (e.g. the piano game's clef modes). */
   boards?: { id: string; label: string }[];
@@ -49,6 +53,12 @@ export type GameDef = {
 
 export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; emoji: string }[] = [
   { id: "all", label: "All games", hint: "Everything in one colorful arcade", emoji: "🎮" },
+  {
+    id: "adventure",
+    label: "Adventure",
+    hint: "Beginner-friendly story adventures you can play in the browser",
+    emoji: "🌲",
+  },
   {
     id: "karaoke",
     label: "Karaoke Maker",
@@ -76,6 +86,55 @@ export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; 
 ];
 
 export const GAMES: GameDef[] = [
+  {
+    slug: "lumenfall",
+    title: "Lumenfall: Notes of the Spirit Forest",
+    blurb: "Tetris-style note blocks fall through a glowing spirit forest. Play them on a piano, guitar or MIDI keyboard, or sing them — the microphone hears every note. Nine story levels with public-domain and original tunes, plus a Sargam track for Indian classical practice.",
+    category: "adventure",
+    kind: "lumenfall",
+    level: "beginner",
+    minutes: "2–5 min",
+    accent: "#0ea5e9",
+    scoreCap: 300000,
+    boards: [
+      { id: "1-guitar", label: "Level 1 · Guitar" },
+      { id: "1-piano", label: "Level 1 · Piano" },
+      { id: "1-vocal", label: "Level 1 · Vocal" },
+      { id: "1-sargam", label: "Level 1 · Sargam" },
+      { id: "2-guitar", label: "Level 2 · Guitar" },
+      { id: "2-piano", label: "Level 2 · Piano" },
+      { id: "2-vocal", label: "Level 2 · Vocal" },
+      { id: "2-sargam", label: "Level 2 · Sargam" },
+      { id: "3-guitar", label: "Level 3 · Guitar" },
+      { id: "3-piano", label: "Level 3 · Piano" },
+      { id: "3-vocal", label: "Level 3 · Vocal" },
+      { id: "3-sargam", label: "Level 3 · Sargam" },
+      { id: "4-guitar", label: "Level 4 · Guitar" },
+      { id: "4-piano", label: "Level 4 · Piano" },
+      { id: "4-vocal", label: "Level 4 · Vocal" },
+      { id: "4-sargam", label: "Level 4 · Sargam" },
+      { id: "5-guitar", label: "Level 5 · Guitar" },
+      { id: "5-piano", label: "Level 5 · Piano" },
+      { id: "5-vocal", label: "Level 5 · Vocal" },
+      { id: "5-sargam", label: "Level 5 · Sargam" },
+      { id: "6-guitar", label: "Level 6 · Guitar" },
+      { id: "6-piano", label: "Level 6 · Piano" },
+      { id: "6-vocal", label: "Level 6 · Vocal" },
+      { id: "6-sargam", label: "Level 6 · Sargam" },
+      { id: "7-guitar", label: "Level 7 · Guitar" },
+      { id: "7-piano", label: "Level 7 · Piano" },
+      { id: "7-vocal", label: "Level 7 · Vocal" },
+      { id: "7-sargam", label: "Level 7 · Sargam" },
+      { id: "8-guitar", label: "Level 8 · Guitar" },
+      { id: "8-piano", label: "Level 8 · Piano" },
+      { id: "8-vocal", label: "Level 8 · Vocal" },
+      { id: "8-sargam", label: "Level 8 · Sargam" },
+      { id: "9-guitar", label: "Level 9 · Guitar" },
+      { id: "9-piano", label: "Level 9 · Piano" },
+      { id: "9-vocal", label: "Level 9 · Vocal" },
+      { id: "9-sargam", label: "Level 9 · Sargam" },
+    ],
+  },
   {
     slug: "karaoke-maker",
     title: "Karaoke Maker",
@@ -165,54 +224,6 @@ export const GAMES: GameDef[] = [
       { id: "treble", label: "Treble Clef" },
       { id: "bass", label: "Bass Clef" },
       { id: "beast", label: "Beast Mode" },
-    ],
-  },
-  {
-    slug: "lumenfall",
-    title: "Lumenfall: Notes of the Spirit Forest",
-    blurb: "Tetris-style note blocks fall through a glowing spirit forest. Play them on a piano, guitar or MIDI keyboard, or sing them — the microphone hears every note. Nine story levels with public-domain and original tunes, plus a Sargam track for Indian classical practice.",
-    category: "piano",
-    kind: "lumenfall",
-    minutes: "2–5 min",
-    accent: "#0ea5e9",
-    scoreCap: 300000,
-    boards: [
-      { id: "1-guitar", label: "Level 1 · Guitar" },
-      { id: "1-piano", label: "Level 1 · Piano" },
-      { id: "1-vocal", label: "Level 1 · Vocal" },
-      { id: "1-sargam", label: "Level 1 · Sargam" },
-      { id: "2-guitar", label: "Level 2 · Guitar" },
-      { id: "2-piano", label: "Level 2 · Piano" },
-      { id: "2-vocal", label: "Level 2 · Vocal" },
-      { id: "2-sargam", label: "Level 2 · Sargam" },
-      { id: "3-guitar", label: "Level 3 · Guitar" },
-      { id: "3-piano", label: "Level 3 · Piano" },
-      { id: "3-vocal", label: "Level 3 · Vocal" },
-      { id: "3-sargam", label: "Level 3 · Sargam" },
-      { id: "4-guitar", label: "Level 4 · Guitar" },
-      { id: "4-piano", label: "Level 4 · Piano" },
-      { id: "4-vocal", label: "Level 4 · Vocal" },
-      { id: "4-sargam", label: "Level 4 · Sargam" },
-      { id: "5-guitar", label: "Level 5 · Guitar" },
-      { id: "5-piano", label: "Level 5 · Piano" },
-      { id: "5-vocal", label: "Level 5 · Vocal" },
-      { id: "5-sargam", label: "Level 5 · Sargam" },
-      { id: "6-guitar", label: "Level 6 · Guitar" },
-      { id: "6-piano", label: "Level 6 · Piano" },
-      { id: "6-vocal", label: "Level 6 · Vocal" },
-      { id: "6-sargam", label: "Level 6 · Sargam" },
-      { id: "7-guitar", label: "Level 7 · Guitar" },
-      { id: "7-piano", label: "Level 7 · Piano" },
-      { id: "7-vocal", label: "Level 7 · Vocal" },
-      { id: "7-sargam", label: "Level 7 · Sargam" },
-      { id: "8-guitar", label: "Level 8 · Guitar" },
-      { id: "8-piano", label: "Level 8 · Piano" },
-      { id: "8-vocal", label: "Level 8 · Vocal" },
-      { id: "8-sargam", label: "Level 8 · Sargam" },
-      { id: "9-guitar", label: "Level 9 · Guitar" },
-      { id: "9-piano", label: "Level 9 · Piano" },
-      { id: "9-vocal", label: "Level 9 · Vocal" },
-      { id: "9-sargam", label: "Level 9 · Sargam" },
     ],
   },
   {
@@ -484,4 +495,44 @@ export function boardKey(slug: string, board?: string | null) {
 
 export function gamesByCategory(id: CategoryId | "all") {
   return id === "all" ? GAMES : GAMES.filter((game) => game.category === id);
+}
+
+export const LEVEL_LABEL: Record<GameLevel, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+};
+
+export const TOPIC_CATEGORIES = CATEGORIES.filter((c): c is typeof c & { id: CategoryId } => c.id !== "all");
+
+export function categoryPath(id: CategoryId) {
+  return `/games/category/${id}`;
+}
+
+export function gamesByLevel(level: GameLevel) {
+  return GAMES.filter((game) => game.level === level);
+}
+
+/** Same-category games first, then other music or skill games, skipping the current one. */
+export function relatedGames(game: GameDef, limit = 6) {
+  const seen = new Set<string>([game.slug]);
+  const out: GameDef[] = [];
+  const take = (list: GameDef[]) => {
+    for (const item of list) {
+      if (seen.has(item.slug)) continue;
+      seen.add(item.slug);
+      out.push(item);
+      if (out.length >= limit) return;
+    }
+  };
+  take(GAMES.filter((item) => item.category === game.category));
+  const kindFamily: Record<string, string[]> = {
+    lumenfall: ["piano-fall", "clap-trainer", "pick-coach", "piano-keys", "staff"],
+    "piano-fall": ["lumenfall", "piano-keys", "staff", "piano-chord", "clap-trainer"],
+    "clap-trainer": ["lumenfall", "piano-fall", "rhythm", "tempo"],
+  };
+  const cousins = kindFamily[game.kind];
+  if (cousins) take(GAMES.filter((item) => cousins.includes(item.kind)));
+  take(GAMES);
+  return out;
 }

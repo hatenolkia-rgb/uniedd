@@ -1,6 +1,7 @@
 // Search-friendly titles, descriptions and on-page text for the music games.
 // Keep every sentence true to what the game actually does.
-import { CATEGORIES, type CategoryId, type GameDef } from "./catalog";
+import { CATEGORIES, LEVEL_LABEL, type CategoryId, type GameDef } from "./catalog";
+import { SITE_NAME, SITE_URL } from "../lib/site";
 
 const GENERIC_HOWTO = [
   "Press Start to begin a round.",
@@ -18,6 +19,18 @@ type CategorySeo = {
 };
 
 export const CATEGORY_SEO: Record<CategoryId, CategorySeo> = {
+  adventure: {
+    noun: "Adventure Music Game",
+    genre: ["Adventure", "Music", "Educational"],
+    intro:
+      "A free online adventure music game from UniEDD. It runs in your web browser on a phone, tablet or computer, with nothing to download, and is designed so beginners can start straight away.",
+    howTo: [
+      "Choose how you want to play — on-screen keys, a computer keyboard, a MIDI keyboard, a guitar, or your voice.",
+      "Press Play and hit each falling note as it reaches the target.",
+      "Work through the story levels at your own pace. A nickname is enough if you want to post a score.",
+    ],
+    goodFor: "Beginners and students who want a story-led music game they can play in the browser.",
+  },
   karaoke: {
     noun: "Karaoke Maker",
     genre: ["Music", "Educational", "Karaoke"],
@@ -111,6 +124,8 @@ export const CATEGORY_SEO: Record<CategoryId, CategorySeo> = {
   },
 };
 
+export type FaqItem = { question: string; answer: string };
+
 type GameSeo = {
   title: string;
   description: string;
@@ -120,6 +135,7 @@ type GameSeo = {
   goodFor: string;
   extra?: { heading: string; body: string[] }[];
   genre: string[];
+  faq: FaqItem[];
 };
 
 const OVERRIDES: Record<string, Partial<GameSeo>> = {
@@ -383,23 +399,71 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
     title: "Piano Keys Game – Learn Piano Note Names Free Online | UniEDD",
   },
   lumenfall: {
-    title: "Lumenfall: Notes of the Spirit Forest – Free Falling-Notes Music Game | UniEDD",
+    title: "Play Lumenfall Free Online – Beginner Adventure Music Game | UniEDD",
     description:
-      "Play Lumenfall, a free falling-notes music game. Tetris-style note blocks fall through a spirit forest — play them on piano, guitar or a MIDI keyboard, or sing them into the microphone. Nine story levels with public-domain and original tunes, plus a Sargam track for Indian classical practice.",
+      "Play Lumenfall free online in your browser. This beginner-friendly adventure music game lets you catch falling notes on piano, guitar or a MIDI keyboard, or sing them into the microphone. Nine story levels use public-domain and original tunes, plus a Sargam track.",
     h1: "Lumenfall: Notes of the Spirit Forest",
     intro:
-      "Lumenfall is a free browser game from UniEDD. Coloured note blocks fall toward glowing targets in time with the music, and you play or sing each one as it reaches the line. Every note is scored Perfect, Early, Late or Miss. It works on a phone, tablet or computer, with a keyboard, a MIDI piano, a guitar or your voice.",
+      "Lumenfall is a free beginner adventure game you can play in your browser. Coloured note blocks fall toward glowing targets in time with the music, and you play or sing each one as it reaches the line. Every note is scored Perfect, Early, Late or Miss. It works on a phone, tablet or computer, with a keyboard, a MIDI piano, a guitar or your voice. There is nothing to download.",
     howTo: [
-      "Choose guitar, piano or voice, and (for voice) Western or Sargam style.",
+      "Tap Play to load the game, then choose guitar, piano or voice, and (for voice) Western or Sargam style.",
       "Play with the on-screen keys, a computer keyboard, a MIDI keyboard, or allow the microphone to hear a real instrument or your singing.",
       "Hit each falling note as it reaches the glowing circle. Holds need to be sustained. A story unfolds across nine levels.",
     ],
-    goodFor: "Piano, guitar and singing students who want a game-like way to practise timing, and anyone exploring Sargam.",
+    goodFor: "Beginners and piano, guitar or singing students who want a story-led way to practise timing, and anyone exploring Sargam.",
+    genre: ["Adventure", "Music", "Educational"],
+    faq: [
+      {
+        question: "Is Lumenfall free to play online?",
+        answer:
+          "Yes. Lumenfall is a free online adventure music game from UniEDD. You can play it in your web browser with no download and no account.",
+      },
+      {
+        question: "Is Lumenfall suitable for beginners?",
+        answer:
+          "Yes. It is a beginner-friendly adventure game. You can start with the first story levels and play at your own pace on a phone, tablet or computer.",
+      },
+      {
+        question: "What instruments can I use?",
+        answer:
+          "You can play the falling notes on the on-screen keys, a computer keyboard, a MIDI keyboard, a guitar, or by singing into the microphone. For voice, you can choose Western note names or Sargam.",
+      },
+      {
+        question: "Do I need to install an app?",
+        answer:
+          "No. Lumenfall runs in a modern web browser such as Chrome, Edge, Safari or Firefox. Tap Play on the game page to start.",
+      },
+    ],
   },
 };
 
 export function categoryLabel(id: CategoryId) {
   return CATEGORIES.find((c) => c.id === id)?.label ?? "Music";
+}
+
+function defaultFaq(game: GameDef): FaqItem[] {
+  const name = game.title;
+  const items: FaqItem[] = [
+    {
+      question: `Is ${name} free to play?`,
+      answer: `Yes. ${name} is free to play in your web browser. There is nothing to download, and you do not need an account to start.`,
+    },
+    {
+      question: "Can I play on a phone or tablet?",
+      answer: "Yes. It runs in a modern browser such as Chrome, Edge, Safari or Firefox on a phone, tablet or computer.",
+    },
+  ];
+  if (game.level === "beginner") {
+    items.push({
+      question: "Is it suitable for beginners?",
+      answer: `${name} is marked as a beginner game, so you can start without prior experience and play at your own pace.`,
+    });
+  }
+  items.push({
+    question: "Do I need special equipment?",
+    answer: "A web browser is enough to start. Some music games can also use a microphone, a MIDI keyboard or on-screen keys if you want them to.",
+  });
+  return items;
 }
 
 export function gameSeo(game: GameDef): GameSeo {
@@ -413,12 +477,71 @@ export function gameSeo(game: GameDef): GameSeo {
     howTo: cat.howTo,
     goodFor: cat.goodFor,
     genre: cat.genre,
+    faq: defaultFaq(game),
   };
-  return { ...base, ...o };
+  return { ...base, ...o, faq: o.faq ?? base.faq };
 }
 
 export const GAMES_HUB_SEO = {
-  title: "Free Online Music Games, Karaoke Maker & Chess Puzzles for Kids – Piano, Guitar, Rhythm | UniEDD",
+  title: "Free Online Music, Piano, Chess & Kids Learning Games | UniEDD",
   description:
-    "Play free online games in your browser: a karaoke maker that removes vocals and changes the key of any song, an online tanpura and tabla player for riyaz in any key and taal, a guitar picking and strumming coach that speaks each pattern, a falling-notes piano game for MIDI keyboards or a real piano, Lumenfall (a story falling-notes game for piano, guitar or voice), a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
+    "Play free online music, piano, chess and kids learning games in your browser — nothing to download. Start with Lumenfall, a beginner adventure music game, or try piano practice, rhythm training, guitar coaching, music theory and live chess.",
 };
+
+export const GAMES_HUB_FAQ: FaqItem[] = [
+  {
+    question: "Are the UniEDD games free to play online?",
+    answer:
+      "Yes. Every game on this page is free to play in your web browser. You do not need to create an account to start, and nothing has to be installed.",
+  },
+  {
+    question: "What kinds of games can I play?",
+    answer:
+      "You can play a beginner adventure music game (Lumenfall), piano and guitar practice games, a clap rhythm trainer, music theory and ear training, a karaoke maker, an online tanpura and tabla player, and chess puzzles or live chess against the computer or other players.",
+  },
+  {
+    question: "Are these games suitable for beginners and kids?",
+    answer:
+      "Yes. Many games are made for learners, including a beginner adventure game and short practice rounds for piano, rhythm, guitar and chess. Kids and adults can play in the browser on a phone, tablet or computer.",
+  },
+  {
+    question: "Do I need to download an app?",
+    answer:
+      "No. Open a game and play it in Chrome, Edge, Safari or Firefox. Some music games can use a microphone or a MIDI keyboard if you allow them, but a screen and speakers are enough to start.",
+  },
+];
+
+export function faqJsonLd(faqs: FaqItem[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  };
+}
+
+export function videoGameJsonLd(game: GameDef) {
+  const seo = gameSeo(game);
+  const url = `${SITE_URL}/games/${game.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": ["VideoGame", "SoftwareApplication"],
+    name: game.title,
+    description: seo.description,
+    url,
+    image: `${url}/opengraph-image`,
+    genre: seo.genre,
+    gamePlatform: "Web browser",
+    applicationCategory: "GameApplication",
+    operatingSystem: "Any (web browser)",
+    inLanguage: "en",
+    isAccessibleForFree: true,
+    audience: { "@type": "EducationalAudience", educationalRole: "student" },
+    offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+    publisher: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+    ...(game.level ? { educationalLevel: LEVEL_LABEL[game.level] } : {}),
+  };
+}

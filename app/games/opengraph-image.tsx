@@ -8,7 +8,7 @@ export default function Image() {
   return ogCard({
     kicker: "UniEDD Games",
     title: "Free online music games",
-    subtitle: "Clap rhythm game, ear training, music theory, guitar and piano quizzes, singing games",
+    subtitle: "Beginner adventure, piano, guitar, rhythm, music theory and chess — play free in your browser",
     accent: "#e8962e",
   });
 }
