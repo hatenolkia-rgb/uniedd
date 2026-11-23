@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import { SITE_URL } from "../lib/site";
 
 const pricingTitle = "Pricing | UniEDD";
 const pricingDescription =
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: pricingTitle,
     description: pricingDescription,
-    url: "https://uniedd.com/pricing",
+    url: `${SITE_URL}/pricing`,
   },
   twitter: {
     title: pricingTitle,

@@ -5,9 +5,10 @@ import { readSession, validateScore } from "../../../lib/games/session";
 import { consumeNonce } from "../../../lib/games/storage";
 import { courseForGame, signCertificate, validateLead } from "../../../lib/games/lead";
 import { getSupabase } from "../../../lib/supabase";
+import { SITE_URL } from "../../../lib/site";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const SITE = "https://uniedd.com";
+const SITE = SITE_URL;
 
 // Hands the lead to the LMS (lms.uniedd.com/api/meta, action 'game-lead'),
 // which saves it to the Leads page and sends the WhatsApp certificate.

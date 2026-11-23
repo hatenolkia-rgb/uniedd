@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { courseForGame, readCertificate, signCertificate, validateLead } from "../app/lib/games/lead";
 import { signSession } from "../app/lib/games/session";
 import { POST } from "../app/api/games/lead/route";
+import { SITE_URL } from "../app/lib/site";
 
 const good = { name: "Riya Sharma", phone: "+91 98765 43210", childAge: "9–12", consent: true };
 
@@ -69,7 +70,8 @@ describe("POST /api/games/lead", () => {
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data).toMatchObject({ ok: true, whatsapp: true });
-    expect(data.certificateUrl).toMatch(/^https:\/\/uniedd\.com\/api\/games\/certificate\?c=[\w-]+\.[\w-]+$/);
+    expect(data.certificateUrl.startsWith(`${SITE_URL}/api/games/certificate?c=`)).toBe(true);
+    expect(data.certificateUrl).toMatch(/c=[\w-]+\.[\w-]+$/);
     const [url, init] = mockFetch.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("https://lms.uniedd.com/api/meta");
     expect((init.headers as Record<string, string>)["x-booking-secret"]).toBe("test-secret");

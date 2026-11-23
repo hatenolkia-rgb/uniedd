@@ -1,5 +1,5 @@
 // Site-wide facts shared by the pages, metadata and structured data.
-export const SITE_URL = "https://uniedd.com";
+export const SITE_URL = "https://www.uniedd.com";
 export const SITE_NAME = "UniEDD";
 
 export const PHONE_DISPLAY = "+91 83838 57710";

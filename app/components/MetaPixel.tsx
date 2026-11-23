@@ -43,7 +43,7 @@ export default function MetaPixel() {
       <p className="text-xs leading-relaxed text-[var(--foreground)]">
         We&rsquo;d like to use cookies from Meta and Google to measure our ads and visits. None are set unless you accept.{" "}
         <Link href="/privacy#tracking" className="text-[var(--brand-blue)] hover:underline">
-          Learn more
+          Read our cookie and tracking policy
         </Link>
       </p>
       <div className="mt-3 flex gap-2">

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { FaWhatsapp } from "react-icons/fa";
 import StickyBookBar from "./components/StickyBookBar";
 import { PROGRAMS, programPath } from "./lib/programs";
-import { SOCIAL_LINKS, PHONE_NUMBERS } from "./lib/site";
+import { SITE_NAME, SITE_URL, SOCIAL_LINKS, PHONE_NUMBERS } from "./lib/site";
 import MetaPixel from "./components/MetaPixel";
 import GoogleTagManager from "./components/GoogleTagManager";
 import { GOOGLE_TAG_INLINE, GTM_ID } from "./lib/googleTag";
@@ -26,7 +26,7 @@ const siteDescription =
   "UniEDD is a New Delhi-based academy offering live 1-on-1 online classes in Guitar, Keyboard, Vocals, Tabla, Dance, Public Speaking, and Chess for kids and adults.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://uniedd.com"),
+  metadataBase: new URL(SITE_URL),
   title: siteTitle,
   description: siteDescription,
   alternates: {
@@ -35,8 +35,8 @@ export const metadata: Metadata = {
   openGraph: {
     title: siteTitle,
     description: siteDescription,
-    url: "https://uniedd.com",
-    siteName: "UniEDD",
+    url: SITE_URL,
+    siteName: SITE_NAME,
     images: [{ url: "/logo.png", width: 2332, height: 908, alt: "UniEDD" }],
     locale: "en_IN",
     type: "website",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "UniEDD",
+    title: SITE_NAME,
     statusBarStyle: "default",
   },
 };
@@ -70,10 +70,10 @@ export const viewport: Viewport = {
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "EducationalOrganization",
-  name: "UniEDD",
+  name: SITE_NAME,
   alternateName: "Universal Education",
-  url: "https://uniedd.com",
-  logo: "https://uniedd.com/logo.png",
+  url: SITE_URL,
+  logo: `${SITE_URL}/logo.png`,
   description: siteDescription,
   areaServed: "New Delhi, India",
   telephone: "+91-8383857710",
@@ -87,8 +87,8 @@ const structuredData = {
   hasCourse: PROGRAMS.map((program) => ({
     "@type": "Course",
     name: program.title,
-    url: `https://uniedd.com${programPath(program)}`,
-    provider: { "@type": "EducationalOrganization", name: "UniEDD", sameAs: "https://uniedd.com" },
+    url: `${SITE_URL}${programPath(program)}`,
+    provider: { "@type": "EducationalOrganization", name: SITE_NAME, sameAs: SITE_URL },
   })),
 };
 
