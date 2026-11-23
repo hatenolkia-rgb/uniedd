@@ -81,6 +81,19 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
         ],
       },
+      {
+        // Lumenfall is a self-contained page iframed from /games/lumenfall.
+        // SAMEORIGIN overrides the site-wide DENY so the embed can load; mic + MIDI
+        // stay same-origin. The pitch detector builds an AudioWorklet from a blob: URL,
+        // so worker-src/script-src must allow blob:.
+        source: "/games/lumenfall/index.html",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'; worker-src 'self' blob:; script-src 'self' 'unsafe-inline' blob:; connect-src 'self'; media-src 'self' blob:; default-src 'self' 'unsafe-inline' blob: data:;" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), midi=(self)" },
+          { key: "Cache-Control", value: "public, max-age=3600, stale-while-revalidate=86400" },
+        ],
+      },
     ];
   },
 };

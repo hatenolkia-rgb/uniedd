@@ -52,7 +52,8 @@ export function validateScore(slug: string, score: number, startedAt: number) {
   const game = getGame(slug);
   if (!game) return "Unknown game.";
   if (!Number.isFinite(score) || score < 0) return "Invalid score.";
-  if (score > SCORE_CAP) return `Score is too high for ${game.title}.`;
+  const cap = game.scoreCap ?? SCORE_CAP;
+  if (score > cap) return `Score is too high for ${game.title}.`;
   if (Date.now() - startedAt < MIN_DURATION_MS) return "That round finished a little too quickly.";
   if (Date.now() - startedAt > 30 * 60 * 1000) return "That game session expired. Play again!";
   return null;

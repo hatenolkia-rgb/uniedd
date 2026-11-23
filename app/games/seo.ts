@@ -382,6 +382,20 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
   "piano-keys": {
     title: "Piano Keys Game – Learn Piano Note Names Free Online | UniEDD",
   },
+  lumenfall: {
+    title: "Lumenfall: Notes of the Spirit Forest – Free Falling-Notes Music Game | UniEDD",
+    description:
+      "Play Lumenfall, a free falling-notes music game. Tetris-style note blocks fall through a spirit forest — play them on piano, guitar or a MIDI keyboard, or sing them into the microphone. Nine story levels with public-domain and original tunes, plus a Sargam track for Indian classical practice.",
+    h1: "Lumenfall: Notes of the Spirit Forest",
+    intro:
+      "Lumenfall is a free browser game from UniEDD. Coloured note blocks fall toward glowing targets in time with the music, and you play or sing each one as it reaches the line. Every note is scored Perfect, Early, Late or Miss. It works on a phone, tablet or computer, with a keyboard, a MIDI piano, a guitar or your voice.",
+    howTo: [
+      "Choose guitar, piano or voice, and (for voice) Western or Sargam style.",
+      "Play with the on-screen keys, a computer keyboard, a MIDI keyboard, or allow the microphone to hear a real instrument or your singing.",
+      "Hit each falling note as it reaches the glowing circle. Holds need to be sustained. A story unfolds across nine levels.",
+    ],
+    goodFor: "Piano, guitar and singing students who want a game-like way to practise timing, and anyone exploring Sargam.",
+  },
 };
 
 export function categoryLabel(id: CategoryId) {
@@ -406,5 +420,5 @@ export function gameSeo(game: GameDef): GameSeo {
 export const GAMES_HUB_SEO = {
   title: "Free Online Music Games, Karaoke Maker & Chess Puzzles for Kids – Piano, Guitar, Rhythm | UniEDD",
   description:
-    "Play free online games in your browser: a karaoke maker that removes vocals and changes the key of any song, an online tanpura and tabla player for riyaz in any key and taal, a guitar picking and strumming coach that speaks each pattern, a falling-notes piano game for MIDI keyboards or a real piano, a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
+    "Play free online games in your browser: a karaoke maker that removes vocals and changes the key of any song, an online tanpura and tabla player for riyaz in any key and taal, a guitar picking and strumming coach that speaks each pattern, a falling-notes piano game for MIDI keyboards or a real piano, Lumenfall (a story falling-notes game for piano, guitar or voice), a clap rhythm game with songs and nursery rhymes, music theory and ear training games, guitar and piano quizzes, singing games, and thousands of chess puzzles by difficulty plus chess vs the computer or online against other players. No downloads.",
 };
