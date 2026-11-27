@@ -186,6 +186,9 @@ export default function PlayOnline() {
           <Link href="/games/chess" className="text-[var(--brand-blue)] hover:underline">
             Play vs computer
           </Link>
+          <Link href="/games/chess-teacher" className="text-[var(--brand-blue)] hover:underline">
+            Play with Teacher
+          </Link>
           <Link href="/games/chess-puzzles" className="text-[var(--brand-blue)] hover:underline">
             Chess puzzles
           </Link>

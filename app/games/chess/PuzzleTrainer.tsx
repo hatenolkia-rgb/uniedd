@@ -437,9 +437,14 @@ export default function PuzzleTrainer() {
             </button>
           ))}
         </div>
-        <Link href="/games" className="text-sm text-[var(--brand-blue)] hover:underline">
-          All games
-        </Link>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <Link href="/games/chess-teacher" className="text-[var(--brand-blue)] hover:underline">
+            Play with Teacher
+          </Link>
+          <Link href="/games" className="text-[var(--brand-blue)] hover:underline">
+            All games
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-5 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_340px]">

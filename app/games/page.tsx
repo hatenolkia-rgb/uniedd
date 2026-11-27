@@ -137,10 +137,14 @@ export default function GamesPage() {
             ,{" "}
             <Link href="/games/chess" className="font-semibold text-[var(--brand-blue)] hover:underline">
               play chess against the computer
-            </Link>{" "}
-            or{" "}
+            </Link>
+            ,{" "}
             <Link href="/games/chess-online" className="font-semibold text-[var(--brand-blue)] hover:underline">
               online against other players
+            </Link>
+            , or{" "}
+            <Link href="/games/chess-teacher" className="font-semibold text-[var(--brand-blue)] hover:underline">
+              play with a teacher
             </Link>
             .
           </p>
