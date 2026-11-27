@@ -34,8 +34,8 @@ describe("games catalog placement", () => {
   });
 
   it("still has a unique slug for every game", () => {
-    expect(GAMES).toHaveLength(37);
-    expect(new Set(GAMES.map((game) => game.slug)).size).toBe(37);
+    expect(GAMES).toHaveLength(38);
+    expect(new Set(GAMES.map((game) => game.slug)).size).toBe(38);
   });
 
   it("returns related games even when a category has only one title", () => {

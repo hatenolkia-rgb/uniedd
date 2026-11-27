@@ -386,6 +386,38 @@ const OVERRIDES: Record<string, Partial<GameSeo>> = {
     ],
     goodFor: "Students who want to practise against real opponents, friends playing each other from different devices, and anyone who wants a quick live game.",
   },
+  "chess-teacher": {
+    title: "Play Chess with Your Teacher Live – Join with a Code | UniEDD",
+    description:
+      "Play a live private chess game with a UniEDD teacher. The teacher starts the game and shares a join code; students join with the code and a name, with no login. Teachers can move any piece, take moves back and doodle on the board to show ideas.",
+    h1: "Play chess live with your teacher",
+    intro:
+      "Play with Teacher is a free, private live chess board for UniEDD lessons. A teacher signs in with their lms.uniedd.com teacher or admin account, starts a game and shares a short join code. A student opens this page, enters the code and a name, and plays with normal legal-move rules. The teacher has full control of the board — they can move the student's pieces, undo, reset the position, and draw arrows, highlights and pen strokes to show where a piece could go.",
+    howTo: [
+      "Teachers: press Play with Teacher, sign in with the same email and password as lms.uniedd.com, set or accept a join code, and pick a side.",
+      "Share the join code with your student. Rooms close after 45 minutes of silence.",
+      "Students: enter the code and a name — no account is needed — then make legal moves as usual.",
+      "The teacher can move any piece, take a move back, reset the board, flip the board, and use the pen, arrow and highlight tools. Students can doodle too; the teacher can clear everyone's drawings.",
+    ],
+    goodFor: "UniEDD chess teachers running live lessons, and students who have been given a join code by their teacher.",
+    faq: [
+      {
+        question: "Do I need an account to play with a teacher?",
+        answer:
+          "Teachers sign in with their UniEDD LMS teacher or admin account before starting a game. Students only need the join code and a name — no login.",
+      },
+      {
+        question: "Can the teacher move my pieces?",
+        answer:
+          "Yes. The student plays with normal legal-move rules, and the teacher has full control, including moving the student's pieces, taking a move back and resetting the position, plus doodle tools to explain ideas.",
+      },
+      {
+        question: "What if I only have a student LMS account?",
+        answer:
+          "A student or sales account cannot start a teacher game. If you have a join code, use Join with a code — you do not need to sign in.",
+      },
+    ],
+  },
   "rhythm-tap": {
     title: "Rhythm Tap – Free Online Rhythm & Ear Training Game | UniEDD",
   },

@@ -32,7 +32,8 @@ export type GameKind =
   | "tanpura-tabla"
   | "chess-puzzles"
   | "chess-play"
-  | "chess-online";
+  | "chess-online"
+  | "chess-teacher";
 
 export type GameDef = {
   slug: string;
@@ -81,7 +82,7 @@ export const CATEGORIES: { id: CategoryId | "all"; label: string; hint: string; 
     emoji: "🎼",
   },
   { id: "rhythm", label: "Rhythm", hint: "Clap along to songs — the mic scores every clap", emoji: "👏" },
-  { id: "chess", label: "Chess", hint: "Chess puzzles by difficulty, games against the computer and live games online", emoji: "♟️" },
+  { id: "chess", label: "Chess", hint: "Chess puzzles by difficulty, games against the computer, live games online, and Play with Teacher", emoji: "♟️" },
   { id: "other", label: "Other", hint: "Art, public speaking, AI and music quizzes", emoji: "🌟" },
 ];
 
@@ -435,6 +436,15 @@ export const GAMES: GameDef[] = [
     kind: "chess-online",
     minutes: "10+ min",
     accent: "#0f766e",
+  },
+  {
+    slug: "chess-teacher",
+    title: "Play with Teacher",
+    blurb: "A teacher starts a private live chess game and shares a join code. Students join with the code and a name — no login. The teacher can move any piece, take moves back, and doodle on the board to show ideas.",
+    category: "chess",
+    kind: "chess-teacher",
+    minutes: "10+ min",
+    accent: "#1a9fd4",
   },
   {
     slug: "music-quiz",

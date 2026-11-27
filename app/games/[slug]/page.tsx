@@ -10,6 +10,7 @@ import { GAMES, LEVEL_LABEL, categoryPath, getGame, relatedGames } from "../cata
 import { GameScreen } from "../components/GameScreen";
 import { categoryLabel, faqJsonLd, gameSeo, videoGameJsonLd } from "../seo";
 import ChessGame from "../chess/ChessGame";
+import TeacherEmbed from "../chess/TeacherEmbed";
 import KaraokeMaker from "../karaoke/KaraokeMaker";
 import TanpuraTabla from "../tanpura/TanpuraTabla";
 import LumenfallEmbed from "../lumenfall/LumenfallEmbed";
@@ -56,8 +57,9 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
   if (!game) notFound();
   const seo = gameSeo(game);
   const related = relatedGames(game, 6);
-  const isChess = game.category === "chess";
-  const isClap = game.kind === "clap-trainer" || game.kind === "piano-fall" || game.kind === "pick-coach" || game.kind === "karaoke-maker" || game.kind === "tanpura-tabla" || game.kind === "lumenfall" || isChess;
+  const isTeacher = game.kind === "chess-teacher";
+  const isChess = game.category === "chess" && !isTeacher;
+  const isClap = game.kind === "clap-trainer" || game.kind === "piano-fall" || game.kind === "pick-coach" || game.kind === "karaoke-maker" || game.kind === "tanpura-tabla" || game.kind === "lumenfall" || isChess || isTeacher;
 
   return (
     <main>
@@ -91,7 +93,7 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
       </section>
       <section className="px-4 sm:px-6 pb-16 bg-white">
         <div className={`mx-auto ${isClap ? "max-w-6xl" : "max-w-4xl"}`}>
-          {isChess ? <ChessGame kind={game.kind} /> : game.kind === "karaoke-maker" ? <KaraokeMaker /> : game.kind === "tanpura-tabla" ? <TanpuraTabla /> : game.kind === "lumenfall" ? <LumenfallEmbed game={game} /> : <GameScreen game={game} />}
+          {isTeacher ? <TeacherEmbed game={game} /> : isChess ? <ChessGame kind={game.kind} /> : game.kind === "karaoke-maker" ? <KaraokeMaker /> : game.kind === "tanpura-tabla" ? <TanpuraTabla /> : game.kind === "lumenfall" ? <LumenfallEmbed game={game} /> : <GameScreen game={game} />}
         </div>
       </section>
       <section className="px-6 pb-24 bg-white" aria-labelledby="about-game">
@@ -156,7 +158,7 @@ export default async function GameSlugPage({ params }: { params: Promise<{ slug:
             </>
           ) : null}
           <p className="mt-8 text-sm text-[var(--muted)]">
-            {isChess ? (
+            {isChess || isTeacher ? (
               <>
                 Want a coach? See UniEDD&apos;s{" "}
                 <Link href="/programs/chess" className="font-semibold text-[var(--brand-blue)] hover:underline">online chess classes for kids and adults</Link>.{" "}
